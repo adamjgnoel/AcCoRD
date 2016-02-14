@@ -1,0 +1,125 @@
+//
+// The AcCoRD Simulator
+// (Actor-based Communication via Reaction-Diffusion)
+//
+// Copyright 2015 Adam Noel. All rights reserved.
+// 
+// For license details, read LICENSE.txt in the root AcCoRD directory
+// For user documentation, read README.txt in the root AcCoRD directory
+//
+// HOWTO_READ_SUMMARY_OUTPUT.txt - explains how to read the summary output file
+// Last revised for AcCoRD v0.3.1
+//
+// Revision history:
+//
+// Revision v0.3.1
+// - header added
+//
+// WARNING: THIS IS NOT A REAL OUTPUT SUMMARY FILE!!!
+// THE "COMMENTS" IN THIS FILE MAKE IT UNREADABLE BY THE ACCORD MATLAB IMPORT FUNCTION!
+// BUT ... THIS FILE DESCRIBES HOW TO READ A VALID OUTPUT SUMMARY FILE
+//
+// With that out of the way, welcome to this "tutorial" for examining proper
+// AcCoRD output summary files.
+//
+// This document is current as of v0.4 (2016-02-12).
+//
+// Please note that output summary files will not have these comments
+// preceded by "//". 
+// Please refer to README.txt for instructions on running a simulation and
+// importing output into MATLAB.
+//
+// AcCoRD simulations generate two types of file. Each simulation has a corresponding
+// "output" file and "summary output" file in the "results" folder. The output file
+// contains mostly raw simulation
+// data, whereas the summary output file has simulation meta-data, including information
+// about the amount of data in the output file.
+//
+// If the output filename (as defined by
+// "Output Filename" in the simulation config file) is FILENAME.txt, then the output
+// filename in the results folder will be saved as FILENAME.txt_SEEDX, where "X" is the
+// seed value specified as a command line argument when the simulation was ran (or by the
+// parameter "Random Number Seed" in the config file if no seed number was provided
+// as an argument). Similarly, the summary filename will be summary_FILENAME.txt_SEEDX.
+//
+// AcCoRD input and summary output files (but not data output files)
+// use the JSON format. JSON stands for
+// JavaScript Object Notation and it is defined at json.org.
+// JSON is a way of organizing data into an object.
+//
+// Names in AcCoRD output files do not have white space in them so that they can be
+// cleanly imported into MATLAB.
+//
+// Read below to see how a output summary file is organized
+
+{	// The first JSON object describes the main top-level properties of the simulation.
+
+	"ConfigFile":	"sample.txt",			// This is the name of the configuration file
+											// that was used to generate this output
+											// By listing this file, we do not need to repeat
+											// the properties that were written in the
+											// configuration file.
+											
+	"SEED":	1,								// This is the random seed that was used to start
+											// the random number generator. We have to write
+											// it here because it can be different from that
+											// written in the configuration file if the user
+											// specified a value when starting the simulation.
+											
+	"NumRepeat":	2,						// The number of independent realizations executed
+											// by this simulation
+											
+	"StartTime":	"2015-05-02 00:48:36"	// (Approximate) local time when the simulation
+											// was started
+}
+{	// The second JSON object summarizes information about the actors that are being recorded
+
+	"NumberActiveActor":	1,	// The number of active actors in the simulation
+	
+	"ActiveInfo":	[{			// Array of active actors
+								
+			"ID":	0,			// ID of the actor in the list of defined actors
+			
+			"MaxBitLength":	3	// The most bits sent by the current actor in any single
+								// realization
+		}],
+		
+	"NumberPassiveRecord":	2,	// The number of passive actors in the simulation that are being
+								// recorded
+		
+	"RecordInfo":	[{			// Array describing the observations of passive
+								// actors being recorded.
+	
+			"ID":	1,			// ID of the actor in the list of defined actors
+			
+			"bRecordTime":	0,	// Are the observation times for the current actor being recorded?
+			
+			"MaxCountLength":	10,	// The most observations made by the current actor in any
+									// single realization
+			
+			"NumMolTypeObs":	1, 	// The number of types of molecules that this actor observes
+			
+			"MolObsID":	[0],	// Array of IDs of the molecules that are observed by the actor
+			
+			"bRecordPos":	[1] // Array indicating which molecule types have their positions
+								// recorded when they are observed
+								
+			}, { 	// Object describing the second passive actor
+			
+			"ID":	2,			
+			
+			"bRecordTime":	1,
+			
+			"MaxCountLength":	10,
+			
+			"NumMolTypeObs":	1,
+			
+			"MolObsID":	[0],
+			
+			"bRecordPos":	[0]
+			
+			}],
+		
+	"EndTime":	"2015-08-04 10:24:28"	// (Approximate) local time when the simulation
+										// was completed
+}

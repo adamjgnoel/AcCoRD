@@ -1,0 +1,83 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration demonstrates chemical reactions in the mesoscopic
+		regime. We define a single subvolume so there is no diffusion. There is also
+		no active actor; all molecules are generated via a 0th order chemical reaction.
+		This file has no 2nd order reactions so it is also possible to run in the
+		microscopic regime by setting the microscopic property in the region definition to true.
+		A separate and similarly-named sample config file has that setting.
+		The default reaction rates result in an expected equilibrium value of 100 molecules
+		in the reactor. This simulation with 100 repeats should take less than 1 second to
+		execute on a personal computer (it is much faster than its microscopic equivalent
+		since there is no diffusion modeled at all here).",
+	"Output Filename": "accord_sample_reactor",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 100,
+		"Final Simulation Time": 1000,
+		"Global Microscopic Time Step": 1,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-9],
+		"Chemical Reaction Specification": [
+			{							
+				"Notes": "Creation. This reaction rate results in one molecule being created
+					every second, on average (because reactor has volume 1e-12 m^3)",
+				"Default Everywhere?": true,
+				"Exception Regions": [],
+				"Reactants": [0],
+				"Products": [1],
+				"Reaction Rate": 1e12			
+			},
+			{							
+				"Notes": "Death. This reaction rate means that a molecule has an expected
+					lifetime of 1/0.01 = 100 seconds.",
+				"Default Everywhere?": true,
+				"Exception Regions": [],
+				"Reactants": [1],
+				"Products": [0],
+				"Reaction Rate": 0.01			
+			}
+		]
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "Single mesoscopic region with 1 subvolume.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 100,
+				"Is Region Microscopic?": false,
+				"Number of Subvolumes Along X": 1,
+				"Number of Subvolumes Along Y": 1,
+				"Number of Subvolumes Along Z": 1
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Observer",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		}
+		]		
+	}
+}

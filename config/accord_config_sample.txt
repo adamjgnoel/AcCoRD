@@ -1,0 +1,80 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration creates 2 molecules in a box and then tracks their locations.
+		It's only purpose is to demonstrate the molecule locations can be tracked by an observer.
+		The box can also be changed to mesoscopic with multiple subvolumes. When the position
+		of a molecule inside a subvolume is needed, a uniform random point is generated within that
+		subvolume. This simulation takes much less than 1 second to run on a personal computer.",
+	"Output Filename": "accord_sample",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 0.1,
+		"Global Microscopic Time Step": 1e-4,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-9],
+		"Chemical Reaction Specification": []
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "Microscopic box.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 10,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 1,
+				"Number of Subvolumes Along Y": 1,
+				"Number of Subvolumes Along Z": 1
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Molecule initialization",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0, 10e-6, 0, 10e-6, 0, 10e-6],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 2,
+				"Is Molecule Type Released?": [true]
+		},
+		{
+				"Notes": "Box observer that logs molecule positions",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0, 10e-6, 0, 10e-6, 0, 10e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [true]
+		}
+		]		
+	}
+}

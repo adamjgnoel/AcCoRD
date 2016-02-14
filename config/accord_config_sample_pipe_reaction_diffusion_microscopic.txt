@@ -1,0 +1,132 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration demonstrates reaction-diffusion in the mesoscopic
+		regime. We define a chain of subvolumes that form a pipe. Molecules are added
+		by an active actor at one end of the chamber and can convert into an immobile product molecule at the other end. This file has no 2nd order reactions so it can be done in the microscopic regime. 1 repeat of this simulation should take about 1 minute to
+		execute on a personal computer.",
+	"Output Filename": "accord_sample_pipe_reaction_diffusion_microscopic",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 100,
+		"Global Microscopic Time Step": 1e-3,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 2,
+		"Diffusion Coefficients": [1e-9, 0],
+		"Chemical Reaction Specification": [
+			{							
+				"Notes": "Conversion. Can only occur in the destination region.",
+				"Default Everywhere?": false,
+				"Exception Regions": ["Destination"],
+				"Reactants": [1, 0],
+				"Products": [0, 1],
+				"Reaction Rate": 0.1			
+			}
+		]
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "Primary region",
+				"Label": "Pipe",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 10,
+				"Number of Subvolumes Along Y": 1,
+				"Number of Subvolumes Along Z": 1
+			},
+			{
+				"Notes": "Region where conversion reaction can occur.",
+				"Label": "Destination",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 10e-6,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 1,
+				"Number of Subvolumes Along Y": 1,
+				"Number of Subvolumes Along Z": 1
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Molecule source. Release molecules at start.",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0, 1e-6, 0, 1e-6, 0, 1e-6],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 1000,
+				"Is Molecule Type Released?": [true, false]
+		},
+		{
+				"Notes": "Destination observer",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [10e-6, 11e-6, 0e-6, 1e-6, 0e-6, 1e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Source observer",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0e-6, 1e-6, 0e-6, 1e-6, 0e-6, 1e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, false],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "System observer (to show conservation of molecules)",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0e-6, 11e-6, 0e-6, 1e-6, 0e-6, 1e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		}
+		]		
+	}
+}

@@ -1,0 +1,452 @@
+//
+// The AcCoRD Simulator
+// (Actor-based Communication via Reaction-Diffusion)
+//
+// Copyright 2016 Adam Noel. All rights reserved.
+// 
+// For license details, read LICENSE.txt in the root AcCoRD directory
+// For user documentation, read README.txt in the root AcCoRD directory
+//
+// HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
+// Last revised for AcCoRD v0.4
+//
+// Revision history:
+//
+// Revision v0.4
+// - added parameters for sphere regions and actors
+// - added ability to choose what regions a chemical reaction can occur in
+//
+// Revision v0.3.1.1
+// - added comment that a child region must be fully defined within the boundary of its parent
+//
+// Revision v0.3.1
+// - header added
+// - added "Warning Override" member to main object
+//
+// WARNING: THIS IS NOT A REAL CONFIGURATION FILE!!!
+// THE "COMMENTS" IN THIS FILE MAKE IT INVALID JSON!
+// BUT ... THIS FILE DESCRIBES HOW TO WRITE A VALID CONFIGURATION FILE
+//
+// With that out of the way, welcome to this "tutorial" for preparing proper
+// AcCoRD configuration files.
+//
+// This document is current as of v0.4 (2016-02-12).
+//
+// Please note that valid configuration files cannot have these comments
+// preceded by "//". If you remove these comments and place a copy of
+// this file in the "config" folder, then you can run it in AcCoRD.
+// However, this should be unnecessary since the config folder includes
+// a number of sample valid configuration files.
+// Please refer to README.txt for instructions on running a simulation.
+//
+// AcCoRD input and summary output files use the JSON format. JSON stands for
+// JavaScript Object Notation and it is defined at json.org.
+// JSON is a way of organizing data into an object.
+//
+// AcCoRD requires that names (i.e., the words between double quotes
+// and before a colon, e.g., "Output Filename") MUST be written EXACTLY as they are
+// in this file. These names are hard-coded into AcCoRD.
+//
+// Except where noted, ALL names are mandatory in a configuration file, though some of them may have
+// an empty value associated with them. In particular, "Chemical Reaction Specification"
+// is an empty array if there are no chemical reactions to simulate.
+//
+// The ORDER of name/value pairs does not matter for it to be parsed correctly,
+// but the NESTING does. So, for example, you can swap the order of "Output Filename"
+// and "Simulation Control", but "Number of Repeats" must be defined inside the
+// "Simulation Control" object.
+//
+// An object is encapsulated inside curly braces {}. A configuration file has one top-level
+// object and a number of nested objects. An array is encapsulated inside square brackets [].
+// The items in an object are name/value pairs, but the items in an array do not have
+// associated names. Items are separated with commas.
+//
+// Extra white spaces are ignored.
+//
+// Read below to see a description of the individual parameters
+
+{
+	"Notes": "This field replaces commenting.",
+	// The "Notes" item is a way to include comments.
+	// Its contents are ignored by parsing.
+	// In fact, you can add any other additional fields to a configuration file
+	// and they will be ignored as long as they are formatted correctly
+												
+	"Output Filename": "sample.txt", 
+	// the name of the simulation output file that will
+	// be placed in the "results" directory with "_SEEDXX" appended before
+	// .txt, where XX is the random number seed for the simulation. Simulation
+	// meta-data and other information for reading the
+	// output file will be written to summary_sample_output_SEEDXX.txt
+											
+	"Warning Override": false,
+	// By default, a simulation will pause if it encounters
+	// any warnings while trying to read the configuration file.
+	// To ignore any warnings and continue the simulation automatically,
+	// then set this parameter to true.
+	
+	"Simulation Control": {
+	// The primary top-level simulation parameters
+	
+		"Number of Repeats": 2, 	
+		// The number of independent realizations/runs
+		// to execute in the simulation
+									
+		"Final Simulation Time": 1e-2,
+		// Simulation will stop once this time is surpassed
+		// Units are seconds.
+		
+		"Global Microscopic Time Step": 1e-4,
+		// All microscopic regions use a single common time step (for now)
+		// Units are seconds.
+		
+		"Random Number Seed": 1,
+		// Seed value for the random number generator (RNG). Will be converted to an integer.
+		// This seed is over-written if the user defines one at runtime!
+		// AcCoRD uses the Mersenne twister RNG; this seed number is added to the twister's
+		// default seed.
+		// Generally, a seed value initializes a RNG. Running the same
+		// simulation twice with the same random number seed will produce identical results
+		// in the corresponding realizations (i.e., the first realization in each output file
+		// will be the same, and the second realization in each output file will be the same, etc).
+		// AcCoRD uses explicit seeds (instead of random seeds) for 2 reasons:
+		// 1) all results are re-producable
+		// 2) by specifying different seeds for different executions of the same simulation,
+		// the simulations can be executed on different machines and the output files aggregated
+		// without needing to worry about the simulations having the same output.
+		
+		"Max Number of Progress Updates": 100
+		// Control the maximum number of updates
+		// to display in the console. There will be no more
+		// than one update per realization
+	},
+	"Chemical Properties": {
+	// Describes the molecules in the system and how they interact
+	
+		"Number of Molecule Types": 1,
+		// Number of distinct types of molecules. A reaction intermediate would count as one new type
+		
+		"Diffusion Coefficients": [1e-9],
+		// An array of length "Number of Molecule Types". Units are metre^2/second
+		
+		"Chemical Reaction Specification": [
+		// Array of chemical reactions in the environment. No reactions are required
+			{									
+			// First (and only) chemical reaction. This one is actually meaningless because no
+			// reactants or products are defined. See sample configurations for actual reactions
+			
+				"Notes": "",
+				"Default Everywhere?": true,
+				// A chemical reaction can by default take place everywhere or nowhere.
+				// Exceptions to this general setting are defined by "Exception Regions"
+												
+				"Exception Regions": [],
+				// An array of strings of region "Label"s that are exceptions to the
+				// setting of "Default Everywhere?"
+				
+				"Reactants": [0],
+				// An array of length "Number of Molecule Types". Indicates how many of each type of molecule are
+				// reactants. THERE MUST BE NO MORE THAN TWO REACTANTS, AND NO MORE THAN ONE
+				// REACTANT IF THE REACTION CAN TAKE PLACE IN A MICROSCOPIC REGION
+												
+				"Products": [0],
+				// An array of length "Number of Molecule Types". Indicates how many of each
+				// type of molecule are products. There is no limit to the number of products.
+												
+				"Reaction Rate": 1
+				// Chemical reaction rate. Units depend on the order of the reaction.
+			}
+		]
+	},
+	"Environment":	{
+	// Describes the physical dimensions of the simulation space and the actors inside it
+	
+		"Number of Dimensions": 3,
+		// Number of physical dimensions. Must be 3 at this time
+		
+		"Subvolume Base Size": 1e-6,
+		// Environment is defined by a set of regions. Each region, whether microscopic
+		// or mesoscopic, is measured by number of square/cubic subvolumes in the region. This
+		// base size is used to scale ALL Rectangular subvolumes in the environment (every subvolume
+		// in a rectangular region has a size that is an integer multiple of the base size)
+		// Units are meters.
+										
+		"Region Specification": [
+		// Array of regions in the environment. There must be at least ONE region
+			{
+			// Object describing the first region
+			
+				"Notes": "",
+				// Another "Notes" item that is ignored
+				// In fact, you can add any other additional fields to a configuration file
+				// and they will be ignored as long as they are formatted correctly
+			
+				"Label": "A",
+				// The region's label is an optional ID that is only needed
+				// if another region is nested within this region and so is
+				// its parent
+			
+				"Parent label": "",
+				// The ID of this region's parent region, indicating
+				// that this region is placed inside that parent. It is
+				// possible to have multiple levels of nesting, in which
+				// case each nested region must indicate the region directly
+				// "above" it as its own parent. A child region must be fully
+				// defined within the boundary of its parent (i.e., no protrusions
+				// are permitted).
+				
+				"Shape": "Rectangular Box",
+				// Shape of the region. CURRENTLY "Rectangular Box" and "Sphere" ARE SUPPORTED
+				
+				"Anchor X Coordinate": 0,									
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				// The anchor coordinates define
+				// the relative position of the region in GLOBAL space (and NOT relative to its
+				// parent if it has one).
+				// Rectangular regions are defined as rectangular boxes whose faces are parallel to the
+				// global coordinate axes.
+				// The anchor of a rectangular box region is the "minimum coordinate" of the
+				// region, i.e., (xmin, ymin, zmin). Consider the value of
+				// "Subvolume Base Size" when setting the anchor points of rectangular box regions.
+				// The anchor of a sphere region is its center.
+				// All units are meters.
+								
+				//
+				//!!!!  The remaining parameters apply to Rectangular Box regions ONLY !!!!
+				// AcCoRD will produce warnings if any of these parameters are defined for a
+				// spherical region
+				//
+				
+				"Integer Subvolume Size": 2,
+				// The size of the side of one subvolume in this region, which is scaled by
+				// "Subvolume Base Size"
+												
+				"Is Region Microscopic?": false,
+				// If true, all molecules in the region are individually tracked.
+				// If false, then the region is mesoscopic and the subvolumes are used as
+				// virtual containers.
+				// Sphere regions do not need this defined because they are always microscopic.
+				// Note that subvolumes in mesoscopic regions that are adjacent to microscopic
+				// regions must share the entire subvolume face with the adjacent microscopic
+				// region. This is due to how adjacency is detected and how molecules are placed
+				// when leaving the mesoscopic regime.
+													
+				"Number of Subvolumes Along X": 10,
+				"Number of Subvolumes Along Y": 5,
+				"Number of Subvolumes Along Z": 5
+				// Size of the region along each axis as measured by the subvolumes in
+				// that region. Sphere regions do not need these defined because they
+				// always have one subvolume.
+			},
+			{							
+			// Object describing the second region. Only one region is necessary
+				"Notes": "",			
+				"Label": "B",
+				// Optional ID			
+				"Parent label": "",
+				
+				"Anchor X Coordinate": 20e-6,
+				// Note that here the second region is placed so that it is to the "right" of region 1.
+				
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 10,
+				"Number of Subvolumes Along Y": 10,
+				"Number of Subvolumes Along Z": 10,
+			},
+			{							
+			// Object describing the third region. Only one region is necessary
+			// This region is spherical in order to show the different properties that are used
+				"Notes": "",			
+				"Label": "C",
+				// Optional ID			
+				"Parent label": "B",
+				
+				"Anchor X Coordinate": 25e-6,				
+				"Anchor Y Coordinate": 5e-6,
+				"Anchor Z Coordinate": 5e-6,
+				
+							
+				//
+				//!!!!  The remaining parameters apply to Sphere regions ONLY !!!!
+				// AcCoRD will produce warnings if any of these parameters are defined for a
+				// rectangular box region
+				//
+				
+				"Radius": 4e-6
+				// Radius of the sphere. This region is inside of a rectuangular box region
+				// so its surface must have a clearance equal to the subvolume size of the
+				// rectangular region.
+				// Generally, a sphere region can be infinite in size by specifying a radius
+				// large enough to overflow a double (e.g., 1e9999 will work)
+				// Units are meters
+			}
+		],
+		"Actor Specification": [
+		// Array of actors in the environment. No actors are required, but not much will happen if there
+		// aren't any (chemical reactions can still generate molecules that can then diffuse
+		// and react). Active actors are used to "manually" add molecules, and passive actors are needed
+		// to observe molecules for simulation output.
+			{
+			// Object describing the first actor
+			
+				"Notes": "",
+				"Shape": "Rectangular Box",
+				// Shape of the actor. CURRENTLY "Rectangular Box" and "Sphere" ARE SUPPORTED
+				
+				"Outer Boundary": [0, 20e-6, 0, 10e-6, 0, 10e-6],
+				// The coordinates of the actor. For a "Rectangular Box" actor, the format is
+				// [x min, x max, y min, y max, z min, z max].
+				// For a "Sphere" actor, the format is [x center, y center, z center, radius].
+				// Consider the size and location of the regions carefully when defining where
+				// to place actors. The outer boundary of a spherical actor can only intersect
+				// microscopic regions but no region boundaries. Mesoscopic regions can be inside
+				// of a spherical actor only if they are fully within the actor.
+				// Spherical actors can have an "infinite" radius by setting a value large enough
+				// to overflow double (e.g., 1e9999 works)
+				// This actor fully overlaps region 1.
+				// Active actors should be defined in space where there are regions
+				// Passive actors can be defined anywhere.
+				// Actors can overlap with any number of regions and also with each other
+				// Units are meters.
+														
+				"Is Actor Active?": true,
+				// If true, actor releases molecules. If false, actor counts them.
+				
+				"Start Time": 0,
+				// Time of actor's first action.
+				// There should be a slight "offset" for passive actors that are synched
+				// to the actions of active actors. If molecules are being both added and
+				// counted at the same instant, no guarantee is made about which order the
+				// actions will occur
+				// Units are seconds.
+															
+				"Is There Max Number of Actions?": false,
+				// A maximum number of actions can be called to "turn of" an actor before the
+				// final time is reached.
+				
+				"Max Number of Actions": 100,
+				"Is Actor Independent?": true,
+				// If true, actions are started at pre-defined intervals.
+				// CURRENTLY IGNORED. DEPENDENT ACTORS ARE NOT YET IMPLEMENTED,
+				// SO ALL ACTORS ARE INDEPENDENT
+															
+				"Action Interval": 5e-3,
+				// The action interval defines how often a new action is initiated by the actor
+				// If the actor is active, then it might begin a new release of molecules.
+				// If the actor is passive, then molecules within the actor will be immediately
+				// counted.
+				// Units are seconds.
+				
+				//
+				//!!!!  The remaining parameters apply to ACTIVE actors ONLY !!!!
+				//
+				
+				"Random Number of Molecules?": false,
+				// If true, the actual number of molecules released will be random but will have
+				// expected value determined from "Modulation Strength"
+				// If false, a deterministic number of molecules are released for a given symbol.
+															
+				"Random Molecule Release Times?": false,
+				// If true, AND if "Random Number of Molecules?" is true, then the individual
+				// molecule release times are a random process.
+				// If false, then molecules are released uniformly over the release interval in slots.
+															
+				"Release Interval": 0,
+				// Time over which one action's worth of molecules are released. Analogous to pulse width.
+				// Units are seconds.
+				
+				"Slot Interval": 0,
+				// If "Random Molecule Release Times?" is false, then molecules of a single pulse 
+				// are released at this interval
+				// Units are seconds.
+															
+				"Bits Random?": true,
+				// If true, then the underlying actor bit stream can have 1s or 0s.
+				// If false, then bit stream must be defined.
+				// CURRENTLY IGNORED (VALUE IS ALWAYS SET TO TRUE).
+															
+				"Probability of Bit 1": 1,
+				// If "Bits Random?" is true, then this is the probability that a given bit will be 1.
+				
+				"Modulation Scheme": "CSK",
+				// The actor's modulation scheme. CURRENTLY MUST BE "CSK", for concentration shift keying.
+				
+				"Modulation Bits": 1,
+				// Integer number of bits in one symbol
+				
+				"Modulation Strength": 10,
+				// Used to scale number of molecules released. Not necessarily the number of molecules per
+				// bit. If modulation is "CSK" and "Release Interval" is greater than zero, the modulation
+				// strength defines the release rate (constant number of molecules per slot interval if "Random
+				// Molecule Release Times?" is false, and a chemical generation rate if "Random Molecule
+				// Release Times?" is true). For example, if modulation is "CSK", "Modulation Bits" is 2, and
+				// "Random Molecule Release Times?" is false, then the actor will release
+				// val*"Modulation Strength" molecules in each slot where, val is the current symbol (a random
+				// integer between 0 and 3).
+				// If "Random Molecule Release Times?" is
+				// true and modulation is "CSK", then this defines the number of molecules released per second
+				// if there is one modulation bit and the current bit is 1.
+															
+				"Is Molecule Type Released?": [true],
+				// An array of length "Number of Molecule Types". Used to indicate which types of
+				// molecules are released by this actor.
+		},
+			{
+			// Object describing the second actor
+			// It is passive and overlaps region 2.
+			
+				"Notes": "",
+				"Shape": "Rectangle",	
+				"Outer Boundary": [20e-6, 30e-6, 0, 10e-6, 0, 10e-6], 														
+				"Is Actor Active?": false,				
+				"Start Time": 1e-6,																		
+				"Is There Max Number of Actions?": false,	
+				"Max Number of Actions": 100,
+				"Is Actor Independent?": true,				
+				"Action Interval": 1e-3,
+				
+				//
+				//!!!!  The remaining parameters apply to PASSIVE actors ONLY !!!!
+				//
+				"Is Actor Activity Recorded?": true,
+				// If true, actor data will be written to the output file.
+				// NOTE: CURRENTLY THE BIT STREAM OF ACTIVE ACTORS WILL ALWAYS BE WRITTEN,
+				// OTHERWISE THIS WOULD BE A COMMON PARAMETER FOR ALL ACTORS
+															
+				"Is Time Recorded with Activity?": false,
+				// If true, there will be an array of observation times written with each realization
+				
+				"Is Molecule Type Observed?": [true],
+				// An array of length "Number of Molecule Types". Used to indicate which types of
+				// molecules are counted by this actor.
+																														
+				"Is Molecule Position Observed?": [true]
+				// An array of length "Number of Molecule Types". Used to indicate whether
+				// the location of each individual molecule is written to output. Only applies
+				// if "Is Molecule Type Observed?" for the same molecule type is also true.
+		},
+			{
+			// Object describing the third actor
+			// It is passive and overlaps region 1.
+			
+				"Notes": "",
+				"Shape": "Rectangle",	
+				"Outer Boundary": [0, 20e-6, 0, 10e-6, 0, 10e-6], 														
+				"Is Actor Active?": false,				
+				"Start Time": 1e-6,																
+				"Is There Max Number of Actions?": false,	
+				"Max Number of Actions": 100,
+				"Is Actor Independent?": true,				
+				"Action Interval": 1e-3,
+				"Is Actor Activity Recorded?": true,		
+				"Is Time Recorded with Activity?": true,	
+				"Is Molecule Type Observed?": [true],																
+				"Is Molecule Position Observed?": [false]
+		}
+		]		
+	}
+}

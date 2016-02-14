@@ -1,0 +1,336 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration demonstrates the different ways that rectangular and
+	spherical regions can be defined relative to each other. It is an arbitrarily complex
+	toy example with many nested regions. Molecules are uniformly distributed and freely diffuse
+	throughout, so the average observation at each passive actor should remain constant.
+	There are 2 molecule types and their behavior should be independent.
+	In this version, all regions are microscopic.",
+	"Output Filename": "accord_sample_all_shapes_micro",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 1,
+		"Global Microscopic Time Step": 1e-3,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 2,
+		"Diffusion Coefficients": [2e-9, 5e-9],
+		"Chemical Reaction Specification": []
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "System parent region. Total volume 2.5e5 cubic microns",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 5,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 20,
+				"Number of Subvolumes Along Y": 10,
+				"Number of Subvolumes Along Z": 10
+			},
+			{
+				"Notes": "1st child of system parent.
+					Volume 73500 cubic microns (29.4% of total)",
+				"Label": "B",
+				"Parent Label": "A",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 10e-6,
+				"Anchor Y Coordinate": 10e-6,
+				"Anchor Z Coordinate": 10e-6,
+				"Integer Subvolume Size": 5,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 12,
+				"Number of Subvolumes Along Y": 7,
+				"Number of Subvolumes Along Z": 7
+			},
+			{
+				"Notes": "2nd child of system parent. Adjacent to 1st child.
+					Volume 18000 cubic microns (7.2% of total)",
+				"Label": "C",
+				"Parent Label": "A",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 70e-6,
+				"Anchor Y Coordinate": 10e-6,
+				"Anchor Z Coordinate": 10e-6,
+				"Integer Subvolume Size": 2,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 10,
+				"Number of Subvolumes Along Y": 15,
+				"Number of Subvolumes Along Z": 15
+			},
+			{
+				"Notes": "Neighbor to parent's neighbor.
+					Volume 1000 cubic microns (0.4% of total)",
+				"Label": "BChild1",
+				"Parent Label": "B",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 60e-6,
+				"Anchor Y Coordinate": 15e-6,
+				"Anchor Z Coordinate": 15e-6,
+				"Integer Subvolume Size": 2,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 5,
+				"Number of Subvolumes Along Y": 5,
+				"Number of Subvolumes Along Z": 5
+			},
+			{
+				"Notes": "Neighbor to parent's neighbor. Uses
+						bigger subvolumes than BChild1. 
+						Volume 1000 cubic microns (0.4% of total)",
+				"Label": "BChild2",
+				"Parent Label": "B",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 60e-6,
+				"Anchor Y Coordinate": 30e-6,
+				"Anchor Z Coordinate": 30e-6,
+				"Integer Subvolume Size": 5,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 2,
+				"Number of Subvolumes Along Y": 2,
+				"Number of Subvolumes Along Z": 2
+			},
+			{
+				"Notes": "Spherical region nested in Rectangular region. Center is deliberately off-grid
+				to show that spherical regions do not need to be flush with the coordinates used for the rectangular regions.
+				Volume 8000 cubic microns (3.2% of total)",
+				"Label": "D",
+				"Parent Label": "B",
+				"Shape": "Sphere",
+				"Anchor X Coordinate": 30.1e-6,
+				"Anchor Y Coordinate": 27.55e-6,
+				"Anchor Z Coordinate": 27.5e-6,
+				"Radius": 12.407e-6
+			},
+			{
+				"Notes": "This region has a spherical parent.
+					Volume 384 cubic microns (0.15% of total)",
+				"Label": "DChild1",
+				"Parent Label": "D",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 23.6e-6,
+				"Anchor Y Coordinate": 21.1e-6,
+				"Anchor Z Coordinate": 21.2e-6,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 8,
+				"Number of Subvolumes Along Y": 6,
+				"Number of Subvolumes Along Z": 8
+			},
+			{
+				"Notes": "This region has a spherical parent.
+					Volume 192 cubic microns (0.0768% of total)",
+				"Label": "DChild2",
+				"Parent Label": "D",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 23.6e-6,
+				"Anchor Y Coordinate": 27.1e-6,
+				"Anchor Z Coordinate": 21.2e-6,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 8,
+				"Number of Subvolumes Along Y": 3,
+				"Number of Subvolumes Along Z": 8
+			},
+			{
+				"Notes": "Spherical region with a spherical parent.
+				Volume 300 cubic microns (0.12% of total)",
+				"Label": "DChild3",
+				"Parent Label": "D",
+				"Shape": "Sphere",
+				"Anchor X Coordinate": 36.9e-6,
+				"Anchor Y Coordinate": 27.5e-6,
+				"Anchor Z Coordinate": 27.3e-6,
+				"Radius": 4.1528e-6
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Observer of whole system",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region B and its children",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [10e-6, 70e-6, 10e-6, 45e-6, 10e-6, 45e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region C and its children",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [70e-6, 90e-6, 10e-6, 40e-6, 10e-6, 40e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region BChild1",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [60e-6, 70e-6, 15e-6, 25e-6, 15e-6, 25e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region BChild2",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [60e-6, 70e-6, 30e-6, 40e-6, 30e-6, 40e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region D and its children",
+				"Shape": "Sphere",
+				"Outer Boundary": [30.1e-6, 27.55e-6, 27.5e-6, 12.407e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region DChild1",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [23.6e-6, 31.6e-6, 21.1e-6, 27.1e-6, 21.2e-6, 29.2e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region DChild2",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [23.6e-6, 31.6e-6, 27.1e-6, 30.1e-6, 21.2e-6, 29.2e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of region DChild3",
+				"Shape": "Sphere",
+				"Outer Boundary": [36.9e-6, 27.5e-6, 27.3e-6, 4.1528e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Transmitter 1. Releases 1 molecule per 10 cubic microns",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1000000,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 25000,
+				"Is Molecule Type Released?": [true, false]
+		},
+		{
+				"Notes": "Transmitter 2. Releases 10000 molecules (i.e., 100 for every 1% of system volume).",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1000000,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 10000,
+				"Is Molecule Type Released?": [false, true]
+		}
+		]		
+	}
+}

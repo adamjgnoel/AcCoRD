@@ -1,0 +1,129 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration demonstrates the classical point diffusion scenario,
+		where molecules are created at a point and then diffuse into unbounded space. A
+		single spherical region is used because spherical regions can be unbounded by setting
+		a very large radius, i.e., 1e9999 here. There are four passive actors placed to watch
+		the diffusion wave: a sphere centered at the source, two actors (one sphere and one
+		rectangle) placed some distance away, and one infinitely large actor to show that all of
+		the molecules remain in the system. The point source is not a true point but is defined
+		as a very small box. Note that the global subvolume base size is set to a correspondingly
+		low value so that the placement of the source is detected. This simulation with 100 repeats
+		should take less than a minute to execute on a personal computer.",
+	"Output Filename": "accord_sample_point_diffusion",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 10,
+		"Final Simulation Time": 1e-2,
+		"Global Microscopic Time Step": 1e-4,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-9],
+		"Chemical Reaction Specification": []
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-12,
+		"Region Specification": [
+			{
+				"Notes": "Single spherical region with infinite radius. If any other region were
+					added here then it should be defined as a child of this region.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Sphere",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Radius": 1e9999
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Point Transmitter at origin",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 10000,
+				"Is Molecule Type Released?": [true]
+		},
+		{
+				"Notes": "Observer at molecule source. Demonstrates that molecules quickly
+					leave the source",
+				"Shape": "Sphere",
+				"Outer Boundary": [0, 0, 0, 1e-7],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		},
+		{
+				"Notes": "Spherical observer. Radius chosen so that volume is the same as that
+					of the box observer",
+				"Shape": "Sphere",
+				"Outer Boundary": [0, 2e-6, 0, 0.3102e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		},
+		{
+				"Notes": "Box observer",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [1.75e-6, 2.25e-6, -0.25e-6, 0.25e-6, -0.25e-6, 0.25e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		},
+		{
+				"Notes": "Global observer.",
+				"Shape": "Sphere",
+				"Outer Boundary": [0, 0, 0, 1e9999],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		}
+		]		
+	}
+}

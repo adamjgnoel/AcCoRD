@@ -1,0 +1,127 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration demonstrates Michaelis-Menten chemical kinetics in the mesoscopic
+		regime. We define a single subvolume so there is no diffusion. There are active actors
+		to initialize the substrate and enzyme molecules and then all molecules are observed.
+		This file has 2nd order reactions so it is not possible to run in the microscopic regime.
+		This simulation with 100 repeats should take less than 1 second to
+		execute on a personal computer.",
+	"Output Filename": "accord_sample_reactor_2nd_order",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 100,
+		"Final Simulation Time": 20,
+		"Global Microscopic Time Step": 1,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 4,
+		"Diffusion Coefficients": [0, 0, 0, 0],
+		"Chemical Reaction Specification": [
+			{							
+				"Notes": "Enzyme binding.",
+				"Default Everywhere?": true,
+				"Exception Regions": [],
+				"Reactants": [1, 1, 0, 0],
+				"Products": [0, 0, 1, 0],
+				"Reaction Rate": 1e-14
+			},
+			{							
+				"Notes": "Enzyme unbinding.",
+				"Default Everywhere?": true,
+				"Exception Regions": [],
+				"Reactants": [0, 0, 1, 0],
+				"Products": [1, 1, 0, 0],
+				"Reaction Rate": 0.3			
+			},
+			{							
+				"Notes": "Degradation",
+				"Default Everywhere?": true,
+				"Exception Regions": [],
+				"Reactants": [0, 0, 1, 0],
+				"Products": [0, 1, 0, 1],
+				"Reaction Rate": 0.15			
+			}
+		]
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "Single mesoscopic region with 1 subvolume.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 100,
+				"Is Region Microscopic?": false,
+				"Number of Subvolumes Along X": 1,
+				"Number of Subvolumes Along Y": 1,
+				"Number of Subvolumes Along Z": 1
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Initialization of molecule 0",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 100,
+				"Is Molecule Type Released?": [true, false, false, false]
+		},
+		{
+				"Notes": "Initialization of molecule 1",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 100,
+				"Is Molecule Type Released?": [false, true, false, false]
+		},
+		{
+				"Notes": "Observer",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 0.1,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, true, true, true],
+				"Is Molecule Position Observed?": [false, false, false, false]
+		}
+		]		
+	}
+}

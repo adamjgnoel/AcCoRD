@@ -1,0 +1,113 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration consider a simple communications scenario, where a point
+		transmitter releases finite-width pulses of molecules based on a modulated binary sequence.
+		This configuration was arranged to demonstrate the following functionality:
+		- CSK transmission with more than one bit per symbol
+		- transmission of modulated signal over a finite pulse width
+		- passive receiver (no chemical reaction)		
+		One repeat of this simulation should take less than 10 seconds to execute on a personal computer.",
+	"Output Filename": "accord_sample_communication",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 0.1,
+		"Global Microscopic Time Step": 1e-4,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-9],
+		"Chemical Reaction Specification": [
+		]
+	},
+	"Environment":	{
+		"Number of Dimensions": 3,
+		"Subvolume Base Size": 1e-12,
+		"Region Specification": [
+			{
+				"Notes": "Single spherical region with infinite radius. If any other region were
+					added here then it should be defined as a child of this region.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Sphere",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Radius": 1e9999
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Point Transmitter at origin with 10ms symbol length. Note that the slot
+				interval is actually smaller than the microscopic time step, but that is fine because
+				the simulator accommodates smaller times when new molecules are created.",
+				"Shape": "Rectangular Box",
+				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 10e-3,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 1e-3,
+				"Slot Interval": 0.5e-4,
+				"Bits Random?": true,
+				"Probability of Bit 1": 0.5,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 2,
+				"Modulation Strength": 50,
+				"Is Molecule Type Released?": [true]
+		},
+		{
+				"Notes": "Observer at molecule source. Demonstrates that molecules quickly
+					leave the source",
+				"Shape": "Sphere",
+				"Outer Boundary": [0, 0, 0, 1e-7],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		},
+		{
+				"Notes": "Spherical observer.",
+				"Shape": "Sphere",
+				"Outer Boundary": [0, 2e-6, 0, 0.5e-6],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		},
+		{
+				"Notes": "Global observer.",
+				"Shape": "Sphere",
+				"Outer Boundary": [0, 0, 0, 1e9999],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Max Number of Actions": 0,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [false]
+		}
+		]		
+	}
+}

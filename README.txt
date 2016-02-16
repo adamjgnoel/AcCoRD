@@ -70,7 +70,7 @@ A complete version history can be found in CHANGELOG.txt
 3. BASIC USAGE
 --------------
 
-AcCoRD is run from the command line. You must be in one of the AcCoRD subdirectories in order for it to run properly, because of the use of static relative paths.
+AcCoRD is run from the command line. You must be in one of the AcCoRD subdirectories in order for it to run properly, because of the use of static relative paths. The configuration file should be in the "config" subdirectory, and the "results" subdirectory should exist for the output to be created.
 
 AcCoRD takes 2 additional (optional) arguments when called:
 1) Configuration filename. Config file must be in the "config" folder. There are a number of sample configuration files provided to demonstrate AcCoRD functionality.

@@ -48,7 +48,7 @@ You may need to change the file permissions to execute the build script in Linux
 
 Example calls for compiling the optimized version:
 From Windows command line: build_accord_opt_win.bat
-From Ubuntu/Debian shell: ./build_accord_opt_dub
+From shell in Debian/Ubuntu: ./build_accord_opt_dub
 
 
 2. LATEST VERSION

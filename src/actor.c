@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * actor.c - operations on array of actors and its elements
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -44,8 +47,8 @@ void allocateActorCommonArray3D(const short NUM_ACTORS,
 		*actorCommonArray = malloc(NUM_ACTORS*sizeof(struct actorStruct3D));
 			
 		if(*actorCommonArray == NULL){
-			puts("Memory could not be allocated to store array of actor structures");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for array of actor structures.\n");
+			exit(EXIT_FAILURE);
 		}		
 	} else
 	{
@@ -127,8 +130,9 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 					regionArray[curRegion].boundary, 0.))
 				{
 					// Invalid actor for region
-					puts("Error: Round Actor placed inside a mesoscopic Region");
-					exit(3);	
+					fprintf(stderr, "ERROR: Round actor %u placed inside mesoscopic region %u.\n",
+						curActor, curRegion);
+					exit(EXIT_FAILURE);	
 				}
 				actorCommonArray[curActor].numRegion++;
 			}		
@@ -136,8 +140,8 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 		
 		if(actorCommonArray[curActor].numRegion == 0)
 		{
-			fprintf(stderr,"\nError! Actor %d placement is completely outside of simulation space.\n", curActor);
-			exit(3);
+			fprintf(stderr,"ERROR: Actor %u placement is completely outside of simulation space.\n", curActor);
+			exit(EXIT_FAILURE);
 		}
 		
 		// Allocate structure memory for current actor
@@ -165,8 +169,8 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 			|| actorCommonArray[curActor].regionInterArea == NULL
 			|| actorCommonArray[curActor].cumFracActorInRegion == NULL
 			|| actorCommonArray[curActor].subID == NULL){
-			fprintf(stderr,"\nError! Memory could not be allocated for structure members of actor %d.\n", curActor);
-			exit(3);
+			fprintf(stderr,"ERROR: Memory allocation for structure members of actor %u.\n", curActor);
+			exit(EXIT_FAILURE);
 		}
 		
 		// Determine IDs of regions within actor space
@@ -295,8 +299,8 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 						malloc(actorCommonArray[curActor].numSub[curInterRegion]
 							*sizeof(uint32_t));
 					if(actorCommonArray[curActor].subID[curInterRegion] == NULL){
-						fprintf(stderr,"\nError! Memory could not be allocated for structure members of actor %d.\n", curActor);
-						exit(3);
+						fprintf(stderr,"ERROR: Memory allocation for structure members of actor %u.\n", curActor);
+						exit(EXIT_FAILURE);
 					}
 				}
 				
@@ -368,8 +372,8 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 	*actorRecordID =
 		malloc((*numActorRecord)*sizeof(short));
 	if(*numActorRecord > 0 && *actorRecordID == NULL){
-		puts("Memory could not be allocated to store array of actor structures");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for IDs of actors that will be recorded in the output file.\n");
+		exit(EXIT_FAILURE);
 	} else{ // There is at least one (passive) actor recording observations
 		curActorRecord = 0;
 		for(curActor = 0; curActor < NUM_ACTORS; curActor++)
@@ -392,8 +396,8 @@ void allocateActorActivePassiveArray3D(const short NUM_ACTORS_ACTIVE,
 			malloc(NUM_ACTORS_ACTIVE*sizeof(struct actorActiveStruct3D));
 			
 		if(*actorActiveArray == NULL){
-			puts("Memory could not be allocated to store array of actor structures");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for array of active actor structures.\n");
+			exit(EXIT_FAILURE);
 		}		
 	} else
 	{
@@ -406,8 +410,8 @@ void allocateActorActivePassiveArray3D(const short NUM_ACTORS_ACTIVE,
 			malloc(NUM_ACTORS_PASSIVE*sizeof(struct actorPassiveStruct3D));
 			
 		if(*actorPassiveArray == NULL){
-			puts("Memory could not be allocated to store array of actor structures");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for array of passive actor structures.\n");
+			exit(EXIT_FAILURE);
 		}		
 	} else
 	{
@@ -456,8 +460,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 		initializeListData(&actorActiveArray[curActive].binaryData);
 		
 		if(actorActiveArray[curActive].cumFracActorInSub == NULL){
-			fprintf(stderr,"\nError! Memory could not be allocated for structure members of active actor %d.\n", curActive);
-			exit(3);
+			fprintf(stderr,"ERROR: Memory allocation for structure members of active actor %u.\n", curActive);
+			exit(EXIT_FAILURE);
 		}
 		
 		actorActiveArray[curActive].alphabetSize = 1;
@@ -493,8 +497,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 		
 			if(actorActiveArray[curActive].cumFracActorInSub[curInterRegion]
 				== NULL){
-				fprintf(stderr,"\nError! Memory could not be allocated for structure members of active actor %d.\n", curActive);
-				exit(3);
+				fprintf(stderr,"ERROR: Memory allocation for structure members of active actor %u.\n", curActive);
+				exit(EXIT_FAILURE);
 			}
 			
 			for(curInterSub = 0;
@@ -581,8 +585,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 			|| actorPassiveArray[curPassive].molRecordPosID == NULL
 			|| actorPassiveArray[curPassive].curMolObs == NULL
 			|| actorPassiveArray[curPassive].subInterBound == NULL){
-			fprintf(stderr,"\nError! Memory could not be allocated for structure members of active actor %d.\n", curPassive);
-			exit(3);
+			fprintf(stderr,"ERROR: Memory allocation for structure members of active actor %u.\n", curPassive);
+			exit(EXIT_FAILURE);
 		}
 		
 		for(curInterRegion = 0;
@@ -611,8 +615,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 						*sizeof(double [6]));
 					if(actorPassiveArray[curPassive].subInterBound[curInterRegion]
 						== NULL){
-						fprintf(stderr,"\nError! Memory could not be allocated for structure members of passive actor %d.\n", curPassive);
-						exit(3);
+						fprintf(stderr,"ERROR: Memory allocation for structure members of passive actor %u.\n", curPassive);
+						exit(EXIT_FAILURE);
 					}
 					break;
 				}
@@ -624,8 +628,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 		
 			if(actorPassiveArray[curPassive].fracSubInActor[curInterRegion]
 				== NULL){
-				fprintf(stderr,"\nError! Memory could not be allocated for structure members of passive actor %d.\n", curPassive);
-				exit(3);
+				fprintf(stderr,"ERROR: Memory allocation for structure members of passive actor %d.\n", curPassive);
+				exit(EXIT_FAILURE);
 			}
 			
 			for(curInterSub = 0;
@@ -883,15 +887,15 @@ void newRelease3D(const struct actorStruct3D * actorCommon,
 			{ // Bit is "1"
 				if(!addData(&newData, true))
 				{
-					fprintf(stderr,"\nError! Memory could not be allocated for new bit.\n");
-					exit(3);
+					fprintf(stderr,"ERROR: Memory allocation for new bit.\n");
+					exit(EXIT_FAILURE);
 				}
 			} else
 			{ // Bit is "0"
 				if(!addData(&newData, false))
 				{
-					fprintf(stderr,"\nError! Memory could not be allocated for new bit.\n");
-					exit(3);
+					fprintf(stderr,"ERROR: Memory allocation for new bit.\n");
+					exit(EXIT_FAILURE);
 				}
 			}
 		} else
@@ -924,9 +928,9 @@ void newRelease3D(const struct actorStruct3D * actorCommon,
 			break;
 		default:
 			fprintf(stderr,
-				"\nModulation scheme %d invalid.\n",
+				"ERROR: Modulation scheme %d invalid.\n",
 				actorCommon->spec.modScheme);
-			exit(3);
+			exit(EXIT_FAILURE);
 	}
 	
 	// Append release information to list of current releases
@@ -935,8 +939,8 @@ void newRelease3D(const struct actorStruct3D * actorCommon,
 		if(!addRelease(&actorActive->releaseList, strength, molType,
 			curTime + startTime, curTime + endTime, frequency))
 		{
-			fprintf(stderr,"\nError! Memory could not be allocated for new active actor release.\n");
-			exit(3);
+			fprintf(stderr,"ERROR: Memory allocation for new active actor release.\n");
+			exit(EXIT_FAILURE);
 		}
 		
 		// Update time of next emission event
@@ -1081,7 +1085,7 @@ void placeMolecules3D(const struct actorStruct3D * actorCommon,
 			{ // Scanning regions until we find where molecule must be place
 				if(curRegionInter >= actorCommon->numRegion)
 				{
-					fprintf(stderr,"\nWarning! New molecule does not have a valid region to be placed in.\n");
+					fprintf(stderr,"\nWARNING: New molecule does not have a valid region to be placed in.\n");
 					break; // end for-loop
 				}
 			}
@@ -1155,8 +1159,8 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 					if(!addMoleculeRecent3D(microMolListRecent, point[0], point[1],
 						point[2], tMicro - tCur))
 					{ // Creation of molecule failed
-						puts("Memory could not be allocated for new molecule to be placed");
-						exit(3);
+						fprintf(stderr, "ERROR: Memory allocation for new molecule to be placed in region %u.\n", curRegion);
+						exit(EXIT_FAILURE);
 					}
 				}			
 			}
@@ -1182,7 +1186,7 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 					{ // Scanning subvolumes until we find where molecule must be place
 						if(curSubInter >= actorCommon->numSub[curRegionInter])
 						{
-							fprintf(stderr,"\nWarning! New molecule does not have a valid subvolume to be placed in.\n");
+							fprintf(stderr,"\nWARNING: New molecule placed in region %u does not have a valid subvolume to be placed in.\n", curRegion);
 							break; // end for-loop
 						}
 					}

@@ -8,9 +8,15 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * accord.c - main file
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
+ * - added more simulation parameters to display while initializing a simulation
+ * - added copyright notice and code repository to terminal display
+ * - added simulation start time and end time to terminal display
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -51,7 +57,8 @@ const char CONFIG_NAME[] = "accord_config_sample.txt"; // TEMP - will be loaded 
 
 int main(int argc, char *argv[])
 {
-	int i, j, k; // generic indices
+	int i, j; // generic indices
+	uint64_t k;
 	uint32_t numSub; 		// Total number of subvolumes in system
 	uint32_t curSub;		// Index of subvolume where next reaction occurs
 	uint32_t curSubID; 	// Current subvolume in actor list
@@ -68,21 +75,42 @@ int main(int argc, char *argv[])
 	double point[3];				// Coordinates of new micro molecules created by 0th order rxn
 	bool bNeedPoint;			// Need to keep looking for a valid micro location
 	
+	// Timer and progress variables
+	time_t timer;
+	char timeBuffer[26]; 	// Array for clock time
+	struct tm* timeInfo; 	// Stucture of timer info
+	unsigned int updateFreq;
+	double fracComplete;
+	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
 	printf("Version v0.4 (public beta, 2016-02-12)\n");
+	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
+	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	
 	//
 	// STEP 1: Load Configuration
 	//
 	// Consider using an interactive environment to specify input file, set message verbosity, and check configuration
-	puts("Loading configuration parameters ...");
+	printf("Loading configuration parameters ");
 	struct simSpec3D spec;
 	if (argc > 2)
+	{
+		printf("from file \"%s\" using seed offset %d\n", argv[1], atoi(argv[2]));
 		loadConfig3D(argv[1], atoi(argv[2]), &spec);
+	}
 	else if (argc > 1)
+	{
+		printf("from file \"%s\" using seed offset defined in that file\n", argv[1]);
+		printf("NOTE: To specify a different seed offset, call AcCoRD with the offset as the 2nd argument.\n");
 		loadConfig3D(argv[1], 0, &spec);
+	}
 	else
-		loadConfig3D(CONFIG_NAME, 0, &spec); // TODO: Display instructions
+	{
+		printf("from default configuration file \"%s\"\n", CONFIG_NAME);
+		printf("NOTE: To specify a different configuration file, call AcCoRD from command line in format ACCORD_EXE CONFIG_NAME\n");
+		printf("NOTE: To specify a different seed offset, call AcCoRD with the offset as the 2nd argument.\n");
+		loadConfig3D(CONFIG_NAME, 0, &spec);
+	}
 	
 	uint64_t numMolChange[spec.NUM_MOL_TYPES]; // Number of molecules changed by mesoscopic event
 	for(i = 0; i < spec.NUM_MOL_TYPES; i++)
@@ -161,17 +189,18 @@ int main(int argc, char *argv[])
 	//
 	
 	// Initialize array of region information
-	puts("Initializing region parameters");
+	printf("Initializing region parameters.\n");
+	printf("Number of regions: %u\n", spec.NUM_REGIONS);
 	struct region regionArray[spec.NUM_REGIONS];
 	initializeRegionArray(regionArray,	spec.subvol_spec, spec.NUM_REGIONS,
 		spec.NUM_MOL_TYPES,	spec.SUBVOL_BASE_SIZE, DIFF_COEF,
 		spec.MAX_RXNS, spec.chem_rxn);
 	
-	numSub = count_subvol3D(regionArray, spec.NUM_REGIONS);
-	printf("There are %" PRIu32 " subvolumes.\n", numSub);
 	
 	// Define subvolume array
-	puts("Initializing subvolume parameters");
+	printf("Initializing microscopic and mesoscopic subvolume parameters.\n");
+	numSub = count_subvol3D(regionArray, spec.NUM_REGIONS);
+	printf("Number of subvolumes: %" PRIu32 "\n", numSub);
 	struct subvolume3D * subvolArray;
 	allocateSubvolArray(numSub,&subvolArray);
 	
@@ -194,8 +223,9 @@ int main(int argc, char *argv[])
 	// 2nd order A+B - k*A*B/vol
 	// 2nd order A+A - k*A*(A-1)/vol
 	
-	// Build array of mesoscopic subvolumes (with parameters only needed for mesoscopic regimes)
-	puts("Initializing mesoscopic subvolumes and meso reaction heap");
+	// Build array of mesoscopic subvolumes (with parameters only needed f
+	printf("Number of mesoscopic subvolumes: %" PRIu32 "\n", numMesoSub);
+	printf("Initializing mesoscopic subvolumes and meso reaction heap...\n");
 	struct mesoSubvolume3D * mesoSubArray;
 	allocateMesoSubArray3D(numMesoSub,&mesoSubArray);
 	initializeMesoSubArray3D(numMesoSub, numSub, mesoSubArray, subvolArray,
@@ -209,10 +239,10 @@ int main(int argc, char *argv[])
 	
 	heapMesoFindChildren(numMesoSub, heap_childID, b_heap_childValid);
 	unsigned int num_heap_levels = (unsigned int) ceil(log2(numMesoSub+1));
-	printf("There are %u heap levels.\n", num_heap_levels);	
 	
 	// Build actor array
-	puts("Initializing simulation actors");
+	printf("Initializing simulation actors...\n");
+	printf("Number of actors: %u\n", spec.NUM_ACTORS);
 	struct actorStruct3D * actorCommonArray;
 	struct actorActiveStruct3D * actorActiveArray = NULL;
 	struct actorPassiveStruct3D * actorPassiveArray = NULL;
@@ -228,6 +258,8 @@ int main(int argc, char *argv[])
 		spec.NUM_MOL_TYPES,
 		regionArray, spec.NUM_REGIONS, NUM_ACTORS_ACTIVE, actorActiveArray,
 		NUM_ACTORS_PASSIVE, actorPassiveArray, subCoorInd);
+	printf("Number of active actors: %u\n", NUM_ACTORS_ACTIVE);
+	printf("Number of passive actors: %u\n", NUM_ACTORS_PASSIVE);
 	
 	// Delete temporary arrays for managing subvolume validity and placement
 	deleteSubvolHelper(subCoorInd, subID, spec.NUM_REGIONS, regionArray);
@@ -298,18 +330,21 @@ int main(int argc, char *argv[])
 	}
 		
 	// Initialize random number generation
-	mt_seed32(spec.SEED + 5489UL); // Offset by default seed
+	printf("Starting up random number generator with seed offset: %u\n", spec.SEED);
+	mt_seed32(spec.SEED + 5489UL); // Offset by mersenne twister default seed
 	
 	//
 	// STEP 4: Run Simulation
 	//
 	
-	unsigned int updateFreq = (unsigned int)
-		ceil((double) spec.NUM_REPEAT / spec.MAX_UPDATES);
-	double fracComplete;
+	// Initialize variables to track simulation progress
+	updateFreq = (unsigned int)	ceil((double) spec.NUM_REPEAT / spec.MAX_UPDATES);
+	time(&timer);
+	timeInfo = localtime(&timer);
+	strftime(timeBuffer, 26, "%Y-%m-%d %H:%M:%S", timeInfo);
 	
+	printf("Starting simulation at %s.\n", timeBuffer);
 	startTime = clock();
-	puts("Starting simulation");
 	for(curRepeat = 0; curRepeat < spec.NUM_REPEAT; curRepeat++)
 	{
 		
@@ -542,8 +577,10 @@ int main(int argc, char *argv[])
 													if(!addMolecule3D(&molListPassive3D[curMolPassive],
 														point[0], point[1], point[2]))
 													{ // Creation of molecule failed
-														puts("Memory could not be allocated to create molecules");
-														exit(3);
+														fprintf(stderr,"ERROR: Memory allocation to create molecule %"
+														PRIu64 " of %" PRIu64" of type %u being observed by actor %u in region %u.\n",
+														curMol, numMol, curMolType, heapTimer[0], curRegion);
+														exit(EXIT_FAILURE);
 													}
 												}
 											}
@@ -564,8 +601,10 @@ int main(int argc, char *argv[])
 												if(!addMolecule3D(&molListPassive3D[curMolPassive],
 													point[0], point[1], point[2]))
 												{ // Creation of molecule failed
-													puts("Memory could not be allocated to create molecules");
-													exit(3);
+													fprintf(stderr,"ERROR: Memory allocation to create molecule %"
+														PRIu64 " of %" PRIu64" of type %u being created by actor %u in region %u.\n",
+														curMol, numMol, curMolType, heapTimer[0], curRegion);
+													exit(EXIT_FAILURE);
 												}
 											}
 										}
@@ -640,8 +679,9 @@ int main(int argc, char *argv[])
 										point[1], point[2],
 										tMicro - regionArray[i].tZeroth[curZerothRxn]))
 									{ // Creation of molecule failed
-										puts("Memory could not be allocated to create molecule");
-										exit(3);
+										fprintf(stderr,"ERROR: Memory allocation to create molecule %"
+											PRIu64 " of %" PRIu64" of type %u being created by reaction %u in region %u.\n",
+											k, regionArray[i].numMolChange[curRxn][j], j, curRxn, i);
 									}
 								}									
 							}
@@ -815,14 +855,15 @@ int main(int argc, char *argv[])
 								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
 								+regionArray[curRegion].actualSubSize*mt_drand(), tMicro - tCur))
 							{ // Creation of molecule failed
-								puts("Memory could not be allocated to create molecules");
-								exit(3);
+								fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
+									curMolType, curRegion, destRegion);
+								exit(EXIT_FAILURE);
 							}
 						} else
 						{
 							// Error
-							puts("Hybrid interface error");
-							exit(3);
+							fprintf(stderr,"ERROR: Molecule was supposed to transition out of subvolume %" PRIu32 " in region %u and into region %u but this subvolume could not be found in the list of subvolumes along the boundary between the two regions.\n", curSub, curRegion, destRegion);
+							exit(EXIT_FAILURE);
 						}
 					} else
 					{ // Destination is also a mesoscopic subvolume
@@ -868,8 +909,8 @@ int main(int argc, char *argv[])
 						
 				} else
 				{ // ID of reaction is beyond valid range. Error					
-					puts("Error: Current mesoscopic event is invalid");
-					exit(3);
+					fprintf(stderr,"ERROR: Current mesoscopic event %u in subvolume %" PRIu32 " is invalid.\nSubvolume is number %" PRIu32 " in the mesoscopic list\n", curRxn, curSub, curMeso);
+					exit(EXIT_FAILURE);
 				}
 				// Update timer structure array
 				timerArray[MESO_TIMER_ID].nextTime =
@@ -882,7 +923,6 @@ int main(int argc, char *argv[])
 				heapTimerChildID, b_heapTimerChildValid);
 			
 		}
-		//printf("Repeat %u had %" PRIu64 " steps\n", curRepeat+1,numMesoSteps);
 		
 		// Write realization observations to output file
 		printOneTextRealization3D(out, spec, curRepeat, observationArray,
@@ -898,28 +938,33 @@ int main(int argc, char *argv[])
 				(double) (clock() - startTime)*(1/fracComplete - 1)/CLOCKS_PER_SEC);
 		}
 	}
+	timeInfo = localtime(&timer);
+	strftime(timeBuffer, 26, "%Y-%m-%d %H:%M:%S", timeInfo);
+	printf("Ending simulation at %s.\n", timeBuffer);
 	endTime = clock();
 	printf("Simulation ran in %f seconds\n", (double) (endTime-startTime)/CLOCKS_PER_SEC);
+	
+	//
+	// STEP 5: Save Output Summary
+	//
+	
+	printf("Writing simulation summary file ...\n");
 	
 	// Print end time and info used to help Matlab importing
 	printTextEnd3D(outSummary, NUM_ACTORS_ACTIVE, numActorRecord, actorCommonArray,
 		actorActiveArray, actorPassiveArray,
 		actorRecordID, maxActiveBits, maxPassiveObs);
-	
-	if (fclose(out) != 0)
-		fprintf(stderr,"Error in closing output file %s.\n\n",spec.OUTPUT_NAME);
-	if (fclose(outSummary) != 0)
-		fprintf(stderr,"Error in closing output summary file.\n\n");
-	
-	//
-	// STEP 5: Save Output
-	//
-	printf("Writing simulation data to output file ...\n");
 		
 	//
-	// Free Memory
+	// STEP 6: Free Memory
 	//
-	printf("Program cleanup ...\n");
+	printf("Memory cleanup ...\n");
+	
+	if (fclose(out) != 0)
+		fprintf(stderr,"ERROR: Could not close output file %s.\n",spec.OUTPUT_NAME);
+	if (fclose(outSummary) != 0)
+		fprintf(stderr,"ERROR: Could not close output summary file %s%s.\n", "summary_", spec.OUTPUT_NAME);
+	
 	for(curActor = 0; curActor < numActorRecord; curActor++)
 	{
 		if(!isListEmptyObs3D(&observationArray[curActor]))

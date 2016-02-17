@@ -9,9 +9,12 @@
  *
  * observations.c - 	linked list of observations made by a passive actor
  *
- * Last revised for AcCoRD v0.3.1
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.3.1
  * - header added
@@ -84,8 +87,8 @@ bool addObservation3D(ListObs3D * list,
 					molPosList->item.x, molPosList->item.y, molPosList->item.z))
 				{
 					// Creation of molecule failed
-					puts("Memory could not be allocated to create molecules");
-					exit(3);
+					fprintf(stderr, "ERROR: Memory allocation to record molecule positions.\n");
+					exit(EXIT_FAILURE);
 				}
 				molPosList = molPosList->next;
 			}

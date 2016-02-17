@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * meso.c - heap of all mesoscopic subvolumes in simulation environment
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -25,6 +28,7 @@
 #include <math.h> // for fabs(), INFINITY
 #include <stdlib.h> // for exit(), malloc
 #include <stdbool.h> // for C++ bool conventions
+#include <inttypes.h> // for extended integer type macros
 #include "meso.h"
 #include "subvolume.h"
 #include "region.h"
@@ -47,8 +51,8 @@ void allocateMesoSubArray3D(const uint32_t numMesoSub,
 	*mesoSubArray = malloc(numMesoSub*sizeof(struct mesoSubvolume3D));
 		
 	if(*mesoSubArray == NULL){
-		puts("Memory could not be allocated to store array of mesoscopic subvolume structures");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for array of mesoscopic subvolume structures.\n");
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -68,8 +72,8 @@ void allocateMesoHeapArray3D(const uint32_t numMesoSub,
 		
 	if(*heap_subvolID == NULL || *heap_childID == NULL || *b_heap_childValid == NULL)
 	{
-		puts("Memory could not be allocated to store array of mesoscopic subvolume structures");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for heap of mesoscopic subvolume structures.\n");
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -120,14 +124,14 @@ void initializeMesoSubArray3D(const uint32_t numMesoSub,
 				*sizeof(double));
 			if(mesoSubArray[curMesoSub].rxnProp == NULL)
 			{
-				puts("Memory could not be allocated to mesoscopic structure parameters");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation to mesoscopic structure parameters for mesoscopic subvolume %" PRIu32 " (subvolume ID %" PRIu32 ").\n", curMesoSub, curSub);
+				exit(EXIT_FAILURE);
 			}
 			curMesoSub++;
 		} else
 		{
-			puts("Error: Tried to write mesoscopic array beyond allocated memory");
-			exit(3);
+			fprintf(stderr, "ERROR: Error: Tried to write to mesoscopic array beyond allocated memory. Intended mesoscopic subvolume %" PRIu32 " (subvolume ID %" PRIu32 ").\n", curMesoSub, curSub);
+			exit(EXIT_FAILURE);
 		}
 	}
 }

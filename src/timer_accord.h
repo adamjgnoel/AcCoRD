@@ -11,9 +11,12 @@
  *						heap to store the next action time by all actors
  * 						and the micro and meso simulation regimes
  *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - removed deprecated debug functions

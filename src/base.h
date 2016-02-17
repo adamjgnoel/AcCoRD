@@ -9,10 +9,12 @@
  *
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
- *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - filled in cases for spherical boundaries to accommodate spherical regions and actors

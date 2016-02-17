@@ -10,9 +10,12 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -172,8 +175,8 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 								if(!addMolecule3D(&p_list[newRegion][curType],
 									newPoint[0], newPoint[1], newPoint[2]))
 								{
-									puts("Memory could not be allocated to move molecule between microscopic regions");
-									exit(3);
+									fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+									exit(EXIT_FAILURE);
 								}
 								// Indicate that molecule doesn't need to be moved again
 								p_list[newRegion][curType]->item.bNeedUpdate = false;
@@ -250,8 +253,8 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 					if(!addMolecule3D(&p_list[newRegion][curType],
 						newPoint[0], newPoint[1], newPoint[2]))
 					{
-						puts("Memory could not be allocated to move molecule between microscopic molecule lists");
-						exit(3);
+						fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
+						exit(EXIT_FAILURE);
 					}
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
@@ -362,8 +365,8 @@ void rxnFirstOrder3D(ListMol3D * p_list,
 							curNode->item.x, curNode->item.y, curNode->item.z,
 							regionArray.spec.dt-curTime))
 						{ // Creation of molecule failed
-							puts("Memory could not be allocated to create molecule");
-							exit(3);						
+							fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n", regionArray.productID[curRxn][curProd], curRxn);
+							exit(EXIT_FAILURE);						
 						}
 					}
 				}
@@ -471,8 +474,8 @@ void rxnFirstOrderRecent3D(const unsigned short NUM_MOL_TYPES,
 							curNode->item.x, curNode->item.y, curNode->item.z,
 							curNode->item.dt_partial-curTime))
 						{ // Creation of molecule failed
-							puts("Memory could not be allocated to create molecule");
-							exit(3);						
+							fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n", regionArray.productID[curRxn][curProd], curRxn);;
+							exit(EXIT_FAILURE);						
 						}
 						if(prevNode == NULL
 							&& prodID == curMolType)
@@ -527,8 +530,8 @@ void transferMolecules3D(ListMolRecent3D * molListRecent, ListMol3D * molList)
 		if(!addMolecule3D(molList, p_node->item.x, p_node->item.y, p_node->item.z))
 		{
 			// Creation of molecule failed
-			puts("Memory could not be allocated to create molecules");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation to create molecule when transferring from recent list to regular list.\n");
+			exit(EXIT_FAILURE);
 		}
 		p_node = p_node->next;
 	}
@@ -764,8 +767,8 @@ uint64_t recordMolecules3D(ListMol3D * p_list,
 			curCount++;
 			if(bRecordPos && !addItem3D(p_node->item, recordList))
 			{
-				fprintf(stderr,"\nError! Observed molecule could not be added to list.\n");
-				exit(3);
+				fprintf(stderr,"\nERROR: Memory allocation for recording molecule positions.\n");
+				exit(EXIT_FAILURE);
 			}
 		}
 		p_node = p_node->next;
@@ -790,8 +793,8 @@ uint64_t recordMoleculesRecent3D(ListMolRecent3D * p_list,
 			curCount++;
 			if(bRecordPos && !addMolecule3D(recordList, p_node->item.x, p_node->item.y, p_node->item.z))
 			{
-				fprintf(stderr,"\nError! Observed molecule could not be added to list.\n");
-				exit(3);
+				fprintf(stderr,"\nERROR: Memory allocation for recording molecule positions.\n");
+				exit(EXIT_FAILURE);
 			}
 		}
 		p_node = p_node->next;

@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * file_io.c - interface with JSON configuration files
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -63,8 +66,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 	configNameFull = malloc(dirLength + nameLength + 1);
 	if(configNameFull == NULL)
 	{
-		puts("Memory could not be allocated to build the configuration file name");
-		exit(3);
+		fprintf(stderr,"ERROR: Memory could not be allocated to build the configuration file name.\n");
+		exit(EXIT_FAILURE);
 	}
 	configNameFull[0] = '\0'; // Initialize full name to the empty string
 	strcat(configNameFull,configDir);
@@ -74,8 +77,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 	configFile = fopen(configNameFull, "r");
 	if(configFile == NULL)
 	{
-		fprintf(stderr,"Cannot open configuration file %s.\n",CONFIG_NAME);
-		exit(3);
+		fprintf(stderr,"ERROR: Cannot open configuration file \"%s\".\n",CONFIG_NAME);
+		exit(EXIT_FAILURE);
 	}
 	
 	// Read in contents of configuration file
@@ -86,8 +89,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 	configContent = malloc(fileLength + 1);
 	if(configContent == NULL)
 	{
-		puts("Memory could not be allocated to load the configuration file");
-		exit(3);
+		fprintf(stderr,"ERROR: Memory could not be allocated to store the configuration information.\n");
+		exit(EXIT_FAILURE);
 	}
 	temp = fread(configContent,1,fileLength,configFile);
 	fclose(configFile);
@@ -96,25 +99,27 @@ void loadConfig3D(const char * CONFIG_NAME,
 	configJSON = cJSON_Parse(configContent);
 	if (!configJSON)
 	{
-		printf("Error in format of configuration file in area of: [%s]\n",cJSON_GetErrorPtr());
-		exit(3);
+		fprintf(stderr, "ERROR: Invalid configuration file formatting in area of: [%s]\n",cJSON_GetErrorPtr());
+		fprintf(stderr, "Could not convert file contents into a valid JSON object.\n");
+		fprintf(stderr, "Please see AcCoRD documentation on how to write a configuration file.\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	// Check Existence of Primary Structure Objects
 	if(!cJSON_bItemValid(configJSON,"Simulation Control", cJSON_Object))
 	{
-		puts("ERROR: Configuration file is missing \"Simulation Control\" object.");
-		exit(3);
+		fprintf(stderr,"ERROR: Configuration file is missing \"Simulation Control\" object.\n");
+		exit(EXIT_FAILURE);
 	}
 	if(!cJSON_bItemValid(configJSON,"Environment", cJSON_Object))
 	{
-		puts("ERROR: Configuration file is missing \"Environment\" object.");
-		exit(3);
+		fprintf(stderr,"ERROR: Configuration file is missing \"Environment\" object.\n");
+		exit(EXIT_FAILURE);
 	}
 	if(!cJSON_bItemValid(configJSON,"Chemical Properties", cJSON_Object))
 	{
-		puts("ERROR: Configuration file is missing \"Chemical Properties\" object.");
-		exit(3);
+		fprintf(stderr,"ERROR: Configuration file is missing \"Chemical Properties\" object.\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	// Check for warning override
@@ -128,10 +133,10 @@ void loadConfig3D(const char * CONFIG_NAME,
 		bWarnOverride = cJSON_GetObjectItem(configJSON,"Warning Override")->valueint;
 		if(bWarnOverride)
 		{
-			puts("NOTE: Warning override enabled. Simulation will execute automatically, even if warnings appear in the configuration file.");
+			printf("NOTE: Warning override enabled. Simulation will execute automatically, even if warnings appear in the configuration file.\n");
 		} else
 		{
-			puts("NOTE: Warning override disabled. Simulation will require user confirmation to execute if warnings appear in the configuration file.");
+			printf("NOTE: Warning override disabled. Simulation will require user confirmation to execute if warnings appear in the configuration file.\n");
 		}
 	}
 	
@@ -234,8 +239,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 	curSpec->DIFF_COEF = malloc(curSpec->NUM_MOL_TYPES * sizeof(double));
 	if(curSpec->DIFF_COEF == NULL)
 	{
-		puts("Memory could not be allocated to load diffusion coefficient");
-		exit(3);
+		fprintf(stderr,"ERROR: Memory could not be allocated to store diffusion coefficients\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	if(!cJSON_bItemValid(chemSpec,"Diffusion Coefficients", cJSON_Array) ||
@@ -281,8 +286,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 			sizeof(struct chem_rxn_struct));
 		if(curSpec->chem_rxn == NULL)
 		{
-			puts("Memory could not be allocated to load configuration chemical reaction details");
-			exit(3);
+			fprintf(stderr,"ERROR: Memory could not be allocated to store chemical reaction details\n");
+			exit(EXIT_FAILURE);
 		}
 		for(curArrayItem = 0;
 			curArrayItem < curSpec->MAX_RXNS; curArrayItem++)
@@ -346,8 +351,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 							malloc(curSpec->chem_rxn[curArrayItem].numRegionExceptions * sizeof(char *));
 						if(curSpec->chem_rxn[curArrayItem].regionExceptionLabel == NULL)
 						{
-							puts("Memory could not be allocated to load chemical reaction region exceptions");
-							exit(3);
+							fprintf(stderr,"ERROR: Memory could not be allocated to store chemical reaction region exceptions\n");
+							exit(EXIT_FAILURE);
 						}
 						
 						// Read in names of exception regions							
@@ -414,14 +419,14 @@ void loadConfig3D(const char * CONFIG_NAME,
 	if(!cJSON_bItemValid(environment,"Region Specification", cJSON_Array) ||
 		cJSON_GetArraySize(cJSON_GetObjectItem(environment,"Region Specification")) < 1)
 	{
-		puts("ERROR: Configuration file is missing \"Region Specification\" array in \"Environment\" object or it has a length less than 1.");
-		exit(3);
+		fprintf(stderr,"ERROR: Configuration file is missing \"Region Specification\" array in \"Environment\" object or it has a length less than 1.\n");
+		exit(EXIT_FAILURE);
 	}
 	if(!cJSON_bItemValid(environment,"Actor Specification", cJSON_Array) ||
 		cJSON_GetArraySize(cJSON_GetObjectItem(environment,"Actor Specification")) < 1)
 	{
-		puts("ERROR: Configuration file is missing \"Actor Specification\" array in \"Environment\" object or it has a length less than 1.");
-		exit(3);
+		fprintf(stderr,"ERROR: Configuration file is missing \"Actor Specification\" array in \"Environment\" object or it has a length less than 1.\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	if(!cJSON_bItemValid(environment,"Number of Dimensions", cJSON_Number) ||
@@ -466,16 +471,16 @@ void loadConfig3D(const char * CONFIG_NAME,
 		if(curSpec->subvol_spec == NULL
 			|| curSpec->actorSpec == NULL)
 		{
-			puts("Memory could not be allocated to load configuration environment details");
-			exit(3);
+			fprintf(stderr,"ERROR: Memory could not be allocated to load region or actor details\n");
+			exit(EXIT_FAILURE);
 		}
 		for(curArrayItem = 0;
 			curArrayItem < curSpec->NUM_REGIONS; curArrayItem++)
 		{
 			if(!cJSON_bArrayItemValid(regionSpec, curArrayItem, cJSON_Object))
 			{
-				printf("Error: Region %d is not a valid object.\n", curArrayItem);
-				exit(3);
+				fprintf(stderr, "ERROR: Region %d is not described by a JSON object.\n", curArrayItem);
+				exit(EXIT_FAILURE);
 			}
 			
 			curObj = cJSON_GetArrayItem(regionSpec, curArrayItem);
@@ -712,8 +717,8 @@ void loadConfig3D(const char * CONFIG_NAME,
 		{			
 			if(!cJSON_bArrayItemValid(actorSpec, curArrayItem, cJSON_Object))
 			{
-				printf("Error: Actor %d is not a valid object.\n", curArrayItem);
-				exit(3);
+				fprintf(stderr, "ERROR: Actor %d is not described by a JSON object.\n", curArrayItem);
+				exit(EXIT_FAILURE);
 			}
 			
 			curObj = cJSON_GetArrayItem(actorSpec, curArrayItem);
@@ -1113,7 +1118,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 		printf("Press \'Enter\' to continue the simulation or \'q\'+\'Enter\' to quit.\n");
 		ch = getchar();
 		if(ch == 'q')
-			exit(3);
+			exit(EXIT_FAILURE);
 	} else printf("\n");
 }
 
@@ -1175,8 +1180,8 @@ void initializeOutput3D(FILE ** out,
 	if(outputNameFull == NULL
 		|| outputSummaryNameFull == NULL)
 	{
-		puts("Memory could not be allocated to build the configuration file name");
-		exit(3);
+		fprintf(stderr,"ERROR: Memory could not be allocated to store the configuration file name\n");
+		exit(EXIT_FAILURE);
 	}
 	outputNameFull[0] = '\0'; // Initialize full name to the empty string
 	outputSummaryNameFull[0] = '\0';
@@ -1187,13 +1192,13 @@ void initializeOutput3D(FILE ** out,
 	
 	if((*out = fopen(outputNameFull, "w")) == NULL)
 	{
-		fprintf(stderr,"Can't create output file %s.\n",curSpec.OUTPUT_NAME);
-		exit(3);
+		fprintf(stderr,"ERROR: Cannot create output file \"%s\".\n",curSpec.OUTPUT_NAME);
+		exit(EXIT_FAILURE);
 	}
 	if((*outSummary = fopen(outputSummaryNameFull, "w")) == NULL)
 	{
-		fprintf(stderr,"Can't create output summary file %s.\n",curSpec.OUTPUT_NAME);
-		exit(3);
+		fprintf(stderr,"ERROR: Cannot create output summary file \"%s\".\n",curSpec.OUTPUT_NAME);
+		exit(EXIT_FAILURE);
 	}
 	
 	root = cJSON_CreateObject();
@@ -1216,8 +1221,8 @@ char * stringAllocate(long stringLength)
 	char * string = malloc(stringLength+1);
 	if(string == NULL)
 	{
-		puts("Error in memory allocation for string copy");
-		exit(3);
+		fprintf(stderr,"ERROR: Memory could not be allocated for string copy.\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	return string;

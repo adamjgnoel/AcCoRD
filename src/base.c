@@ -10,9 +10,12 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - filled in cases for spherical boundaries to accommodate spherical regions and actors
@@ -70,7 +73,7 @@ bool bPointInBoundary(const double point[3],
 		case SPHERE:
 			return (pointDistance3D(point, boundary1) < boundary1[3]);
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return false;
 	}
 }
@@ -99,7 +102,7 @@ bool bBoundaryIntersect(const int boundary1Type,
 						&& boundary1[1] > boundary2[0]);
 				default:
 					fprintf(stderr,
-						"\nBoundary type combination %d and %d invalid.\n",
+						"ERROR: Boundary type combination %d and %d invalid.\n",
 						boundary1Type, boundary2Type);
 					return false;
 			}
@@ -135,7 +138,7 @@ bool bBoundaryIntersect(const int boundary1Type,
 						RECTANGULAR_BOX, boundary1, 0.) );
 				default:
 					fprintf(stderr,
-						"\nBoundary type combination %d and %d invalid.\n",
+						"ERROR: Boundary type combination %d and %d invalid.\n",
 						boundary1Type, boundary2Type);
 					return false;
 			}
@@ -168,12 +171,12 @@ bool bBoundaryIntersect(const int boundary1Type,
 						RECTANGULAR_BOX, boundary2, 0.) );
 				default:
 					fprintf(stderr,
-						"\nBoundary type combination %d and %d invalid.\n",
+						"ERROR: Boundary type combination %d and %d invalid.\n",
 						boundary1Type, boundary2Type);
 					return false;
 			}
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return false;
 	}
 }
@@ -291,7 +294,7 @@ bool bBoundarySurround(const int boundary1Type,
 						&& boundary1[5] <= boundary2[5] - clearance);
 				default:
 					fprintf(stderr,
-						"\nBoundary type combination %d and %d invalid.\n",
+						"ERROR: Boundary type combination %d and %d invalid.\n",
 						boundary1Type, boundary2Type);
 					return false;
 			}
@@ -350,7 +353,7 @@ bool bBoundarySurround(const int boundary1Type,
 					return true;
 				default:
 					fprintf(stderr,
-						"\nBoundary type combination %d and %d invalid.\n",
+						"ERROR: Boundary type combination %d and %d invalid.\n",
 						boundary1Type, boundary2Type);
 					return false;
 			}
@@ -369,12 +372,12 @@ bool bBoundarySurround(const int boundary1Type,
 						pointDistance3D(boundary1, boundary2) + clearance));
 				default:
 					fprintf(stderr,
-						"\nBoundary type combination %d and %d invalid.\n",
+						"ERROR: Boundary type combination %d and %d invalid.\n",
 						boundary1Type, boundary2Type);
 					return false;
 			}
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return false;
 	}
 }
@@ -450,7 +453,7 @@ bool bLineHitBoundary(const double p1[3],
 			return bLineHitInfinitePlane(p1, L, length, SPHERE, boundary1,
 					curPlane, bInside, d, intersectPoint);
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid for boundary intersection.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid for boundary intersection.\n", boundary1Type);
 			return false;		
 	}
 }
@@ -520,7 +523,7 @@ bool bLineHitInfinitePlane(const double p1[3],
 			intersectPoint[2] = p1[2] + L[2]*(*d);
 			break;		
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid for single plane intersection.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid for single plane intersection.\n", boundary1Type);
 			*d = 0;
 			return false;	
 	}
@@ -563,7 +566,7 @@ bool bPointOnFace(const double p1[3],
 			// Trivially true
 			return true;
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return false;	
 	}
 }
@@ -629,7 +632,7 @@ void recordFace(const int boundary1Type,
 					boundaryFace[5] = boundary1[5];
 					return;
 				default:
-					fprintf(stderr,"\nFace ID %d invalid.\n", faceID);
+					fprintf(stderr,"ERROR: Face ID %d invalid.\n", faceID);
 					return;
 			}
 			return;
@@ -640,7 +643,7 @@ void recordFace(const int boundary1Type,
 			boundaryFace[3] = boundary1[3];
 			return;
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return;	
 	}
 }
@@ -726,7 +729,7 @@ bool reflectPoint(const double oldPoint[3],
 					newPoint[2] = boundary1[5] + boundary1[5] - curPoint[2];
 					return true;
 				default:
-					fprintf(stderr,"\nWARNING: Plane intersection ID %d invalid.\n", *planeID);
+					fprintf(stderr,"WARNING: Plane intersection ID %d invalid.\n", *planeID);
 					return false;					
 			}
 		case SPHERE:
@@ -748,7 +751,7 @@ bool reflectPoint(const double oldPoint[3],
 			
 			return true;
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return false;
 	}
 }
@@ -818,7 +821,7 @@ double distanceToBoundary(const double point[3],
 				dist = -dist;
 			return dist;
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return 0.;
 	}
 }
@@ -890,12 +893,12 @@ int intersectBoundary(const int boundary1Type,
 		} else
 		{
 			// Intersection is invalid
-			fprintf(stderr,"\nError: Intersection of two boundaries is invalid. At least one boundary is spherical and hits the other boundary.\n");
+			fprintf(stderr,"ERROR: Error: Intersection of two boundaries is invalid. At least one boundary is spherical and hits the other boundary.\n");
 			return UNDEFINED_SHAPE;
 		}
 	} else
 	{	// Intersection for combination of boundary types is unknown
-		fprintf(stderr,"\nError: Intersection between Boundary type %d and %d unknown.\n", boundary1Type, boundary2Type);
+		fprintf(stderr,"ERROR: Error: Intersection between Boundary type %d and %d unknown.\n", boundary1Type, boundary2Type);
 		return UNDEFINED_SHAPE;
 	}
 	
@@ -947,7 +950,7 @@ double boundaryArea(const int boundary1Type,
 		case SPHERE:
 			return 4/3*PI*boundary1[3]*boundary1[3]*boundary1[3];
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
 			return 0;
 	}
 }
@@ -1003,7 +1006,7 @@ void uniformPointVolume(double point[3],
 			}
 			return;
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid.\n", boundaryType);
+			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundaryType);
 			return;
 	}
 }

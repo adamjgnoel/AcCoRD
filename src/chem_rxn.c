@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * chem_rxn.c - structure for storing chemical reaction properties
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -69,8 +72,8 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 	rxnInRegionID = malloc(MAX_RXNS * sizeof(unsigned short [NUM_REGIONS]));
 	if(bRxnInRegion == NULL || rxnInRegionID == NULL)
 	{
-		puts("Memory could not be allocated to region reaction matrix");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for region reaction matrix.\n");
+		exit(EXIT_FAILURE);
 	}
 	for(i = 0; i < NUM_REGIONS; i++)
 	{
@@ -174,8 +177,8 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			|| regionArray[i].minRxnTimeRV == NULL
 			|| regionArray[i].biReactants == NULL)
 		{
-			puts("Memory could not be allocated for chemical reactions");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u.\n", i);
+			exit(EXIT_FAILURE);
 		}
 		
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
@@ -193,8 +196,8 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				|| regionArray[i].productID[j] == NULL
 				|| regionArray[i].bUpdateProp[j] == NULL)
 			{
-				puts("Memory could not be allocated for chemical reactions");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u.\n", j, i);
+				exit(EXIT_FAILURE);
 			}
 		}
 		
@@ -210,8 +213,8 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				|| regionArray[i].uniCumProb[j] == NULL
 				|| regionArray[i].uniRelativeRate[j] == NULL)
 			{
-				puts("Memory could not be allocated for chemical reactions");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u.\n", i);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -304,8 +307,8 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 					regionArray[i].secondRxn[regionArray[i].numSecondRxn++] = j;
 					break;
 				default:
-					puts("A reaction has too many reactants");
-					exit(3);
+					fprintf(stderr, "ERROR: Chemical reaction %u has too many reactants.\n", j);
+					exit(EXIT_FAILURE);
 			}
 		}
 		

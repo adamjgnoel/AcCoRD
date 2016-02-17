@@ -10,9 +10,12 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -133,8 +136,8 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].childrenCoor = malloc(regionArray[i].numChildren*sizeof(uint32_t [6]));
 			if(regionArray[i].childrenID == NULL || regionArray[i].childrenCoor == NULL)
 			{
-				puts("Memory could not be allocated to region parameters");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation to region %u parameters.\n", i);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}	
@@ -165,8 +168,9 @@ void initializeRegionArray(struct region regionArray[],
 					fabs((regionArray[j].boundary[5] - regionArray[i].boundary[5])/regionArray[i].actualSubSize - round((regionArray[j].boundary[5] - regionArray[i].boundary[5])/regionArray[i].actualSubSize)) > boundAdjError)
 				{
 					// Child is not flush with region's subvolumes
-					puts("Nested region is not properly aligned within parent");
-					exit(3);
+					fprintf(stderr, "ERROR: Nested region %u is not properly aligned within parent region %u.\n", j, i);
+					fprintf(stderr, "Both regions are rectangular boxes and the outer boundary of the nested region must be flush with subvolumes of the parent region.\n");
+					exit(EXIT_FAILURE);
 				}
 				
 				// Confirm that child is inside of parent
@@ -174,8 +178,9 @@ void initializeRegionArray(struct region regionArray[],
 					RECTANGULAR_BOX, regionArray[i].boundary, -boundAdjError))
 				{
 					// Child is sticking out of parent
-					puts("Nested region is not properly within parent");
-					exit(3);
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u is not properly surrounded by parent region %u.\n", j, i);
+					fprintf(stderr, "Both regions are rectangular boxes.\n");
+					exit(EXIT_FAILURE);
 				}
 				
 				regionArray[i].childrenCoor[curChild][0] = (uint32_t)
@@ -196,8 +201,9 @@ void initializeRegionArray(struct region regionArray[],
 				if(!bBoundarySurround(RECTANGULAR_BOX, regionArray[j].boundary, SPHERE, regionArray[i].boundary, regionArray[j].actualSubSize))
 				{
 					// Child is sticking out of parent
-					puts("Nested region is not properly within parent");
-					exit(3);
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u is not properly surrounded by parent region %u.\n", j, i);
+					fprintf(stderr, "Rectangular region %u is inside of spherical region %u and there must be a clearance between the surfaces of at least the subvolume size of region %u which is %.2em.\n", j, i, j, regionArray[j].actualSubSize);
+					exit(EXIT_FAILURE);
 				}
 			} else if(regionArray[i].spec.shape == RECTANGULAR_BOX &&
 				regionArray[j].spec.shape == SPHERE)
@@ -205,15 +211,16 @@ void initializeRegionArray(struct region regionArray[],
 				if(!regionArray[i].spec.bMicro)
 				{
 					// A mesoscopic parent cannot have a spherical child
-					puts("Error: Mesoscopic parent region has a spherical child");
-					exit(3);					
+					fprintf(stderr, "ERROR: Mesoscopic region %u has a spherical child region %u.\n", i, j);
+					exit(EXIT_FAILURE);					
 				}
 				
 				if(!bBoundarySurround(SPHERE, regionArray[j].boundary, RECTANGULAR_BOX, regionArray[i].boundary, regionArray[i].actualSubSize))
 				{
 					// Child is sticking out of parent
-					puts("Nested region is not properly within parent");
-					exit(3);
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u is not properly surrounded by parent region %u.\n", j, i);
+					fprintf(stderr, "Spherical region %u is inside of rectangular region %u and there must be a clearance between the surfaces of at least the subvolume size of region %u which is %.2em.\n", j, i, i, regionArray[i].actualSubSize);
+					exit(EXIT_FAILURE);
 				}
 			} else if(regionArray[i].spec.shape == SPHERE &&
 				regionArray[j].spec.shape == SPHERE)
@@ -221,14 +228,14 @@ void initializeRegionArray(struct region regionArray[],
 				if(!bBoundarySurround(SPHERE, regionArray[j].boundary, SPHERE, regionArray[i].boundary, 0.))
 				{
 					// Child is sticking out of parent
-					puts("Nested region is not properly within parent");
-					exit(3);
+					fprintf(stderr, "ERROR: Outer boundary of spherical nested region %u is not properly surrounded by spherical parent region %u.\n", j, i);
+					exit(EXIT_FAILURE);
 				}
 			} else
 			{
 				// Combination of child and parent is invalid
-				puts("Combination of child/parent for nested region is invalid");
-				exit(3);
+				fprintf(stderr, "ERROR: Combination of child/parent for region %u nested in region %u is invalid.\n", j, i);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -292,8 +299,8 @@ void initializeRegionArray(struct region regionArray[],
 		regionArray[i].regionNeighDir = malloc(NUM_REGIONS*sizeof(unsigned short));
 		if(regionArray[i].isRegionNeigh == NULL || regionArray[i].regionNeighDir == NULL)
 		{
-			puts("Memory could not be allocated to region parameters");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for region %u parameters.\n", i);
+			exit(EXIT_FAILURE);
 		}
 		
 		// Initialize members used for transitions out of microscopic regions
@@ -309,16 +316,16 @@ void initializeRegionArray(struct region regionArray[],
 				|| regionArray[i].boundRegionFaceCoor == NULL
 				|| regionArray[i].regionNeighFaceDir == NULL)
 			{
-				puts("Memory could not be allocated to region parameters");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for region %u's microscopic parameters.\n", i);
+				exit(EXIT_FAILURE);
 			}
 		}
 		
 		regionArray[i].numSubRegionNeigh = malloc(NUM_REGIONS*sizeof(uint32_t));
 		if(regionArray[i].numSubRegionNeigh == NULL)
 		{
-			puts("Memory could not be allocated to region parameters");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for region %u parameters.\n", i);
+			exit(EXIT_FAILURE);
 		}
 		
 		for(j = 0; j < NUM_REGIONS; j++)
@@ -335,8 +342,8 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].diffRate = malloc(NUM_MOL_TYPES*sizeof(double));
 			if(regionArray[i].diffRate == NULL)
 			{
-				puts("Memory could not be allocated to region parameters");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for region %u diffusion coefficients.\n", i);
+				exit(EXIT_FAILURE);
 			}
 			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
 			{
@@ -401,8 +408,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 			|| regionArray[i].bNeedUpdate == NULL
 			|| regionArray[i].numMolFromMicro == NULL)
 		{
-			puts("Memory could not be allocated to region parameters");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for region %u neighbor parameters.\n", i);
+			exit(EXIT_FAILURE);
 		}
 		
 		for(j = 0; j < NUM_REGIONS; j++)
@@ -460,8 +467,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				|| regionArray[i].bNeedUpdate[j] == NULL
 				|| regionArray[i].numMolFromMicro[j] == NULL)
 			{
-				puts("Memory could not be allocated to region parameters");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+				exit(EXIT_FAILURE);
 			}
 			
 			for(curBoundID = 0; curBoundID < regionArray[i].numSubRegionNeigh[j];
@@ -472,8 +479,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 					malloc(NUM_MOL_TYPES * sizeof(uint64_t));
 				if(regionArray[i].numMolFromMicro[j][curBoundID] == NULL)
 				{
-					puts("Memory could not be allocated to region parameters");
-					exit(3);
+					fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+					exit(EXIT_FAILURE);
 				}
 				// Initialize array values
 				for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
@@ -504,8 +511,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 						* sizeof(double [3]));
 					if(regionArray[i].boundVirtualNeighCoor[j][curBoundID] == NULL)
 					{
-						puts("Memory could not be allocated to region parameters");
-						exit(3);
+						fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+						exit(EXIT_FAILURE);
 					}
 					
 					regionArray[i].neighID[j][curBoundID] = curID;
@@ -571,7 +578,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[4] + regionArray[i].actualSubSize;
 								break;
 							default:
-								puts("Invalid neighbor direction");
+								fprintf(stderr, "ERROR: Invalid neighbor direction determined for neighboring regions %u and %u.\n", i, j);
 						}
 					}
 					curBoundID++; // Increment the index of the ordered subvolume along region
@@ -774,8 +781,8 @@ void findRegionTouch3D(const short NUM_REGIONS,
 			malloc(regionArray[i].numRegionNeigh* sizeof(short));
 		if(regionArray[i].regionNeighID == NULL)
 		{
-			puts("Memory could not be allocated to region parameters");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for region %u's microscopic parameters.\n", i);
+			exit(EXIT_FAILURE);
 		}
 		curNeigh = 0;
 		
@@ -826,8 +833,8 @@ void findRegionTouch3D(const short NUM_REGIONS,
 				if(regionArray[i].boundRegionFaceCoor[j] == NULL
 					|| regionArray[i].regionNeighFaceDir[j] == NULL)
 				{
-					puts("Memory could not be allocated to region parameters");
-					exit(3);
+					fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+					exit(EXIT_FAILURE);
 				}
 				
 				// Determine coordinates of boundary overlap
@@ -997,8 +1004,8 @@ double intersectRegionVolume(const short curRegion,
 	if(intersectType == UNDEFINED_SHAPE)
 	{
 		// Invalid intersection of boundary with region		
-		puts("Error: Region intersection is invalid");
-		exit(3);			
+		fprintf(stderr, "ERROR: An intersection with region %u is invalid.\n", curRegion);
+		exit(EXIT_FAILURE);			
 	}
 	volume = boundaryArea(intersectType, interBoundary);
 	
@@ -1015,8 +1022,8 @@ double intersectRegionVolume(const short curRegion,
 		if(intersectType == UNDEFINED_SHAPE)
 		{
 			// Invalid intersection of boundary with child		
-			puts("Error: Child region intersection is invalid");
-			exit(3);			
+			fprintf(stderr, "ERROR: An intersection with region %u is invalid.\n", curRegion);
+			exit(EXIT_FAILURE);			
 		} else
 		{
 			childVolume = boundaryArea(intersectType, interBoundary);
@@ -1092,7 +1099,7 @@ bool bLineHitRegion(const double p1[3],
 				regionArray[startRegion].boundRegionFaceCoor[endRegion][0],
 				regionArray[startRegion].regionNeighFaceDir[endRegion][0], bInside, d, intersectPoint);
 		default:
-			fprintf(stderr,"\nBoundary type %d invalid for boundary intersection.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Boundary type %d invalid for boundary intersection between regions %u and %u.\n", boundary1Type, startRegion, endRegion);
 			return false;		
 	}
 }
@@ -1206,7 +1213,7 @@ void lockPointToRegion(double point[3],
 			point[0] += regionArray[boundRegion].boundary[0];
 			break;
 		default:
-			fprintf(stderr,"\nError: Boundary type %d invalid.\n", regionArray[boundRegion].spec.shape);
+			fprintf(stderr,"ERROR: Point cannot be locked to region %u because it is of type %d.\n", boundRegion, regionArray[boundRegion].spec.shape);
 	}
 }
 

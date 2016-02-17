@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * actor_data.c - linked list of binary data associated with active actor
- * Last revised for AcCoRD v0.3.1
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.3.1
  * - header added
@@ -52,8 +55,8 @@ void transferData(ListData * oldData,
 		if(!addData(oldData, p_node->item.bit))
 		{
 			// Creation of bit failed
-			puts("Memory could not be allocated to add bit to data sequence");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory could not be allocated to add bit to data sequence.\n");
+			exit(EXIT_FAILURE);
 		}
 		p_node = p_node->next;
 	}

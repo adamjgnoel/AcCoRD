@@ -10,9 +10,12 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - modified use of unsigned long and unsigned long long to uint32_t and uint64_t
@@ -29,6 +32,7 @@
 #include <math.h> // for fabs(), INFINITY
 #include <stdlib.h> // for exit(), malloc
 #include <stdbool.h> // for C++ bool conventions
+#include <inttypes.h> // for extended integer type macros
 #include <limits.h> // For SHRT_MAX
 #include "subvolume.h" // for "Public" declarations
 
@@ -49,8 +53,8 @@ void allocateSubvolArray(const uint32_t numSub,
 	*subvolArray = malloc(numSub*sizeof(struct subvolume3D));
 		
 	if(*subvolArray == NULL){
-		puts("Memory could not be allocated to store array of subvolume structures");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for array of subvolume structures.\n");
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -67,30 +71,30 @@ void allocateSubvolHelper(const uint32_t numSub,
 	*subID = malloc(NUM_REGIONS*sizeof(*subID));
 		
 	if(subCoorInd == NULL || *subID == NULL){
-		puts("Memory could not be allocated to store temporary subvolume information");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	for(i = 0; i < NUM_REGIONS; i++)
 	{
 		(*subID)[i] = malloc(regionArray[i].spec.numX*sizeof(*subID));
 		if((*subID)[i] == NULL){
-			puts("Memory could not be allocated to store temporary subvolume information");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
+			exit(EXIT_FAILURE);
 		}
 		for(x = 0; x < regionArray[i].spec.numX; x++)
 		{
 			(*subID)[i][x] = malloc(regionArray[i].spec.numY*sizeof(*subID));
 			if((*subID)[i][x] == NULL){
-				puts("Memory could not be allocated to store temporary subvolume information");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
+				exit(EXIT_FAILURE);
 			}
 			for(y = 0; y < regionArray[i].spec.numY; y++)
 			{
 				(*subID)[i][x][y] = malloc(regionArray[i].spec.numZ*sizeof(*subID));
 				if((*subID)[i][x][y] == NULL){
-					puts("Memory could not be allocated to store temporary subvolume information");
-					exit(3);
+					fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
+					exit(EXIT_FAILURE);
 				}
 			}
 		}
@@ -206,8 +210,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 	
 	if(curSubNeigh == NULL)
 	{
-		puts("Memory could not be allocated to temporarily store number of neighbors of each subvolume that are in same region");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation to temporarily store number of neighbors of each subvolume that are in same region.\n");
+		exit(EXIT_FAILURE);
 	}
 	for(curID = 0; curID < numSub; curID++)
 	{
@@ -305,8 +309,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 						subvolArray[curID].num_mol = malloc(NUM_MOL_TYPES*sizeof(uint64_t));
 						if(subvolArray[curID].num_mol == NULL)
 						{
-							puts("Memory could not be allocated to store number of molecules in each subvolume");
-							exit(3);
+							fprintf(stderr, "ERROR: Memory allocation for number of molecules in subvolume %" PRIu32 ".\n", curID);
+							exit(EXIT_FAILURE);
 						}
 						subvolArray[curID].mesoID = curMesoID;
 						curMesoID++;
@@ -433,7 +437,7 @@ void buildSubvolArray3D(const uint32_t numSub,
 	}
 	
 	// Determine the neighbors of each subvolume that are in other regions
-	puts("Finding Neighbours of Each Subvolume...");
+	printf("Finding Neighbours of Each Subvolume...\n");
 	if(NUM_REGIONS > 1)
 	{ // Only need to continue if there is more than one region
 
@@ -490,8 +494,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 			malloc(subvolArray[curID].num_neigh*sizeof(uint32_t));
 		if(subvolArray[curID].neighID == NULL)
 		{
-			puts("Memory could not be allocated to store IDs of subvolume neighbors");
-			exit(3);
+			fprintf(stderr, "ERROR: Memory allocation for IDs of neighbors of subvolume %" PRIu32 ".\n", curID);
+			exit(EXIT_FAILURE);
 		}
 	}
 		
@@ -599,8 +603,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 				malloc(NUM_MOL_TYPES*sizeof(subvolArray[curID].diffRateNeigh));
 			
 			if(subvolArray[curID].diffRateNeigh == NULL){
-				puts("Memory could not be allocated to store diffusion rates for mesoscopic boundary subvolumes");
-				exit(3);
+				fprintf(stderr, "ERROR: Memory allocation for mesoscopic diffusion rates for subvolume %" PRIu32 ", which is alng the boundary or region %u.\n", curID, subvolArray[curID].regionID);
+				exit(EXIT_FAILURE);
 			}
 			
 			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
@@ -608,8 +612,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 				subvolArray[curID].diffRateNeigh[curMolType] =
 					malloc(subvolArray[curID].num_neigh*sizeof(double));
 				if(subvolArray[curID].diffRateNeigh[curMolType] == NULL){
-					puts("Memory could not be allocated to store diffusion rates for mesoscopic boundary subvolumes");
-					exit(3);
+					fprintf(stderr, "ERROR: Memory allocation for mesoscopic diffusion rates for subvolume %" PRIu32 ", which is alng the boundary or region %u.\n", curID, subvolArray[curID].regionID);
+					exit(EXIT_FAILURE);
 				}
 			}
 			
@@ -778,8 +782,8 @@ bool checkSubvolNeigh(struct region regionArray[],
 		} else
 		{
 			// Something went wrong ...
-			puts("Parent/Child memory error!");
-			exit(3);
+			fprintf(stderr, "ERROR: Regions %u and %u were determined to be neighbors but this was only valid if one was a child region of the other.\n", curRegion, neighRegion);
+			exit(EXIT_FAILURE);
 		}
 	}
 	

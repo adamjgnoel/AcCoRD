@@ -11,9 +11,12 @@
  *						heap to store the next action time by all actors
  * 						and the micro and meso simulation regimes
  *
- * Last revised for AcCoRD v0.4
+ * Last revised for AcCoRD v0.5
  *
  * Revision history:
+ *
+ * Revision v0.5
+ * - improved use and format of error messages
  *
  * Revision v0.4
  * - removed deprecated debug functions
@@ -44,8 +47,8 @@ void allocateTimerArray(const short NUM_TIMERS,
 	*timerArray = malloc(NUM_TIMERS*sizeof(struct timerStruct));
 		
 	if(*timerArray == NULL){
-		puts("Memory could not be allocated to store array of timer structures");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for array of timer structures.\n");
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -65,8 +68,8 @@ void allocateTimerHeapArray(const short NUM_TIMERS,
 		
 	if(*heapTimer == NULL || *heapTimerChildID == NULL || *b_heapTimerChildValid == NULL)
 	{
-		puts("Memory could not be allocated to store array of timer structures");
-		exit(3);
+		fprintf(stderr, "ERROR: Memory allocation for heap of timer structures.\n");
+		exit(EXIT_FAILURE);
 	}
 }
 

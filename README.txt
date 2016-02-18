@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v0.4.1 (public beta, 2016-02-18)
+This document is the README for AcCoRD v0.4.1.1 (public beta, 2016-02-18)
 
 TABLE OF CONTENTS
 -----------------
@@ -51,7 +51,7 @@ From shell in Debian/Ubuntu: ./build_accord_opt_dub
 2. LATEST VERSION
 -----------------
 
-AcCoRD v0.4.1 is a public "beta" build. It has the following features:
+AcCoRD v0.4.1.1 is a public "beta" build. It has the following features:
 - 3D multi-scale hybrid reaction-diffusion
 - Environment described as union of cubes and spheres. Cubes can be microscopic (track individual molecules) or mesoscopic (assume uniform molecule density throughout the cube). Spheres must be microscopic but can be infinite in size (i.e., unbounded environment).
 - Chemical reactions of 0th, 1st, and 2nd order in mesoscopic regime. No 2nd order reactions permitted in microscopic regime (for now).
@@ -67,7 +67,7 @@ A complete version history can be found in CHANGELOG.txt
 3. BASIC USAGE
 --------------
 
-AcCoRD is run from the command line. You must be in one of the AcCoRD subdirectories in order for it to run properly, because of the use of static relative paths. The configuration file should be in the "config" subdirectory, and the "results" subdirectory should exist for the output to be created.
+AcCoRD is run from the command line.
 
 AcCoRD takes 2 additional (optional) arguments when called:
 1) Configuration filename. Config file must be defined relative to one of 3 locations. AcCoRD will first search the current directory, then the "config" subdirectory, and finally the "../config/" directory. There are a number of sample configuration files provided to demonstrate AcCoRD functionality.
@@ -119,6 +119,7 @@ Additional documentation will be prepared as AcCoRD nears general public release
 5. KNOWN ISSUES
 ---------------
 
+This list is current as of v0.4.1.1. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
 - 2D environments cannot be created as 3D environments with one dimension having size zero
 - Simplified algorithms are used to handle molecule placement when transitioning between mesoscopic and microscopic regions
 - AcCoRD does not do an exhaustive check for the validity of input parameters. Parameters are checked individually for having valid values. For example, creating an environment with overlapping regions will most likely result in a hard crash.
@@ -138,7 +139,7 @@ Additional documentation will be prepared as AcCoRD nears general public release
 6. FUTURE FEATURES
 ------------------
 
-Development of AcCoRD is active and on-going. Here is a list of planned end-user features in approximate order of priority:
+Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details. Here is a list of planned end-user features in approximate order of priority:
 - Add definition of surfaces placed around or within regions
 - Add surface interactions/reactions (besides just reflections)
 - Add actor definitions as union of regions instead of just a boundary
@@ -147,7 +148,6 @@ Development of AcCoRD is active and on-going. Here is a list of planned end-user
 - Add actors that track changes to molecule composition in their volumes
 - Add 2nd order chemical reactions in microscopic regions
 - Improve accuracy of transitions between microscopic and mesoscopic regions
-- Improve detail of error messages so that they are more specific about where and how they occurred
 - Write more MATLAB utility functions to perform common tasks with simulation output (e.g., plot average behavior, simulation statistics, bit error probabilities, and video of simulation progression)
 - Add checks on configuration parameters after they are loaded but before simulation is initialized
 - Specify different diffusion coefficients for different regions

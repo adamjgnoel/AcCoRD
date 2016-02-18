@@ -8,11 +8,11 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * accord.c - main file
- * Last revised for AcCoRD v0.5
+ * Last revised for AcCoRD v0.4.1
  *
  * Revision history:
  *
- * Revision v0.5
+ * Revision v0.4.1
  * - improved use and format of error messages
  * - added more simulation parameters to display while initializing a simulation
  * - added copyright notice and code repository to terminal display
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 	else
 	{
 		printf("from default configuration file \"%s\"\n", CONFIG_NAME);
-		printf("NOTE: To specify a different configuration file, call AcCoRD from command line in format ACCORD_EXE CONFIG_NAME\n");
+		printf("NOTE: To specify a different configuration file, call AcCoRD from command line in format ACCORD_EXE PATH_TO_CONFIG\n");
 		printf("NOTE: To specify a different seed offset, call AcCoRD with the offset as the 2nd argument.\n");
 		loadConfig3D(CONFIG_NAME, 0, &spec);
 	}
@@ -961,9 +961,9 @@ int main(int argc, char *argv[])
 	printf("Memory cleanup ...\n");
 	
 	if (fclose(out) != 0)
-		fprintf(stderr,"ERROR: Could not close output file %s.\n",spec.OUTPUT_NAME);
+		fprintf(stderr,"ERROR: Could not close output file \"%s.txt\".\n",spec.OUTPUT_NAME);
 	if (fclose(outSummary) != 0)
-		fprintf(stderr,"ERROR: Could not close output summary file %s%s.\n", "summary_", spec.OUTPUT_NAME);
+		fprintf(stderr,"ERROR: Could not close output summary file \"%s_summary.txt\".\n", spec.OUTPUT_NAME);
 	
 	for(curActor = 0; curActor < numActorRecord; curActor++)
 	{

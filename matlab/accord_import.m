@@ -3,7 +3,7 @@ function [data, config] = accord_import(fileName, seedRange)
 % The AcCoRD Simulator
 % (Actor-based Communication via Reaction-Diffusion)
 %
-% Copyright 2015 Adam Noel. All rights reserved.
+% Copyright 2016 Adam Noel. All rights reserved.
 % 
 % For license details, read LICENSE.txt in the root AcCoRD directory
 % For user documentation, read README.txt in the root AcCoRD directory
@@ -26,9 +26,13 @@ function [data, config] = accord_import(fileName, seedRange)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD v0.3.1
+% Last revised for AcCoRD v0.4.1
 %
 % Revision history:
+%
+% Revision v0.4.1
+% - changed output filename convention and location for increased
+% flexibility
 %
 % Revision v0.3.1
 % - header added
@@ -47,10 +51,26 @@ opt.SimplifyCell = 1;
 opt.FastArrayParser = 1;
 opt.ShowProgress = 0;
 
-summary = loadjson(['../results/summary_' fileName ...
-    '_SEED' num2str(seedRange(1)) '.txt'], opt);
+summary = loadjson([fileName ...
+    '_SEED' num2str(seedRange(1)) '_summary.txt'], opt);
 data.configName = summary{1}.ConfigFile; % Original configuration file
-config = loadjson(['../config/' data.configName], opt);
+
+% "Search" for configuration file
+if exist(data.configName, 'file')
+    configFile = data.configName;
+elseif exist(['config/' data.configName], 'file')
+    configFile = ['config/' data.configName];
+elseif exist(['../config/' data.configName], 'file')
+    configFile = ['../config/' data.configName];
+elseif exist(['../' data.configName], 'file')
+    configFile = ['../' data.configName];
+elseif exist(['../../' data.configName], 'file')
+    configFile = ['../../' data.configName];
+elseif exist(['../../config' data.configName], 'file')
+    configFile = ['../../config' data.configName];
+end
+
+config = loadjson(configFile, opt);
 %data.seed = summary{1}.SEED;
 data.startTime = summary{1}.StartTime;
 data.endTime = summary{2}.EndTime;
@@ -113,7 +133,7 @@ end
 curReal = 1;
 for s = 1:data.numSeed
     seed = seedRange(s);
-    fid = fopen(['../results/' fileName '_SEED' num2str(seed) '.txt']);
+    fid = fopen([fileName '_SEED' num2str(seed) '.txt']);
     for r = 1:data.numRepeatSingle
         % Read in realization line
         textscan(fid, '%*[^\n]', 1);
@@ -170,5 +190,5 @@ for s = 1:data.numSeed
 end
 
 %% Write output to a .mat file
-baseName = textscan(data.configName, '%s', 'delimiter', '.');
-save([baseName{1}{1} '_out'], 'data', 'config');
+[~,configName,~] = fileparts(data.configName);
+save([configName '_out'], 'data', 'config');

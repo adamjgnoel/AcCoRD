@@ -21,9 +21,6 @@ TABLE OF CONTENTS
 1. INSTALLATION
 ---------------
 
-Extract the AcCoRD directory where you want it to run. Keep the file structure as-is because AcCoRD
-uses relative paths for simulation input and output.
-
 There are two installation options:
 1) (BASIC) Use a pre-compiled binary. Debug and optimized versions exist for Windows,
 Debian/Ubuntu Linux, and RHEL/CentOS Linux. No further action is required before running the simulator, unless file permissions need to be modified (e.g., in Linux, type "chmod +x FILENAME" in a terminal to enable execution of FILENAME).
@@ -32,7 +29,7 @@ Windows binaries were compiled using GCC 4.8.1 on minGW and the C99 standard of 
 Debian/Ubuntu binaries were compiled using GCC 4.8.4 and the C99 standard of C.
 RHEL/CentOS binaries were compiled using GCC 4.8.3 and the C99 standard of C.
 
-2) (ADVANCED) Build from source. This is needed if you want to use different compilation
+2) (ADVANCED) Build from source code. This is needed if you want to use different compilation
 parameters. The src directory contains scripts for Windows, Debian/Ubuntu, and RHEL/CentOS builds (note that the linux build scripts are identical except for the binary filenames in order to distinguish between them). Run a script from
 the command line while in the "src" directory and the binary will be placed in the "bin" directory. GCC and standard C libraries are required.
 - build_accord_opt_win.bat builds the optimized Windows version with executable accord_win.exe

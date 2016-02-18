@@ -1,1 +1,6 @@
 bin/accord_dub.out
+bin/accord_dub_debug.out
+bin/accord_rc_debug.out
+bin/accord_win.exe
+bin/accord_rc.out
+bin/accord_win_debug.exe

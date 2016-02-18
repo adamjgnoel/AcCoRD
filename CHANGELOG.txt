@@ -2,7 +2,11 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.4.1 (public beta, 2016-02-18)
+This document is the CHANGELOG for AcCoRD v0.4.1.1 (public beta, 2016-02-18)
+- Minor updates to README to reflect new installation and usage
+- Corrected build scripts to create the bin subdirectory if it doesn't exist.
+
+Changes introduced in v0.4.1
 - Removed binaries from source code.
 - Relaxed placement of executable file relative to configuration file. See README.txt for details.
 - Improved console output with initialization details and better error messages.

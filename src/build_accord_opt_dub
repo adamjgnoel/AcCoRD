@@ -1,3 +1,3 @@
 #!/bin/bash
-
+mkdir -p "../bin"
 gcc accord.c subvolume.c mtwist.c randistrs.c micro_molecule.c region.c meso.c chem_rxn.c actor.c observations.c base.c timer_accord.c mol_release.c actor_data.c file_io.c cJSON.c -std=c99 -pedantic -O3 -lm -o "../bin/accord_dub.out"

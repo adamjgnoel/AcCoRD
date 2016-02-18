@@ -9,11 +9,11 @@
  *
  * observations.h - 	linked list of observations made by a passive actor
  *
- * Last revised for AcCoRD v0.5
+ * Last revised for AcCoRD v0.4.1
  *
  * Revision history:
  *
- * Revision v0.5
+ * Revision v0.4.1
  * - improved use and format of error messages
  *
  * Revision v0.3.1

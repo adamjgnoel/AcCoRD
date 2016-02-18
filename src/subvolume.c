@@ -10,11 +10,11 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.5
+ * Last revised for AcCoRD v0.4.1
  *
  * Revision history:
  *
- * Revision v0.5
+ * Revision v0.4.1
  * - improved use and format of error messages
  *
  * Revision v0.4

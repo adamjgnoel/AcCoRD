@@ -8,9 +8,12 @@
 // For user documentation, read README.txt in the root AcCoRD directory
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
-// Last revised for AcCoRD v0.4
+// Last revised for AcCoRD v0.4.1
 //
 // Revision history:
+//
+// Revision v0.4.1
+// - made placement of config file and output more flexible
 //
 // Revision v0.4
 // - added parameters for sphere regions and actors
@@ -30,11 +33,13 @@
 // With that out of the way, welcome to this "tutorial" for preparing proper
 // AcCoRD configuration files.
 //
-// This document is current as of v0.4 (2016-02-12).
+// This document is current as of v0.4.1 (2016-02-18).
 //
 // Please note that valid configuration files cannot have these comments
 // preceded by "//". If you remove these comments and place a copy of
-// this file in the "config" folder, then you can run it in AcCoRD.
+// this file where AcCoRD can "see" it, then you can run it in AcCoRD.
+// AcCoRD looks for config files first in the current directory, then
+// in a "config" subdirectory, then in a "../config/" directory.
 // However, this should be unnecessary since the config folder includes
 // a number of sample valid configuration files.
 // Please refer to README.txt for instructions on running a simulation.

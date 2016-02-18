@@ -8,11 +8,16 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * file_io.h - interface with JSON configuration files
- * Last revised for AcCoRD v0.5
+ * Last revised for AcCoRD v0.4.1
  *
  * Revision history:
  *
- * Revision v0.5
+ * Revision v0.4.1
+ * - added search for configuration file. First checks current directory, then
+ * config subdirectory, and then config sibling directory
+ * - added search for results folder in current directory and then as subdirectory
+ * of parent. If it cannot be found, results folder is created in current directory
+ * and output is placed there.
  * - improved use and format of error messages
  *
  * Revision v0.4
@@ -35,11 +40,15 @@
 #define FILE_IO_H
 
 #include <stdio.h>
+#include <sys/stat.h> // for stat(), S_ISDIR(), mkdir()
 #include <stdlib.h> // for exit(), malloc
 #include <inttypes.h> // for extended integer type macros
 #include <stdbool.h> // for C++ bool naming, requires C99
 #include <string.h> // for strcpy()
 #include <time.h> // For time record keeping
+#ifndef __linux__
+	#include <direct.h> // for _mkdir() [Windows]
+#endif // __linux__
 #include "cJSON.h"
 #include "region.h"
 #include "actor.h"

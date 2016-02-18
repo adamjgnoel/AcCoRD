@@ -8,11 +8,16 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * file_io.c - interface with JSON configuration files
- * Last revised for AcCoRD v0.5
+ * Last revised for AcCoRD v0.4.1
  *
  * Revision history:
  *
- * Revision v0.5
+ * Revision v0.4.1
+ * - added search for configuration file. First checks current directory, then
+ * config subdirectory, and then config sibling directory
+ * - added search for results folder in current directory and then as subdirectory
+ * of parent. If it cannot be found, results folder is created in current directory
+ * and output is placed there.
  * - improved use and format of error messages
  *
  * Revision v0.4
@@ -61,25 +66,40 @@ void loadConfig3D(const char * CONFIG_NAME,
 	size_t temp; // Garbage variable for discarded file content length
 	
 	// Construct full name of configuration file
-	dirLength = strlen(configDir);
 	nameLength = strlen(CONFIG_NAME);
-	configNameFull = malloc(dirLength + nameLength + 1);
+	configNameFull = malloc(strlen("../config/") + nameLength + 1);
 	if(configNameFull == NULL)
 	{
 		fprintf(stderr,"ERROR: Memory could not be allocated to build the configuration file name.\n");
 		exit(EXIT_FAILURE);
 	}
-	configNameFull[0] = '\0'; // Initialize full name to the empty string
-	strcat(configNameFull,configDir);
-	strcat(configNameFull,CONFIG_NAME);
 	
-	// Open configuration file
-	configFile = fopen(configNameFull, "r");
+	// Open configuration file.
+	// First check current directory, then check "config" folder,
+	// then check "config" folder in parent directory
+	configFile = fopen(CONFIG_NAME, "r");
 	if(configFile == NULL)
 	{
-		fprintf(stderr,"ERROR: Cannot open configuration file \"%s\".\n",CONFIG_NAME);
-		exit(EXIT_FAILURE);
+		strcpy(configNameFull,"config/");
+		strcat(configNameFull,CONFIG_NAME);
+		configFile = fopen( configNameFull, "r");
+		if(configFile == NULL)
+		{
+			strcpy(configNameFull,"../config/");
+			strcat(configNameFull,CONFIG_NAME);
+			configFile = fopen( configNameFull, "r");
+			if(configFile == NULL)
+			{
+				fprintf(stderr,"ERROR: Configuration file \"%s\" not found.\n",CONFIG_NAME);
+				fprintf(stderr,"AcCoRD searches 1) in current directory, 2) in \"config\" subdirectory, and then 3) in \"..\\config\\\" directory.\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+	} else
+	{
+		strcpy(configNameFull,CONFIG_NAME);
 	}
+	printf("Successfully opened configuration file at \"%s\".\n", configNameFull);
 	
 	// Read in contents of configuration file
 	fseek(configFile, 0, SEEK_END);
@@ -169,11 +189,11 @@ void loadConfig3D(const char * CONFIG_NAME,
 		bWarn = true;
 		printf("WARNING %d: \"Output Filename\" not defined or has length zero. Assigning default value of \"test\".\n", numWarn++);
 		curSpec->OUTPUT_NAME = stringAllocate(strlen("test") + 15);
-		sprintf(curSpec->OUTPUT_NAME, "%s_SEED%d.txt", "test", curSpec->SEED);
+		sprintf(curSpec->OUTPUT_NAME, "%s_SEED%d", "test", curSpec->SEED);
 	} else{
 		curSpec->OUTPUT_NAME = stringAllocate(strlen(cJSON_GetObjectItem(configJSON,
 			"Output Filename")->valuestring) + 15);
-		sprintf(curSpec->OUTPUT_NAME, "%s_SEED%d.txt", cJSON_GetObjectItem(configJSON,
+		sprintf(curSpec->OUTPUT_NAME, "%s_SEED%d", cJSON_GetObjectItem(configJSON,
 			"Output Filename")->valuestring, curSpec->SEED);
 	}
 	
@@ -1161,22 +1181,55 @@ void initializeOutput3D(FILE ** out,
 	struct tm* timeInfo;
 	cJSON * root;
 	char * outText;
-	char * outDir = "../results/";
-	char * outPre = "../results/summary_";
+	char * outDir2 = "../results";
+	char * outDir1 = "results";
+	bool bUseDir1;
+	int mkdirOutput;
 	char * outputNameFull;
 	char * outputSummaryNameFull;
 	unsigned int dirLength, nameLength;
+	struct stat sb;
 	
 	time(&timer);
 	timeInfo = localtime(&timer);
 	
 	strftime(timeBuffer, 26, "%Y-%m-%d %H:%M:%S", timeInfo);
 	
+	// Check existence of results folder and create it if it does not exist
+	if (stat(outDir1, &sb) == 0 && S_ISDIR(sb.st_mode))
+    { // Directory "results/" exists. Use it for output
+		bUseDir1 = true;
+    } else if (stat(outDir2, &sb) == 0 && S_ISDIR(sb.st_mode))
+    { // Directory "../results/" exists. Use it for output
+		bUseDir1 = false;
+    } else
+	{ // Create directory "results/" and use for output
+		printf("NOTE: \"results\" directory could not be found. Trying to create.\n");
+		#ifdef __linux__
+			mkdirOutput = mkdir(outDir1, S_IRWXU);
+		#else
+			mkdirOutput = _mkdir(outDir1);
+		#endif
+		if(mkdirOutput == -1)
+		{ // Directory could not be created
+			fprintf(stderr,"ERROR: \"results\" directory could not be created.\n");
+			exit(EXIT_FAILURE);
+		}
+		bUseDir1 = true;
+	}
+	
 	// Construct full name of output file
-	dirLength = strlen(outDir);
+	if(bUseDir1)
+	{
+		dirLength = strlen(outDir1)+1;
+	} else
+	{
+		dirLength = strlen(outDir2)+1;
+	}
+	
 	nameLength = strlen(curSpec.OUTPUT_NAME);
-	outputNameFull = malloc(dirLength + nameLength + 1);
-	outputSummaryNameFull = malloc(dirLength + nameLength + 19);
+	outputNameFull = malloc(dirLength + nameLength + 5);
+	outputSummaryNameFull = malloc(dirLength + nameLength + 23);
 	if(outputNameFull == NULL
 		|| outputSummaryNameFull == NULL)
 	{
@@ -1185,19 +1238,32 @@ void initializeOutput3D(FILE ** out,
 	}
 	outputNameFull[0] = '\0'; // Initialize full name to the empty string
 	outputSummaryNameFull[0] = '\0';
-	strcat(outputNameFull,outDir);
+	if(bUseDir1)
+	{
+		strcat(outputNameFull,outDir1);
+		strcat(outputNameFull,"/");
+	} else
+	{
+		strcat(outputNameFull,outDir2);
+		strcat(outputNameFull,"/");
+	}
 	strcat(outputNameFull,curSpec.OUTPUT_NAME);
-	strcat(outputSummaryNameFull,outPre);
-	strcat(outputSummaryNameFull,curSpec.OUTPUT_NAME);
+	strcat(outputSummaryNameFull,outputNameFull);
+	strcat(outputNameFull,".txt");
+	strcat(outputSummaryNameFull,"_summary.txt");
+	
+	printf("Simulation output will be written to \"%s\".\n", outputNameFull);
+	printf("Simulation summary will be written to \"%s\".\n", outputSummaryNameFull);
 	
 	if((*out = fopen(outputNameFull, "w")) == NULL)
 	{
-		fprintf(stderr,"ERROR: Cannot create output file \"%s\".\n",curSpec.OUTPUT_NAME);
+		fprintf(stderr,"ERROR: Cannot create output file \"%s\".\n",outputNameFull);
 		exit(EXIT_FAILURE);
 	}
 	if((*outSummary = fopen(outputSummaryNameFull, "w")) == NULL)
 	{
-		fprintf(stderr,"ERROR: Cannot create output summary file \"%s\".\n",curSpec.OUTPUT_NAME);
+		fprintf(stderr,"ERROR: Cannot create output summary file \"%s\".\n",
+			outputSummaryNameFull);
 		exit(EXIT_FAILURE);
 	}
 	

@@ -2,7 +2,10 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.4 (public beta, 2016-02-12)
+This document is the CHANGELOG for AcCoRD v0.4.1 (public beta, 2016-02-18)
+- Removed binaries from source code.
+- Relaxed placement of executable file relative to configuration file. See README.txt for details.
+- Improved console output with initialization details and better error messages.
 
 Changes introduced in v0.4:
 - Added spherical regions and actors. Spherical regions must be microscopic and are always composed of a single subvolume. Spherical regions can have cartesian parent or child regions, but there must be a clearance of at least the cartesian subvolume size to the boundary of the cartesian region. The surface of spherical actors must not intersect any cartesian region boundaries or any mesoscopic subvolumes.

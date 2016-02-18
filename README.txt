@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v0.4 (public beta, 2016-02-12)
+This document is the README for AcCoRD v0.4.1 (public beta, 2016-02-18)
 
 TABLE OF CONTENTS
 -----------------
@@ -25,7 +25,7 @@ Extract the AcCoRD directory where you want it to run. Keep the file structure a
 uses relative paths for simulation input and output.
 
 There are two installation options:
-1) (BASIC) Use pre-compiled binaries in the bin folder. Debug and optimized versions exist for Windows,
+1) (BASIC) Use a pre-compiled binary. Debug and optimized versions exist for Windows,
 Debian/Ubuntu Linux, and RHEL/CentOS Linux. No further action is required before running the simulator, unless file permissions need to be modified (e.g., in Linux, type "chmod +x FILENAME" in a terminal to enable execution of FILENAME).
 
 Windows binaries were compiled using GCC 4.8.1 on minGW and the C99 standard of C.
@@ -54,7 +54,7 @@ From shell in Debian/Ubuntu: ./build_accord_opt_dub
 2. LATEST VERSION
 -----------------
 
-AcCoRD v0.4 is a public "beta" build. It has the following features:
+AcCoRD v0.4.1 is a public "beta" build. It has the following features:
 - 3D multi-scale hybrid reaction-diffusion
 - Environment described as union of cubes and spheres. Cubes can be microscopic (track individual molecules) or mesoscopic (assume uniform molecule density throughout the cube). Spheres must be microscopic but can be infinite in size (i.e., unbounded environment).
 - Chemical reactions of 0th, 1st, and 2nd order in mesoscopic regime. No 2nd order reactions permitted in microscopic regime (for now).
@@ -73,26 +73,25 @@ A complete version history can be found in CHANGELOG.txt
 AcCoRD is run from the command line. You must be in one of the AcCoRD subdirectories in order for it to run properly, because of the use of static relative paths. The configuration file should be in the "config" subdirectory, and the "results" subdirectory should exist for the output to be created.
 
 AcCoRD takes 2 additional (optional) arguments when called:
-1) Configuration filename. Config file must be in the "config" folder. There are a number of sample configuration files provided to demonstrate AcCoRD functionality.
+1) Configuration filename. Config file must be defined relative to one of 3 locations. AcCoRD will first search the current directory, then the "config" subdirectory, and finally the "../config/" directory. There are a number of sample configuration files provided to demonstrate AcCoRD functionality.
 2) Seed value for random number generator (will override value specified in config file). You can read more about the meaning of the seed value in HOWTO_DEFINE_CONFIG.txt
 
 If there are no additional arguments, then a default config file is used ("accord_config_sample.txt").
 If there is one additional argument, then it must be the configuration filename.
 
-Sample call from Windows command prompt:
-..\bin\accord_win.exe myconfig.txt 2
-Sample call from Linux shell while in the AcCoRD "bin" directory:
+Sample call from Windows command prompt (where both the executable and the configuration file are in the current directory):
+accord_win.exe myconfig.txt 2
+Sample call from Linux shell while in the AcCoRD "bin" directory while the configuration file is in "../config/":
 ./accord myconfig.txt 2
 
-To import simulation output as a structure in Maltab, use the accord_import function found in the matlab folder. The call is:
+To import simulation output as a structure in Maltab, use the accord_import function found in the matlab folder of the source code. Please note that the files in the "JSONLab" subdirectory are required for this function. The call is:
 [data, config] = accord_import(FILENAME, SEEDRANGE)
 
-where FILENAME is the output filename to load (not including the path; filename only), SEEDRANGE is a vector specifying the seed values to import (each seed value corresponds to one pair of output files), and "data" and "config" are output structures. You must be in the AcCoRD "matlab" subdirectory in order for this function to run properly, because of the use of static relative paths and other functions that are called by accord_import.
+where FILENAME is the output filename to load (including the relative path, if applicable, but excluding the '_SEEDX.txt' suffix), SEEDRANGE is a vector specifying the seed values to import (each seed value corresponds to one pair of output files), and "data" and "config" are output structures. accord_import will search for the output file in its current directory, then in the "config", "../config/", "../", "../../", and "../../config" directories (and in that order).
 
 The accord_import function will also save the "data" and "config" structures to a MATLAB mat-file named CONFIG_NAME_out.mat in the "matlab" directory, where CONFIG_NAME is the name of the configuration file that was originally used to run the simulation.
 
 The "config" structure will contain all of the parameters specified in the original configuration file, using a format similar to that in the configuration file.
-
 The "data" structure will contain the data from both the output and output summary files. The names of the structure members are similar to those used in the output files themselves, so reading the structure should be straightforward.
 Examples:
 data.numRepeat -> total number of independent realizations (aggregated from all seed values).
@@ -114,8 +113,8 @@ AcCoRD is developed in C in order to have precise control over memory management
 The only general user documentation at this time is this readme and sample "fake" config and output files (they include comments so they are not valid JSON files and cannot be used as-is). The "fake" files are placed in the root AcCoRD folder and are called "HOWTO_DEFINE_CONFIG.txt", "HOWTO_READ_SUMMARY_OUTPUT.txt", and "HOWTO_READ_OUTPUT.txt". The config subdirectory also includes a number of sample valid configuration files for you to start running and experimenting with.
 
 While a formal publication on the design of AcCoRD has not yet been written, the general motivation and some of the implementation ideas were presented in the following conference papers:
-- A. Noel, K.C. Cheung, and R. Schober, On the Statistics of Reaction-Diffusion Simulations for Molecular Communication, in Proc. ACM NANOCOM 2015, Sep. 2015. DOI: http://dx.doi.org/10.1145/2800795.2800821
-- A. Noel, K.C. Cheung, and R. Schober, Multi-Scale Stochastic Simulation for Diffusive Molecular Communication, in Proc. IEEE ICC 2015, pp. 2712--2718, Jun. 2015. DOI: http://dx.doi.org/10.1109/ICC.2015.7248471
+- A. Noel, K.C. Cheung, and R. Schober, On the Statistics of Reaction-Diffusion Simulations for Molecular Communication, in Proc. ACM NANOCOM 2015, Sep. 2015. DOI: http://dx.doi.org/10.1145/2800795.2800821 - the simulations in this paper were completed with proof-of-concept MATLAB code
+- A. Noel, K.C. Cheung, and R. Schober, Multi-Scale Stochastic Simulation for Diffusive Molecular Communication, in Proc. IEEE ICC 2015, pp. 2712--2718, Jun. 2015. DOI: http://dx.doi.org/10.1109/ICC.2015.7248471 - the simulations in this paper were completed with AcCoRD v0.1, which was an early 2D build
 
 Additional documentation will be prepared as AcCoRD nears general public release. Until that time, please contact the developer or consider following AcCoRD on github (https://github.com/adamjgnoel/accord) for the latest updates.
 

@@ -67,6 +67,7 @@ void initializeRegionArray(struct region regionArray[],
 	unsigned short curMolType;
 	double h_i;
 	short curChildArray[NUM_REGIONS];
+	bool bFail;	// Fail switch for reactangle children on boundary of box parent
 	
 	double boundAdjError = SUBVOL_BASE_SIZE * SUB_ADJ_RESOLUTION;
 	
@@ -90,6 +91,29 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].boundary[4] = subvol_spec[i].zAnch;
 			regionArray[i].boundary[5] = regionArray[i].boundary[4] +
 				(regionArray[i].actualSubSize*subvol_spec[i].numZ);
+			
+			if(subvol_spec[i].shape == RECTANGLE)
+			{ // Determine which plane the rectangle is in
+				if(regionArray[i].actualSubSize*subvol_spec[i].numX == 0)
+				{
+					regionArray[i].plane = PLANE_YZ;
+				} else if (regionArray[i].actualSubSize*subvol_spec[i].numY == 0)
+				{
+					regionArray[i].plane = PLANE_XZ;
+				} else if (regionArray[i].actualSubSize*subvol_spec[i].numZ == 0)
+				{
+					regionArray[i].plane = PLANE_XY;
+				} else
+				{ // We shouldn't have gotten here
+					fprintf(stderr, "ERROR: Region %u is not defined properly as a Rectangle.\n", i,
+						subvol_spec[i].label);
+					fprintf(stderr, "There must be 0 subvolumes along one dimension.\n");
+					exit(EXIT_FAILURE);
+				}
+			} else
+			{ // There is no single plane
+				regionArray[i].plane = PLANE_3D;
+			}
 		} else
 		{
 			regionArray[i].actualSubSize = subvol_spec[i].radius;
@@ -99,6 +123,7 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].boundary[3] = subvol_spec[i].radius;
 			regionArray[i].boundary[4] = squareDBL(subvol_spec[i].radius);
 			regionArray[i].boundary[5] = 0.;
+			regionArray[i].plane = PLANE_3D;
 		}		
 			
 		regionArray[i].numChildren = 0;
@@ -124,6 +149,12 @@ void initializeRegionArray(struct region regionArray[],
 					regionArray[j].numChildren++;
 					break;
 				}
+				if(j == NUM_REGIONS - 1)
+				{ // Parent was not found. Throw error.
+					fprintf(stderr, "ERROR: Region %u (Label: \"%s\") has non-existent parent \"%s\".\n",
+						i, subvol_spec[i].label, subvol_spec[i].parent);
+							exit(EXIT_FAILURE);
+				}
 			}
 		}
 	}	
@@ -136,7 +167,7 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].childrenCoor = malloc(regionArray[i].numChildren*sizeof(uint32_t [6]));
 			if(regionArray[i].childrenID == NULL || regionArray[i].childrenCoor == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation to region %u parameters.\n", i);
+				fprintf(stderr, "ERROR: Memory allocation to region %u (label: \"%s\") parameters.\n", i, subvol_spec[i].label);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -156,52 +187,107 @@ void initializeRegionArray(struct region regionArray[],
 			j = regionArray[i].childrenID[curChild];
 			
 			if(regionArray[i].spec.shape == RECTANGULAR_BOX &&
-				regionArray[j].spec.shape == RECTANGULAR_BOX)
+				(regionArray[j].spec.shape == RECTANGULAR_BOX
+				|| regionArray[j].spec.shape == RECTANGLE))
 			{
 				// Neither parent nor child are spheres
 				// Check for flush subvolumes first
-				if(fabs((regionArray[j].boundary[0] - regionArray[i].boundary[0])/regionArray[i].actualSubSize - round((regionArray[j].boundary[0] - regionArray[i].boundary[0])/regionArray[i].actualSubSize)) > boundAdjError ||
-					fabs((regionArray[j].boundary[1] - regionArray[i].boundary[1])/regionArray[i].actualSubSize - round((regionArray[j].boundary[1] - regionArray[i].boundary[1])/regionArray[i].actualSubSize)) > boundAdjError ||
-					fabs((regionArray[j].boundary[2] - regionArray[i].boundary[2])/regionArray[i].actualSubSize - round((regionArray[j].boundary[2] - regionArray[i].boundary[2])/regionArray[i].actualSubSize)) > boundAdjError ||
-					fabs((regionArray[j].boundary[3] - regionArray[i].boundary[3])/regionArray[i].actualSubSize - round((regionArray[j].boundary[3] - regionArray[i].boundary[3])/regionArray[i].actualSubSize)) > boundAdjError ||
-					fabs((regionArray[j].boundary[4] - regionArray[i].boundary[4])/regionArray[i].actualSubSize - round((regionArray[j].boundary[4] - regionArray[i].boundary[4])/regionArray[i].actualSubSize)) > boundAdjError ||
-					fabs((regionArray[j].boundary[5] - regionArray[i].boundary[5])/regionArray[i].actualSubSize - round((regionArray[j].boundary[5] - regionArray[i].boundary[5])/regionArray[i].actualSubSize)) > boundAdjError)
+				if(bChildRegionNotFlush(i, j, regionArray, boundAdjError))
 				{
 					// Child is not flush with region's subvolumes
-					fprintf(stderr, "ERROR: Nested region %u is not properly aligned within parent region %u.\n", j, i);
-					fprintf(stderr, "Both regions are rectangular boxes and the outer boundary of the nested region must be flush with subvolumes of the parent region.\n");
+					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is not properly aligned within parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
+					fprintf(stderr, "Both regions are rectangular and the outer boundary of the nested region must be flush with subvolumes of the parent region.\n");
 					exit(EXIT_FAILURE);
 				}
 				
 				// Confirm that child is inside of parent
-				if(!bBoundarySurround(RECTANGULAR_BOX, regionArray[j].boundary,
+				if(!bBoundarySurround(regionArray[j].spec.shape, regionArray[j].boundary,
 					RECTANGULAR_BOX, regionArray[i].boundary, -boundAdjError))
 				{
 					// Child is sticking out of parent
-					fprintf(stderr, "ERROR: Outer boundary of nested region %u is not properly surrounded by parent region %u.\n", j, i);
-					fprintf(stderr, "Both regions are rectangular boxes.\n");
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u (label: \"%s\") is not properly surrounded by parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
+					fprintf(stderr, "Both regions are rectangular.\n");
 					exit(EXIT_FAILURE);
 				}
 				
-				regionArray[i].childrenCoor[curChild][0] = (uint32_t)
-					round((regionArray[j].boundary[0] - regionArray[i].boundary[0])/regionArray[i].actualSubSize);
-				regionArray[i].childrenCoor[curChild][1] = (uint32_t)
-					round((regionArray[j].boundary[1] - regionArray[i].boundary[0])/regionArray[i].actualSubSize - 1);
-				regionArray[i].childrenCoor[curChild][2] = (uint32_t)
-					round((regionArray[j].boundary[2] - regionArray[i].boundary[2])/regionArray[i].actualSubSize);
-				regionArray[i].childrenCoor[curChild][3] = (uint32_t)
-					round((regionArray[j].boundary[3] - regionArray[i].boundary[2])/regionArray[i].actualSubSize - 1);
-				regionArray[i].childrenCoor[curChild][4] = (uint32_t)
-					round((regionArray[j].boundary[4] - regionArray[i].boundary[4])/regionArray[i].actualSubSize);
-				regionArray[i].childrenCoor[curChild][5] = (uint32_t)
-					round((regionArray[j].boundary[5] - regionArray[i].boundary[4])/regionArray[i].actualSubSize - 1);
-			} else if(regionArray[i].spec.shape == SPHERE &&
-				regionArray[j].spec.shape == RECTANGULAR_BOX)
-			{				
-				if(!bBoundarySurround(RECTANGULAR_BOX, regionArray[j].boundary, SPHERE, regionArray[i].boundary, regionArray[j].actualSubSize))
+				// Determine coordinates of child relative to parent subvolumes
+				findChildCoordinates(i, j, curChild, regionArray);
+				
+				// If child is RECTANGLE, check that it is not on parent's outer boundary
+				if(regionArray[j].spec.shape == RECTANGLE)
+				{
+					bFail = false;
+					switch (regionArray[j].plane)
+					{
+						case PLANE_XY:
+							bFail =
+								regionArray[i].childrenCoor[curChild][4] == 0
+								|| regionArray[i].childrenCoor[curChild][4] == regionArray[i].spec.numZ;
+							break;
+						case PLANE_XZ:		
+							bFail =
+								regionArray[i].childrenCoor[curChild][2] == 0
+								|| regionArray[i].childrenCoor[curChild][2] == regionArray[i].spec.numY;
+							break;				
+						case PLANE_YZ:
+							bFail =
+								regionArray[i].childrenCoor[curChild][0] == 0
+								|| regionArray[i].childrenCoor[curChild][0] == regionArray[i].spec.numX;
+							break;
+					}
+					if(bFail)
+					{
+						fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is on boundary of parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
+						fprintf(stderr, "Rectangle regions with rectangular box parents must not be defined on the parent's outer boundary. Place rectangle inside or do not define it as a child of region %u (label: \"%s\").\n", i, subvol_spec[i].label);
+						exit(EXIT_FAILURE);
+					}
+				}
+			} else if(regionArray[i].spec.shape == RECTANGLE &&
+				regionArray[j].spec.shape == RECTANGLE)
+			{
+				// Check for flush subvolumes				
+				if(bChildRegionNotFlush(i, j, regionArray, boundAdjError))
+				{
+					// Child is not flush with region's subvolumes
+					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is not properly aligned within parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
+					fprintf(stderr, "Both regions are rectangles and the outer boundary of the nested region must be flush with subvolumes of the parent region.\n");
+					exit(EXIT_FAILURE);
+				}
+				
+				// Confirm that child is inside of parent
+				if(regionArray[i].plane != regionArray[j].plane
+					|| !bBoundarySurround(RECTANGLE, regionArray[j].boundary,
+					RECTANGLE, regionArray[i].boundary, -boundAdjError))
 				{
 					// Child is sticking out of parent
-					fprintf(stderr, "ERROR: Outer boundary of nested region %u is not properly surrounded by parent region %u.\n", j, i);
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u (label: \"%s\") is not properly surrounded by parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
+					fprintf(stderr, "Both regions are rectangles.\n");
+					exit(EXIT_FAILURE);
+				}
+				
+				// Determine coordinates of child relative to parent subvolumes
+				findChildCoordinates(i, j, curChild, regionArray);
+				if(regionArray[i].plane == PLANE_XY)
+				{
+					regionArray[i].childrenCoor[curChild][4] = 0;
+					regionArray[i].childrenCoor[curChild][5] = 0;
+				} else if (regionArray[i].plane == PLANE_XZ)
+				{
+					regionArray[i].childrenCoor[curChild][2] = 0;
+					regionArray[i].childrenCoor[curChild][3] = 0;
+				} else if (regionArray[i].plane == PLANE_YZ)
+				{
+					regionArray[i].childrenCoor[curChild][0] = 0;
+					regionArray[i].childrenCoor[curChild][1] = 0;
+				}
+			} else if(regionArray[i].spec.shape == SPHERE &&
+				(regionArray[j].spec.shape == RECTANGULAR_BOX
+				|| regionArray[j].spec.shape == RECTANGLE))
+			{				
+				if(!bBoundarySurround(regionArray[j].spec.shape, regionArray[j].boundary, SPHERE, regionArray[i].boundary, regionArray[j].actualSubSize - boundAdjError))
+				{
+					// Child is sticking out of parent
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u (label: \"%s\") is not properly surrounded by parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
 					fprintf(stderr, "Rectangular region %u is inside of spherical region %u and there must be a clearance between the surfaces of at least the subvolume size of region %u which is %.2em.\n", j, i, j, regionArray[j].actualSubSize);
 					exit(EXIT_FAILURE);
 				}
@@ -211,14 +297,14 @@ void initializeRegionArray(struct region regionArray[],
 				if(!regionArray[i].spec.bMicro)
 				{
 					// A mesoscopic parent cannot have a spherical child
-					fprintf(stderr, "ERROR: Mesoscopic region %u has a spherical child region %u.\n", i, j);
+					fprintf(stderr, "ERROR: Mesoscopic region %u (label: \"%s\") has a spherical child region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 					exit(EXIT_FAILURE);					
 				}
 				
-				if(!bBoundarySurround(SPHERE, regionArray[j].boundary, RECTANGULAR_BOX, regionArray[i].boundary, regionArray[i].actualSubSize))
+				if(!bBoundarySurround(SPHERE, regionArray[j].boundary, RECTANGULAR_BOX, regionArray[i].boundary, regionArray[i].actualSubSize - boundAdjError))
 				{
 					// Child is sticking out of parent
-					fprintf(stderr, "ERROR: Outer boundary of nested region %u is not properly surrounded by parent region %u.\n", j, i);
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u (label: \"%s\") is not properly surrounded by parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
 					fprintf(stderr, "Spherical region %u is inside of rectangular region %u and there must be a clearance between the surfaces of at least the subvolume size of region %u which is %.2em.\n", j, i, i, regionArray[i].actualSubSize);
 					exit(EXIT_FAILURE);
 				}
@@ -228,13 +314,13 @@ void initializeRegionArray(struct region regionArray[],
 				if(!bBoundarySurround(SPHERE, regionArray[j].boundary, SPHERE, regionArray[i].boundary, 0.))
 				{
 					// Child is sticking out of parent
-					fprintf(stderr, "ERROR: Outer boundary of spherical nested region %u is not properly surrounded by spherical parent region %u.\n", j, i);
+					fprintf(stderr, "ERROR: Outer boundary of spherical nested region %u (label: \"%s\") is not properly surrounded by spherical parent region %u (label: \"%s\").\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
 					exit(EXIT_FAILURE);
 				}
 			} else
 			{
 				// Combination of child and parent is invalid
-				fprintf(stderr, "ERROR: Combination of child/parent for region %u nested in region %u is invalid.\n", j, i);
+				fprintf(stderr, "ERROR: Combination of child/parent for region %u (label: \"%s\") nested in region %u (label: \"%s\") is invalid.\n", j, subvol_spec[j].label, i, subvol_spec[i].label);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -243,7 +329,7 @@ void initializeRegionArray(struct region regionArray[],
 	curID = 0;
 	for(i = 0; i < NUM_REGIONS; i++)
 	{
-		// Calculate region volume now that know the validity of child regions
+		// Calculate region volume now that we know the validity of child regions
 		regionArray[i].volume = findRegionVolume(regionArray, i, false);
 		
 		// Determine number of subvolumes
@@ -252,8 +338,27 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].numSub = 1UL; // Spherical regions always have one subvolume
 		else
 		{
-			regionArray[i].numSub = (uint32_t) regionArray[i].spec.numX *
-				regionArray[i].spec.numY * regionArray[i].spec.numZ;
+			switch(regionArray[i].plane)
+			{
+				case PLANE_3D:
+					regionArray[i].numSub = (uint32_t) regionArray[i].spec.numX *
+						regionArray[i].spec.numY * regionArray[i].spec.numZ;
+					break;
+				case PLANE_XY:
+					regionArray[i].numSub = (uint32_t) regionArray[i].spec.numX *
+						regionArray[i].spec.numY;
+					break;				
+				case PLANE_XZ:
+					regionArray[i].numSub = (uint32_t) regionArray[i].spec.numX *
+						regionArray[i].spec.numZ;
+					break;				
+				case PLANE_YZ:
+					regionArray[i].numSub = (uint32_t) regionArray[i].spec.numY *
+						regionArray[i].spec.numZ;
+					break;				
+				break;
+			}
+			
 			// Subtract subvolumes lost due to each child
 			for(curChild = 0; curChild < regionArray[i].numChildren; curChild++)
 			{
@@ -291,6 +396,25 @@ void initializeRegionArray(struct region regionArray[],
 							}
 						}
 					}
+				} else if(regionArray[j].spec.shape == RECTANGLE
+					&& regionArray[i].spec.shape == RECTANGLE)
+				{ // Only subtract area of children if parent is 2D
+					switch(regionArray[j].plane)
+					{
+						case PLANE_XY:
+							regionArray[i].numSub -= (uint32_t) regionArray[j].spec.numX *
+								regionArray[j].spec.numY;
+							break;				
+						case PLANE_XZ:
+							regionArray[i].numSub -= (uint32_t) regionArray[j].spec.numX *
+								regionArray[j].spec.numZ;
+							break;				
+						case PLANE_YZ:
+							regionArray[i].numSub -= (uint32_t) regionArray[j].spec.numY *
+								regionArray[j].spec.numZ;
+							break;				
+						break;
+					}
 				}
 			}
 		}
@@ -299,7 +423,7 @@ void initializeRegionArray(struct region regionArray[],
 		regionArray[i].regionNeighDir = malloc(NUM_REGIONS*sizeof(unsigned short));
 		if(regionArray[i].isRegionNeigh == NULL || regionArray[i].regionNeighDir == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for region %u parameters.\n", i);
+			fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") parameters.\n", i, subvol_spec[i].label);
 			exit(EXIT_FAILURE);
 		}
 		
@@ -316,7 +440,7 @@ void initializeRegionArray(struct region regionArray[],
 				|| regionArray[i].boundRegionFaceCoor == NULL
 				|| regionArray[i].regionNeighFaceDir == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for region %u's microscopic parameters.\n", i);
+				fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s microscopic parameters.\n", i, subvol_spec[i].label);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -324,7 +448,7 @@ void initializeRegionArray(struct region regionArray[],
 		regionArray[i].numSubRegionNeigh = malloc(NUM_REGIONS*sizeof(uint32_t));
 		if(regionArray[i].numSubRegionNeigh == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for region %u parameters.\n", i);
+			fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") parameters.\n", i, subvol_spec[i].label);
 			exit(EXIT_FAILURE);
 		}
 		
@@ -342,7 +466,7 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].diffRate = malloc(NUM_MOL_TYPES*sizeof(double));
 			if(regionArray[i].diffRate == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for region %u diffusion coefficients.\n", i);
+				fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") diffusion coefficients.\n", i, subvol_spec[i].label);
 				exit(EXIT_FAILURE);
 			}
 			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
@@ -358,6 +482,9 @@ void initializeRegionArray(struct region regionArray[],
 	
 	// Determine what regions are touching (reduces neighbour search computation)
 	findRegionTouch3D(NUM_REGIONS, subvol_spec, regionArray, SUBVOL_BASE_SIZE);
+	
+	// Confirm validity of all regions now that neighbors have been identified
+	validateRegions(NUM_REGIONS, regionArray);
 	
 	// Define chemical reaction network
 	initialize_region_chem_rxn3D(NUM_REGIONS, regionArray,
@@ -408,7 +535,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 			|| regionArray[i].bNeedUpdate == NULL
 			|| regionArray[i].numMolFromMicro == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for region %u neighbor parameters.\n", i);
+			fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") neighbor parameters.\n", i, subvol_spec[i].label);
 			exit(EXIT_FAILURE);
 		}
 		
@@ -467,7 +594,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				|| regionArray[i].bNeedUpdate[j] == NULL
 				|| regionArray[i].numMolFromMicro[j] == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+				fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s neighbor parameters with region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 				exit(EXIT_FAILURE);
 			}
 			
@@ -479,7 +606,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 					malloc(NUM_MOL_TYPES * sizeof(uint64_t));
 				if(regionArray[i].numMolFromMicro[j][curBoundID] == NULL)
 				{
-					fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+					fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s neighbor parameters with region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 					exit(EXIT_FAILURE);
 				}
 				// Initialize array values
@@ -511,7 +638,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 						* sizeof(double [3]));
 					if(regionArray[i].boundVirtualNeighCoor[j][curBoundID] == NULL)
 					{
-						fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+						fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s neighbor parameters with region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 						exit(EXIT_FAILURE);
 					}
 					
@@ -689,15 +816,21 @@ double findRegionVolume(const struct region regionArray[],
 	bool bOuter)
 {
 	short curChild;
-	double volume = boundaryArea(regionArray[curRegion].spec.shape, regionArray[curRegion].boundary);
+	double volume = boundaryVolume(regionArray[curRegion].spec.shape, regionArray[curRegion].boundary);
 	
 	if(!bOuter)
 	{
 		// Subtract outer volumes of children
 		for(curChild = 0; curChild < regionArray[curRegion].numChildren; curChild++)
 		{
-			volume -= boundaryArea(
-				regionArray[regionArray[curRegion].childrenID[curChild]].spec.shape, regionArray[regionArray[curRegion].childrenID[curChild]].boundary);
+			if(regionArray[curRegion].plane != PLANE_3D
+				|| regionArray[regionArray[curRegion].childrenID[curChild]].plane
+				== PLANE_3D)
+			{
+				volume -= boundaryVolume(
+					regionArray[regionArray[curRegion].childrenID[curChild]].spec.shape, regionArray[regionArray[curRegion].childrenID[curChild]].boundary);
+				
+			}
 		}
 	}
 	
@@ -758,7 +891,7 @@ void findRegionTouch3D(const short NUM_REGIONS,
 				continue;
 			}
 			
-			if(bBoundaryAdjacent(RECTANGULAR_BOX, regionArray[i].boundary, RECTANGULAR_BOX,
+			if(bBoundaryAdjacent(regionArray[i].spec.shape, regionArray[i].boundary, regionArray[j].spec.shape,
 				regionArray[j].boundary, error, &direction))
 			{	// Regions share a face
 				regionArray[i].boundaryRegion[direction] = true;
@@ -781,7 +914,7 @@ void findRegionTouch3D(const short NUM_REGIONS,
 			malloc(regionArray[i].numRegionNeigh* sizeof(short));
 		if(regionArray[i].regionNeighID == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for region %u's microscopic parameters.\n", i);
+			fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s microscopic parameters.\n", i, subvol_spec[i].label);
 			exit(EXIT_FAILURE);
 		}
 		curNeigh = 0;
@@ -801,6 +934,9 @@ void findRegionTouch3D(const short NUM_REGIONS,
 						// Number of neighboring faces is equal to number of region i faces
 						switch(regionArray[i].spec.shape)
 						{
+							case RECTANGLE:
+								regionArray[i].numRegionNeighFace[j] = 6;
+								break;
 							case RECTANGULAR_BOX:
 								regionArray[i].numRegionNeighFace[j] = 6;
 								break;
@@ -813,6 +949,9 @@ void findRegionTouch3D(const short NUM_REGIONS,
 						// Number of neighboring faces is equal to number of region j faces
 						switch(regionArray[j].spec.shape)
 						{
+							case RECTANGLE:
+								regionArray[i].numRegionNeighFace[j] = 6;
+								break;
 							case RECTANGULAR_BOX:
 								regionArray[i].numRegionNeighFace[j] = 6;
 								break;
@@ -833,7 +972,7 @@ void findRegionTouch3D(const short NUM_REGIONS,
 				if(regionArray[i].boundRegionFaceCoor[j] == NULL
 					|| regionArray[i].regionNeighFaceDir[j] == NULL)
 				{
-					fprintf(stderr, "ERROR: Memory allocation for region %u's neighbor parameters with region %u.\n", i, j);
+					fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s neighbor parameters with region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 					exit(EXIT_FAILURE);
 				}
 				
@@ -983,6 +1122,27 @@ uint32_t findNearestSub3D(const short curRegion,
 	return regionArray[curRegion].neighID[neighRegion][minSub];
 }
 
+// Determine coordinates of child region as subvolumes of parent
+// Applies to Rectangular regions only.
+void findChildCoordinates(const short parentRegion,
+	const short childRegion,
+	const short curChild,
+	const struct region regionArray[])
+{
+	regionArray[parentRegion].childrenCoor[curChild][0] = (uint32_t)
+		round((regionArray[childRegion].boundary[0] - regionArray[parentRegion].boundary[0])/regionArray[parentRegion].actualSubSize);
+	regionArray[parentRegion].childrenCoor[curChild][1] = (uint32_t)
+		round((regionArray[childRegion].boundary[1] - regionArray[parentRegion].boundary[0])/regionArray[parentRegion].actualSubSize - 1);
+	regionArray[parentRegion].childrenCoor[curChild][2] = (uint32_t)
+		round((regionArray[childRegion].boundary[2] - regionArray[parentRegion].boundary[2])/regionArray[parentRegion].actualSubSize);
+	regionArray[parentRegion].childrenCoor[curChild][3] = (uint32_t)
+		round((regionArray[childRegion].boundary[3] - regionArray[parentRegion].boundary[2])/regionArray[parentRegion].actualSubSize - 1);
+	regionArray[parentRegion].childrenCoor[curChild][4] = (uint32_t)
+		round((regionArray[childRegion].boundary[4] - regionArray[parentRegion].boundary[4])/regionArray[parentRegion].actualSubSize);
+	regionArray[parentRegion].childrenCoor[curChild][5] = (uint32_t)
+		round((regionArray[childRegion].boundary[5] - regionArray[parentRegion].boundary[4])/regionArray[parentRegion].actualSubSize - 1);
+}
+
 // Volume of intersection within specified region
 // Value returned here excludes children
 // Intersection must be rectangular. Region can be spherical if it
@@ -1004,10 +1164,10 @@ double intersectRegionVolume(const short curRegion,
 	if(intersectType == UNDEFINED_SHAPE)
 	{
 		// Invalid intersection of boundary with region		
-		fprintf(stderr, "ERROR: An intersection with region %u is invalid.\n", curRegion);
+		fprintf(stderr, "ERROR: An intersection with region %u (label: \"%s\") is invalid.\n", curRegion, regionArray[curRegion].spec.label);
 		exit(EXIT_FAILURE);			
 	}
-	volume = boundaryArea(intersectType, interBoundary);
+	volume = boundaryVolume(intersectType, interBoundary);
 	
 	if(volume <= 0)
 		return 0.;	// Region does not intersect at all
@@ -1016,17 +1176,22 @@ double intersectRegionVolume(const short curRegion,
 	for(curChild = 0; curChild < regionArray[curRegion].numChildren; curChild++)
 	{
 		childRegion = regionArray[curRegion].childrenID[curChild];
+		
+		if(regionArray[curRegion].plane == PLANE_3D
+			&& regionArray[childRegion].plane != PLANE_3D)
+			continue; // Do not calculate 2D area to subtract from 3D volume
+		
 		intersectType = intersectBoundary(regionArray[childRegion].spec.shape,
 			regionArray[childRegion].boundary, boundary2Type, boundary2, interBoundary);
 		
 		if(intersectType == UNDEFINED_SHAPE)
 		{
 			// Invalid intersection of boundary with child		
-			fprintf(stderr, "ERROR: An intersection with region %u is invalid.\n", curRegion);
+			fprintf(stderr, "ERROR: An intersection with region %u (label: \"%s\") is invalid.\n", curRegion, regionArray[curRegion].spec.label);
 			exit(EXIT_FAILURE);			
 		} else
 		{
-			childVolume = boundaryArea(intersectType, interBoundary);
+			childVolume = boundaryVolume(intersectType, interBoundary);
 			if(childVolume > 0.)
 				volume -= childVolume; // Only subtract positive child volumes
 		}
@@ -1165,6 +1330,7 @@ bool bSharedBoundary(const short startRegion,
 	
 	switch(regionArray[startRegion].spec.shape)
 	{
+		case RECTANGLE:
 		case RECTANGULAR_BOX:
 			return fabs(regionArray[startRegion].boundary[faceID]
 				- regionArray[endRegion].boundary[faceID]) <
@@ -1174,6 +1340,21 @@ bool bSharedBoundary(const short startRegion,
 			return regionArray[startRegion].boundary[3]
 				== regionArray[endRegion].boundary[3];
 	}
+}
+
+// Is the outer boundary of a child region flush with the subvolumes of its
+// parent? Applies to rectangular regions (2D or 3D)
+bool bChildRegionNotFlush(const short parentRegion,
+	const short childRegion,
+	const struct region regionArray[],
+	const double boundAdjError)
+{
+	return fabs((regionArray[childRegion].boundary[0] - regionArray[parentRegion].boundary[0])/regionArray[parentRegion].actualSubSize - round((regionArray[childRegion].boundary[0] - regionArray[parentRegion].boundary[0])/regionArray[parentRegion].actualSubSize)) > boundAdjError ||
+		fabs((regionArray[childRegion].boundary[1] - regionArray[parentRegion].boundary[1])/regionArray[parentRegion].actualSubSize - round((regionArray[childRegion].boundary[1] - regionArray[parentRegion].boundary[1])/regionArray[parentRegion].actualSubSize)) > boundAdjError ||
+		fabs((regionArray[childRegion].boundary[2] - regionArray[parentRegion].boundary[2])/regionArray[parentRegion].actualSubSize - round((regionArray[childRegion].boundary[2] - regionArray[parentRegion].boundary[2])/regionArray[parentRegion].actualSubSize)) > boundAdjError ||
+		fabs((regionArray[childRegion].boundary[3] - regionArray[parentRegion].boundary[3])/regionArray[parentRegion].actualSubSize - round((regionArray[childRegion].boundary[3] - regionArray[parentRegion].boundary[3])/regionArray[parentRegion].actualSubSize)) > boundAdjError ||
+		fabs((regionArray[childRegion].boundary[4] - regionArray[parentRegion].boundary[4])/regionArray[parentRegion].actualSubSize - round((regionArray[childRegion].boundary[4] - regionArray[parentRegion].boundary[4])/regionArray[parentRegion].actualSubSize)) > boundAdjError ||
+		fabs((regionArray[childRegion].boundary[5] - regionArray[parentRegion].boundary[5])/regionArray[parentRegion].actualSubSize - round((regionArray[childRegion].boundary[5] - regionArray[parentRegion].boundary[5])/regionArray[parentRegion].actualSubSize)) > boundAdjError;
 }
 
 // Lock point coordinate to chosen region face
@@ -1213,7 +1394,7 @@ void lockPointToRegion(double point[3],
 			point[0] += regionArray[boundRegion].boundary[0];
 			break;
 		default:
-			fprintf(stderr,"ERROR: Point cannot be locked to region %u because it is of type %d.\n", boundRegion, regionArray[boundRegion].spec.shape);
+			fprintf(stderr,"ERROR: Point cannot be locked to region %u (label: \"%s\") because it is of type %d.\n", boundRegion, regionArray[boundRegion].spec.label, regionArray[boundRegion].spec.shape);
 	}
 }
 
@@ -1321,4 +1502,182 @@ bool bSubFaceRegion(struct region regionArray[],
 	
 	
 	return *numFace > 0;
+}
+
+// Final check of region overlap and correct adjacency
+void validateRegions(const short NUM_REGIONS,
+	const struct region regionArray[])
+{
+	short curRegion, curChild1, curChild2, curChild1ID, curChild2ID;
+	short otherRegion;
+	short neighID, curNeigh;
+	int intersectType;
+	double intersection[6];
+	double minVol, curVol;
+	bool bDoubleSide; // Does a rectangle have neighbors on each side?
+	bool bFoundFirst3DNeigh; // Have we found the first 3D neighbor of rectangle yet?
+	unsigned short initDir, curDir;
+	
+	for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
+	{		
+		// First check overlap of children. Checking overlaps this way reduces
+		// the number of comparisons that must be made
+		for (curChild1 = 0; curChild1 < regionArray[curRegion].numChildren; curChild1++)
+		{ // Compare with every higher-ID child
+			curChild1ID = regionArray[curRegion].childrenID[curChild1];
+			
+			if(regionArray[curChild1ID].spec.shape == RECTANGLE)
+				minVol = regionArray[curChild1ID].subResolution *
+					regionArray[curChild1ID].subResolution;
+			else
+				minVol = regionArray[curChild1ID].subResolution *
+					regionArray[curChild1ID].subResolution * regionArray[curChild1ID].subResolution;
+			
+			for(curChild2 = curChild1 + 1;
+				curChild2 < regionArray[curRegion].numChildren; curChild2++)
+			{
+				curChild2ID = regionArray[curRegion].childrenID[curChild2];
+				
+				intersectType = intersectBoundary(regionArray[curChild1].spec.shape,
+					regionArray[curChild1].boundary, regionArray[curChild2].spec.shape,
+					regionArray[curChild2].boundary, intersection);
+				
+				if(intersectType == UNDEFINED_SHAPE ||
+					boundaryVolume(intersectType, intersection) > minVol)
+				{ // Intersection detected					
+					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") overlaps nested region %u (label: \"%s\").\n",
+						curChild1ID, regionArray[curChild1ID].spec.label, curChild2ID,
+						regionArray[curChild2ID].spec.label);
+					fprintf(stderr, "Both regions are children of region %u (label: \"%s\").\n",
+						curRegion, regionArray[curRegion].spec.label);
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+		
+		if(regionArray[curRegion].spec.shape == RECTANGLE)
+			minVol = regionArray[curRegion].subResolution *
+				regionArray[curRegion].subResolution;
+		else
+			minVol = regionArray[curRegion].subResolution *
+				regionArray[curRegion].subResolution * regionArray[curRegion].subResolution;
+		
+		// TODO: If region is a surface or membrane and it has children,
+		// then the children should overlap all of its faces.
+		
+		// All children have been checked.
+		// If region has no parent, check against remaining regions without a parent
+		if(!regionArray[curRegion].bParent)
+		{
+			for(otherRegion = curRegion + 1; otherRegion < NUM_REGIONS; otherRegion++)
+			{
+				if(regionArray[otherRegion].bParent)
+					continue;
+				
+				intersectType = intersectBoundary(regionArray[curRegion].spec.shape,
+					regionArray[curRegion].boundary, regionArray[otherRegion].spec.shape,
+					regionArray[otherRegion].boundary, intersection);
+				
+				if(intersectType == UNDEFINED_SHAPE ||
+					boundaryVolume(intersectType, intersection) > minVol)
+				{ // Intersection detected					
+					fprintf(stderr, "ERROR: Region %u (label: \"%s\") overlaps region %u (label: \"%s\").\n",
+						curRegion, regionArray[curRegion].spec.label, otherRegion,
+						regionArray[otherRegion].spec.label);
+					fprintf(stderr, "Both regions have no parent.\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+		} else if(regionArray[curRegion].spec.shape == RECTANGLE)
+		{ // Region is rectangle and has a parent
+			otherRegion = regionArray[curRegion].parentID;
+			if(regionArray[otherRegion].plane == PLANE_3D
+				&& !regionArray[otherRegion].spec.bMicro)
+			{ // Parent is 3D and mesoscopic.
+				// Region must lie on boundary of its 3D neighbors
+				// We need to know whether there are neighbors on both sides or region
+				curVol = 0.;
+				bDoubleSide = false;
+				bFoundFirst3DNeigh = false;
+				for(curNeigh = 0;
+					curNeigh < regionArray[curRegion].numRegionNeigh; curNeigh++)
+				{
+					neighID = regionArray[curRegion].regionNeighID[curNeigh];
+					if(neighID == otherRegion
+						|| regionArray[neighID].plane != PLANE_3D)
+						continue; // Don't check against parent or 2D neighbor
+					
+					if(!bFoundFirst3DNeigh)
+					{
+						bFoundFirst3DNeigh = true;
+						initDir = regionArray[curRegion].regionNeighDir[curNeigh];
+					} else if(initDir != regionArray[curRegion].regionNeighDir[curNeigh])
+					{
+						bDoubleSide = true;
+					}
+					
+					intersectBoundary(regionArray[curRegion].spec.shape,
+					regionArray[curRegion].boundary, regionArray[neighID].spec.shape,
+					regionArray[neighID].boundary, intersection);
+					
+					// Need to force boundary type to rectangle, otherwise
+					// area of intersection with 3D neighbor will be 0
+					curVol += boundaryVolume(RECTANGLE, intersection);
+				}
+				
+				if((bDoubleSide
+					&& fabs(curVol - 2* regionArray[curRegion].volume) > minVol)
+					|| fabs(curVol - regionArray[curRegion].volume) > minVol)
+				{
+					fprintf(stderr, "ERROR: Region %u (label: \"%s\") is a rectangle in mesoscopic 3D region %u (label: \"%s\") but is not on boundary of region %u's children.\n",
+						curRegion, regionArray[curRegion].spec.label, otherRegion,
+						regionArray[otherRegion].spec.label, otherRegion);
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+	}
+}
+
+// Check whether the children of a surface region cover all of the
+// region's outer boundary
+void checkSurfaceRegionChildren(const short curRegion,
+	const short NUM_REGIONS,
+	const struct region regionArray[])
+{	
+	double curArea = 0.;
+	double surfaceArea = 0.;
+	short curChild, curChildID;
+	
+	if(regionArray[curRegion].spec.type == REGION_NORMAL
+		|| regionArray[curRegion].numChildren == 0)
+		return; // Region is normal or has no children
+	
+	switch (regionArray[curRegion].spec.shape)
+	{
+		case SPHERE:
+		// Region should have only one child and radii must be the same
+			if(regionArray[curRegion].numChildren > 1
+				|| regionArray[curRegion].boundary[3] != regionArray[regionArray[curRegion].childrenID[0]].boundary[3])
+			{
+				fprintf(stderr, "ERROR: Surface spherical region %u (label: \"%s\") has more than 1 child or its child region %u (label: \"%s\") has a different radius.\n",
+					curRegion, regionArray[curRegion].spec.label, regionArray[curRegion].childrenID[0],
+					regionArray[regionArray[curRegion].childrenID[0]].spec.label);
+				fprintf(stderr, "Radii are %.4em and %.4em.\n",
+					regionArray[curRegion].boundary[3],
+					regionArray[regionArray[curRegion].childrenID[0]].boundary[3]);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case RECTANGLE:
+		case RECTANGULAR_BOX:
+			// Measure surface area and compare with that shared with its children
+			// Only need to check children that are the same shape
+			surfaceArea = boundarySurfaceArea(regionArray[curRegion].spec.shape,
+				regionArray[curRegion].boundary);
+			break;
+		default:			
+			fprintf(stderr,"ERROR: Surface region %u (label: \"%s\") shape %s invalid.\n", curRegion, regionArray[curRegion].spec.label, boundaryString(regionArray[curRegion].spec.shape));
+			return;
+	}
 }

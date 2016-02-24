@@ -8,9 +8,15 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * file_io.c - interface with JSON configuration files
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - modified check on number of subvolumes along each dimension of a rectangular region
+ * - added type property to region. Default value is REGION_NORMAL
+ * - added stringWrite function to nest some calls to stringAllocate, strlen,
+ * and strcpy
  *
  * Revision v0.4.1
  * - added search for configuration file. First checks current directory, then
@@ -56,7 +62,6 @@ void loadConfig3D(const char * CONFIG_NAME,
 	int curArrayItem;
 	unsigned short curMolType, i;
 	char * configContent;
-	char * configDir = "../config/";
 	char * configNameFull;
 	unsigned int dirLength, nameLength;
 	bool bWarn = false; // Was there at least one warning?
@@ -64,6 +69,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 	int numWarn = 0; // Number of warnings found in configuration file.
 	int ch;
 	size_t temp; // Garbage variable for discarded file content length
+	int minSubDim = 0; // Minimum # of subvolumes along each dimension for a rectangular region
 	
 	// Construct full name of configuration file
 	nameLength = strlen(CONFIG_NAME);
@@ -387,9 +393,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 							} else
 							{
 								curSpec->chem_rxn[curArrayItem].regionExceptionLabel[i] =
-									stringAllocate(strlen(cJSON_GetArrayItem(curObjInner,i)->valuestring));
-								sprintf(curSpec->chem_rxn[curArrayItem].regionExceptionLabel[i],
-									"%s", cJSON_GetArrayItem(curObjInner,i)->valuestring);
+									stringWrite(cJSON_GetArrayItem(curObjInner,i)->valuestring);
 							}					
 						}
 					}
@@ -513,9 +517,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 				curSpec->subvol_spec[curArrayItem].label = '\0';
 			} else{
 				curSpec->subvol_spec[curArrayItem].label =
-					stringAllocate(strlen(cJSON_GetObjectItem(curObj,"Label")->valuestring));
-				sprintf(curSpec->subvol_spec[curArrayItem].label, "%s", cJSON_GetObjectItem(curObj,
-					"Label")->valuestring);
+					stringWrite(cJSON_GetObjectItem(curObj,"Label")->valuestring);
 			}
 			
 			// Region Parent
@@ -526,9 +528,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 				curSpec->subvol_spec[curArrayItem].parent = '\0';
 			} else{
 				curSpec->subvol_spec[curArrayItem].parent =
-					stringAllocate(strlen(cJSON_GetObjectItem(curObj,"Parent Label")->valuestring));
-				sprintf(curSpec->subvol_spec[curArrayItem].parent, "%s", cJSON_GetObjectItem(curObj,
-					"Parent Label")->valuestring);
+					stringWrite(cJSON_GetObjectItem(curObj,"Parent Label")->valuestring);
 			}
 			
 			// Region Shape
@@ -537,14 +537,11 @@ void loadConfig3D(const char * CONFIG_NAME,
 				bWarn = true;
 				printf("WARNING %d: Region %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
 				tempString =
-					stringAllocate(strlen("Rectangular Box"));
-				strcpy(tempString, "Rectangular Box");
+					stringWrite("Rectangular Box");
 			} else{
 				tempString =
-					stringAllocate(strlen(cJSON_GetObjectItem(curObj,
-					"Shape")->valuestring));
-				strcpy(tempString,
-					cJSON_GetObjectItem(curObj,"Shape")->valuestring);
+					stringWrite(cJSON_GetObjectItem(curObj,
+					"Shape")->valuestring);
 			}
 			
 			if(strcmp(tempString,"Rectangle") == 0)
@@ -560,6 +557,33 @@ void loadConfig3D(const char * CONFIG_NAME,
 				bWarn = true;
 				printf("WARNING %d: Region %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
 				curSpec->subvol_spec[curArrayItem].shape = RECTANGULAR_BOX;
+			}
+			free(tempString);
+			
+			// Region Type
+			if(!cJSON_bItemValid(curObj,"Type", cJSON_String))
+			{ // Region does not have a defined Type
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a defined \"Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+				tempString =
+					stringWrite("Normal");
+			} else{
+				tempString =
+					stringWrite(cJSON_GetObjectItem(curObj,
+					"Type")->valuestring);
+			}
+			
+			if(strcmp(tempString,"Normal") == 0)
+				curSpec->subvol_spec[curArrayItem].type = REGION_NORMAL;
+			else if(strcmp(tempString,"Surface") == 0)
+				curSpec->subvol_spec[curArrayItem].type = REGION_SURFACE;
+			else if(strcmp(tempString,"Membrane") == 0)
+				curSpec->subvol_spec[curArrayItem].type = REGION_MEMBRANE;
+			else
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d has an invalid \"Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].type = REGION_NORMAL;
 			}
 			free(tempString);
 			
@@ -641,8 +665,13 @@ void loadConfig3D(const char * CONFIG_NAME,
 						cJSON_GetObjectItem(curObj, "Is Region Microscopic?")->valueint;
 				}
 				
+				if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
+					minSubDim = 0;
+				else
+					minSubDim = 1;
+				
 				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along X")->valueint < 1)
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along X")->valueint < minSubDim)
 				{ // Region does not have a valid Number of Subvolumes Along X
 					bWarn = true;
 					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along X\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
@@ -654,7 +683,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 				}
 				
 				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Y")->valueint < 1)
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Y")->valueint < minSubDim)
 				{ // Region does not have a valid Number of Subvolumes Along Y
 					bWarn = true;
 					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Y\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
@@ -666,7 +695,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 				}
 				
 				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Z")->valueint < 1)
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Z")->valueint < minSubDim)
 				{ // Region does not have a valid Number of Subvolumes Along Z
 					bWarn = true;
 					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Z\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
@@ -675,7 +704,31 @@ void loadConfig3D(const char * CONFIG_NAME,
 				{
 					curSpec->subvol_spec[curArrayItem].numZ = 
 						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Z")->valueint;
-				}			
+				}
+				
+				// Confirm that a rectangle region is actually 2D
+				if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
+				{
+					if((curSpec->subvol_spec[curArrayItem].numX == 0
+						&& (curSpec->subvol_spec[curArrayItem].numY < 1
+						|| curSpec->subvol_spec[curArrayItem].numZ < 1))
+						|| (curSpec->subvol_spec[curArrayItem].numY == 0
+						&& (curSpec->subvol_spec[curArrayItem].numX < 1
+						|| curSpec->subvol_spec[curArrayItem].numZ < 1))
+						|| (curSpec->subvol_spec[curArrayItem].numZ == 0
+						&& (curSpec->subvol_spec[curArrayItem].numY < 1
+						|| curSpec->subvol_spec[curArrayItem].numX < 1))
+						|| (curSpec->subvol_spec[curArrayItem].numX > 0
+						&& curSpec->subvol_spec[curArrayItem].numY > 0
+						&& curSpec->subvol_spec[curArrayItem].numZ > 0))
+					{
+						bWarn = true;
+						printf("WARNING %d: Region %d is not properly defined as a Rectangle. Defining along XY plane with 1 subvolume along X and Y.\n", numWarn++, curArrayItem);
+						curSpec->subvol_spec[curArrayItem].numX = 1;
+						curSpec->subvol_spec[curArrayItem].numY = 1;
+						curSpec->subvol_spec[curArrayItem].numZ = 0;
+					}
+				}
 			} else // Region is round
 			{
 				curSpec->subvol_spec[curArrayItem].sizeRect = 0;
@@ -748,14 +801,11 @@ void loadConfig3D(const char * CONFIG_NAME,
 				bWarn = true;
 				printf("WARNING %d: Actor %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
 				tempString =
-					stringAllocate(strlen("Rectangular Box"));
-				strcpy(tempString, "Rectangular Box");
+					stringWrite("Rectangular Box");
 			} else{
 				tempString =
-					stringAllocate(strlen(cJSON_GetObjectItem(curObj,
-					"Shape")->valuestring));
-				strcpy(tempString,
-					cJSON_GetObjectItem(curObj,"Shape")->valuestring);
+					stringWrite(cJSON_GetObjectItem(curObj,
+					"Shape")->valuestring);
 			}
 			
 			if(strcmp(tempString,"Rectangle") == 0)
@@ -975,14 +1025,11 @@ void loadConfig3D(const char * CONFIG_NAME,
 					bWarn = true;
 					printf("WARNING %d: Actor %d does not have a defined \"Modulation Scheme\". Setting to default value \"CSK\".\n", numWarn++, curArrayItem);
 					tempString =
-						stringAllocate(strlen("CSK"));
-					strcpy(tempString, "CSK");
+						stringWrite("CSK");
 				} else{
 					tempString =
-						stringAllocate(strlen(cJSON_GetObjectItem(curObj,
-						"Modulation Scheme")->valuestring));
-					strcpy(tempString,
-						cJSON_GetObjectItem(curObj,"Modulation Scheme")->valuestring);
+						stringWrite(cJSON_GetObjectItem(curObj,
+						"Modulation Scheme")->valuestring);
 				}			
 				
 				if(strcmp(tempString,"CSK") == 0)
@@ -1282,6 +1329,16 @@ void initializeOutput3D(FILE ** out,
 	free(outputSummaryNameFull);	
 }
 
+// Copy string (with memory allocation)
+char * stringWrite(char * src)
+{
+	char * string = stringAllocate(strlen(src));
+	strcpy(string, src);
+	
+	return string;
+}
+
+// Allocate memory for a string
 char * stringAllocate(long stringLength)
 {
 	char * string = malloc(stringLength+1);

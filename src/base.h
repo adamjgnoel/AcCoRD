@@ -44,33 +44,28 @@
 #include "randistrs.h" // For PRNGs
 #include "global_param.h"
 
-/*
-* Data Type Declarations
-*/
+//
+// Data Type Declarations
+//
 
-/*
-* Function Declarations
-*/
+//
+// Function Declarations
+//
 
 // Is point inside of boundary?
 bool bPointInBoundary(const double point[3],
 	const int boundary1Type,
 	const double boundary1[]);
 	
-/* Do two sets of boundaries intersect?
-*  Boundary Formats:
-*  RECTANGLE 	-> [x_lower,x_upper,y_lower,y_upper]
-*  CIRCLE    	-> [x_center,y_center,radius,radius^2]
-*/
+// Do two sets of boundaries intersect?
 bool bBoundaryIntersect(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
 	const double boundary2[],
 	const double clearance);
 
-/* Are two sets of boundaries adjacent?
-*  Both boundaries must be rectangular (either 2D or 3D)
-*/
+// Are two sets of boundaries adjacent? Intersections will not be detected.
+// Both boundaries must be rectangular (either 2D or 3D)
 bool bBoundaryAdjacent(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
@@ -78,8 +73,8 @@ bool bBoundaryAdjacent(const int boundary1Type,
 	const double error,
 	unsigned short * direction);
 
-/* Is first boundary entirely inside the second?
-*/
+// Is first boundary entirely inside the second?
+//
 bool bBoundarySurround(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
@@ -158,11 +153,8 @@ double distanceToBoundary(const double point[3],
 	const int boundary1Type,
 	const double boundary1[]);
 
-/* Determine boundary of intersection of two boundaries
-*  Only valid for rectangular boundaries (rectangles or boxes) or spherical intersections.
-*  Boundary Formats:
-*  RECTANGLE 	-> [x_lower,x_upper,y_lower,y_upper]
-*/
+// Determine boundary of intersection of two boundaries
+//  Only valid for rectangular boundaries (rectangles or boxes) or spherical intersections.
 int intersectBoundary(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
@@ -175,13 +167,17 @@ void defineLine(const double p1[3],
 	double L[3],
 	double * length);
 
-/* Determine area of boundary
-*/
-double boundaryArea(const int boundary1Type,
+// Determine volume of boundary
+//
+double boundaryVolume(const int boundary1Type,
 	const double boundary1[]);
 
-/* Find a random coordinate within the specified range
-*/
+// Determine boundary surface Area
+double boundarySurfaceArea(const int boundary1Type,
+	const double boundary1[]);
+
+// Find a random coordinate within the specified range
+//
 double uniformPoint(double rangeMin,
 	double rangeMax);
 
@@ -190,13 +186,18 @@ void uniformPointVolume(double point[3],
 	const int boundaryType,
 	const double boundary1[]);
 
-/* Find distance between 2 3D points
-*/
+// Find distance between 2 3D points
+//
 double pointDistance3D(const double point1[3],
 	const double point2[3]);
 
-/* Square a double value
-*/
+// Square a double value
+//
 double squareDBL(double v);
+
+// Return string with name of boundary
+// Uses static memory strings in case output is not assigned
+// to allocated memory
+const char * boundaryString(const int boundaryType);
 	
 #endif // BASE_H

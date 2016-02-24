@@ -10,9 +10,18 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - added 2D regions
+ * - added type member to spec and plane member to main struct in order to accommodate
+ * surface and other 2D regions
+ * - added region label when giving errors about region initialization
+ * - adjusted clearance between spherical and rectangular regions such that the clearance
+ * between them (when one is nested inside the other) is adjusted by the subvolume adjacency
+ * error
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -75,6 +84,15 @@ struct spec_region3D { // Used to define a region of subvolumes
 	// restricted to microscopic regions that do not have mesoscopic parents
 	int shape;
 	
+	// Region type. Default is REGION_NORMAL, which means that the region
+	// occupies the entire volume defined and does not impede diffusion across
+	// its boundary.
+	// REGION_SURFACE means that the region is "hollow" and impedes (though
+	// may not necessarily prevent) diffusion across its boundary
+	// REGION_MEMBRANE is similar to REGION_SURFACE but is specifically a
+	// selective diffusion barrier (may not need to keep)
+	int type;
+	
 	// The simulation configuration has a defined base subvolume size,
 	// SUBVOL_BASE_SIZE. Square/cube subvolumes have a length that is a multiple
 	// of SUBVOL_BASE_SIZE.
@@ -109,6 +127,11 @@ struct spec_region3D { // Used to define a region of subvolumes
 struct region { // Region boundary parameters
 	// The user-defined region parameters
 	struct spec_region3D spec;
+	
+	// What plane is the region in?
+	// Applies particularly to 2D regions.
+	// Values are defined in global_param.h
+	short plane;
 	
 	// Is this region nested inside another region
 	bool bParent;
@@ -411,6 +434,13 @@ uint32_t findNearestSub3D(const short curRegion,
 	double y,
 	double z);
 
+// Determine coordinates of child region as subvolumes of parent
+// Applies to Rectangular regions only.
+void findChildCoordinates(const short parentRegion,
+	const short childRegion,
+	const short curChild,
+	const struct region regionArray[]);
+
 // Volume of intersection within specified region
 // Value returned here excludes children
 // Intersection must be rectangular
@@ -449,6 +479,13 @@ bool bSharedBoundary(const short startRegion,
 	const struct region regionArray[],
 	const short faceID);
 
+// Is the outer boundary of a child region flush with the subvolumes of its
+// parent? Applies to rectangular regions (2D or 3D)
+bool bChildRegionNotFlush(const short parentRegion,
+	const short childRegion,
+	const struct region regionArray[],
+	const double boundAdjError);
+
 // Lock point coordinate to chosen region face
 void lockPointToRegion(double point[3],
 	const short startRegion,
@@ -478,5 +515,9 @@ bool bSubFaceRegion(struct region regionArray[],
 	double boundAdjError,
 	unsigned short * numFace,
 	unsigned short dirArray[6]);
+
+// Final check of region overlap and correct adjacency
+void validateRegions(const short NUM_REGIONS,
+	const struct region regionArray[]);
 
 #endif // REGION_H

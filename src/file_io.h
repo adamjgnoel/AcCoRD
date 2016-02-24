@@ -102,6 +102,10 @@ void initializeOutput3D(FILE ** out,
 	const char * CONFIG_NAME,
 	const struct simSpec3D curSpec);
 
+// Copy string (with memory allocation)
+char * stringWrite(char * src);
+
+// Allocate memory for a string
 char * stringAllocate(long stringLength);
 
 void printOneTextRealization3D(FILE * out,

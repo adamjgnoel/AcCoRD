@@ -98,7 +98,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 		*/
 		
 		actorCommonArray[curActor].volume =
-			boundaryArea(actorCommonArray[curActor].spec.shape,
+			boundaryVolume(actorCommonArray[curActor].spec.shape,
 				actorCommonArray[curActor].spec.boundary);
 		
 		actorCommonArray[curActor].numRegion = 0;
@@ -535,7 +535,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 					actorActiveArray[curActive].cumFracActorInSub[curInterRegion][0] = 0.;
 				}
 				actorActiveArray[curActive].cumFracActorInSub[curInterRegion][curInterSub] +=
-					boundaryArea(RECTANGULAR_BOX, curInterSubBound)
+					boundaryVolume(RECTANGULAR_BOX, curInterSubBound)
 					/ actorCommonArray[curActor].regionInterArea[curInterRegion];
 			}
 		}
@@ -673,7 +673,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 					actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] = 1.;
 				else
 					actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] =
-						boundaryArea(RECTANGULAR_BOX, curInterSubBound)
+						boundaryVolume(RECTANGULAR_BOX, curInterSubBound)
 						/ regionArray[curRegion].actualSubSize
 						/ regionArray[curRegion].actualSubSize
 						/ regionArray[curRegion].actualSubSize;

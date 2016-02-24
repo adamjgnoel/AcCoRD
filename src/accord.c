@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v0.4 (public beta, 2016-02-12)\n");
+	printf("Version LATEST_RELEASE (public beta, 2016-02-12)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	
@@ -171,7 +171,6 @@ int main(int argc, char *argv[])
 	{
 		for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 		{
-			//DIFF_COEF[i][j] = 1;
 			DIFF_COEF[i][j] = spec.DIFF_COEF[j];
 		}
 	}

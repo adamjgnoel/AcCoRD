@@ -2,16 +2,19 @@
  * The AcCoRD Simulator
  * (Actor-based Communication via Reaction-Diffusion)
  *
- * Copyright 2015 Adam Noel. All rights reserved.
+ * Copyright 2016 Adam Noel. All rights reserved.
  * 
  * For license details, read LICENSE.txt in the root AcCoRD directory
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
- * Last revised for AcCoRD v0.3.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - added types of regions
  *
  * Revision v0.3.1
  * - header added
@@ -32,12 +35,25 @@
 #define MAX_RXN_PRODUCTS 4
 
 // Shape Indicators
-// NOTE: Changes to names must be reflected in file_io.c
+// NOTE: Changes to list of names must be reflected in file_io.c
 #define RECTANGLE 0
 #define CIRCLE 1
 #define RECTANGULAR_BOX 2
 #define SPHERE 3
 #define UNDEFINED_SHAPE 4
+
+// Types of regions
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define REGION_NORMAL 0
+#define REGION_SURFACE 1
+#define REGION_MEMBRANE 1
+
+// Planes for 2d shapes
+// NOTE: Changes to list of names must be reflected in region.c
+#define PLANE_3D 0
+#define PLANE_XY 1
+#define PLANE_XZ 2
+#define PLANE_YZ 3
 
 // Resolution of adjacency
 // (i.e., what fraction of base subvolume size do the edges of shapes need to be
@@ -56,7 +72,7 @@
 #define UNDEFINED 8
 
 // Modulation schemes
-// NOTE: Changes to names must be reflected in file_io.c
+// NOTE: Changes to list of names must be reflected in file_io.c
 #define CSK 0
 
 #endif // GLOBAL_PARAM_H

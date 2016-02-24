@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * chem_rxn.c - structure for storing chemical reaction properties
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - added region label when giving errors about region initialization
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -177,7 +180,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			|| regionArray[i].minRxnTimeRV == NULL
 			|| regionArray[i].biReactants == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u.\n", i);
+			fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 			exit(EXIT_FAILURE);
 		}
 		
@@ -196,7 +199,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				|| regionArray[i].productID[j] == NULL
 				|| regionArray[i].bUpdateProp[j] == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u.\n", j, i);
+				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u (label: \"%s\").\n", j, i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -213,7 +216,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				|| regionArray[i].uniCumProb[j] == NULL
 				|| regionArray[i].uniRelativeRate[j] == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u.\n", i);
+				fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -289,9 +292,13 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			switch(num_reactants)
 			{
 				case 0:
-					// rxnRate must be calculated for one subvolume
-					regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-						*regionArray[i].actualSubSize * regionArray[i].actualSubSize * regionArray[i].actualSubSize;
+					// meso rxnRate must be calculated for one subvolume
+					if (regionArray[i].plane = PLANE_3D)
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							*regionArray[i].actualSubSize * regionArray[i].actualSubSize * regionArray[i].actualSubSize;
+					else // Region is 2D so need area and not volume
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							*regionArray[i].actualSubSize * regionArray[i].actualSubSize;
 					// microscopic 0th order rate depends on total region volume
 					regionArray[i].rxnRateZerothMicro[regionArray[i].numZerothRxn] =
 						chem_rxn[curRxn].k * regionArray[i].volume;
@@ -302,8 +309,12 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
-					regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-						/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+					if (regionArray[i].plane = PLANE_3D)
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+					else // Region is 2D so need area and not volume
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							/regionArray[i].actualSubSize / regionArray[i].actualSubSize;
 					regionArray[i].secondRxn[regionArray[i].numSecondRxn++] = j;
 					break;
 				default:

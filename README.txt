@@ -161,7 +161,7 @@ Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/
 7. LICENSING
 ------------
 
-Main AcCoRD files are copyright 2016 by Adam Noel under the "BSD Simplified" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
+Main AcCoRD files are copyright 2016 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
 
 
 8. CREDITS

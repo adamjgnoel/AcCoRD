@@ -117,6 +117,18 @@ bool bPointOnFace(const double p1[3],
 	const double boundary1[],
 	const short planeID);
 
+// Do 2 boundaries share the same given surface?
+// If so, faceShared specifies where they overlap
+// This function is distinct from bBoundaryAdjacent because the shared
+// face must be the same on both boundaries (e.g., lower x)
+bool bSharedSurface(const int boundary1Type,
+	const double boundary1[],
+	const int boundary2Type,
+	const double boundary2[],
+	const short faceID,
+	double faceShared[],
+	const double error);
+
 // Record specified face of boundary
 void recordFace(const int boundary1Type,
 	const double boundary1[],

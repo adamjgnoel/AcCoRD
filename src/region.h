@@ -15,12 +15,15 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
+ * - added more checks on region parameters to verify placement
+ * - pushed error exit to end of region initialization so that all errors will be displayed
+ * before exiting.
  * - added 2D regions
  * - added type member to spec and plane member to main struct in order to accommodate
  * surface and other 2D regions
  * - added region label when giving errors about region initialization
  * - adjusted clearance between spherical and rectangular regions such that the clearance
- * between them (when one is nested inside the other) is adjusted by the subvolume adjacency
+ * between them (when one is nested inside the other) is scaled by the subvolume adjacency
  * error
  *
  * Revision v0.4.1
@@ -518,6 +521,14 @@ bool bSubFaceRegion(struct region regionArray[],
 
 // Final check of region overlap and correct adjacency
 void validateRegions(const short NUM_REGIONS,
-	const struct region regionArray[]);
+	const struct region regionArray[],
+	bool * bFail);
+
+// Check whether the children of a surface region cover all of the
+// region's outer boundary
+void checkSurfaceRegionChildren(const short curRegion,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	bool * bFail);
 
 #endif // REGION_H

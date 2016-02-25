@@ -36,11 +36,13 @@
 
 // Shape Indicators
 // NOTE: Changes to list of names must be reflected in file_io.c
+// if regions or actors can have the updated shapes
 #define RECTANGLE 0
 #define CIRCLE 1
 #define RECTANGULAR_BOX 2
 #define SPHERE 3
-#define UNDEFINED_SHAPE 4
+#define LINE 4
+#define UNDEFINED_SHAPE 5
 
 // Types of regions
 // NOTE: Changes to list of names must be reflected in file_io.c

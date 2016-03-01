@@ -73,7 +73,6 @@ struct simSpec3D {
 	unsigned int MAX_UPDATES;
 	
 	// Environment
-	unsigned short NUM_DIM;
 	double SUBVOL_BASE_SIZE;
 	short NUM_REGIONS;
 	struct spec_region3D * subvol_spec;

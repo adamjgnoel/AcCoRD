@@ -670,7 +670,7 @@ bool bSharedSurface(const int boundary1Type,
 							break;
 						default:
 							fprintf(stderr,
-								"ERROR: Specified face %d invalid for 2 Rectangles.\n");
+								"ERROR: Specified face %d invalid for 2 Rectangles.\n", faceID);
 							return false;							
 					}
 					
@@ -728,7 +728,7 @@ bool bSharedSurface(const int boundary1Type,
 							break;
 						default:
 							fprintf(stderr,
-								"ERROR: Specified face %d invalid for 2 Rectanglular Boxes.\n");
+								"ERROR: Specified face %d invalid for 2 Rectanglular Boxes.\n", faceID);
 							return false;							
 					}
 					

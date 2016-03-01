@@ -14,9 +14,11 @@
  *
  * Revision LATEST_RELEASE
  * - modified check on number of subvolumes along each dimension of a rectangular region
- * - added type property to region. Default value is REGION_NORMAL
+ * - added type and surfaceType properties to region. Default values are REGION_NORMAL and
+ * NO_SURFACE, respectively
  * - added stringWrite function to nest some calls to stringAllocate, strlen,
  * and strcpy
+ * - removed NUM_DIM parameter from simulation spec
  *
  * Revision v0.4.1
  * - added search for configuration file. First checks current directory, then
@@ -453,18 +455,6 @@ void loadConfig3D(const char * CONFIG_NAME,
 		exit(EXIT_FAILURE);
 	}
 	
-	if(!cJSON_bItemValid(environment,"Number of Dimensions", cJSON_Number) ||
-		cJSON_GetObjectItem(environment,"Number of Dimensions")->valueint != 3)
-	{
-		bWarn = true;
-		printf("WARNING %d: \"Number of Dimensions\" not defined or not equal to 3. Setting to default value of \"3\".\n", numWarn++);
-		curSpec->NUM_DIM = 3;
-	} else
-	{
-		curSpec->NUM_DIM =
-			cJSON_GetObjectItem(environment,"Number of Dimensions")->valueint;
-	}
-	
 	if(!cJSON_bItemValid(environment,"Subvolume Base Size", cJSON_Number) ||
 		cJSON_GetObjectItem(environment,"Subvolume Base Size")->valuedouble <= 0)
 	{
@@ -484,689 +474,733 @@ void loadConfig3D(const char * CONFIG_NAME,
 		cJSON_GetArraySize(regionSpec);
 	curSpec->NUM_ACTORS =
 		cJSON_GetArraySize(actorSpec);
-	if(curSpec->NUM_DIM == 3)
+
+	curSpec->subvol_spec =
+		malloc(curSpec->NUM_REGIONS *
+		sizeof(struct spec_region3D));
+	curSpec->actorSpec =
+		malloc(curSpec->NUM_ACTORS *
+		sizeof(struct actorStructSpec3D));
+	if(curSpec->subvol_spec == NULL
+		|| curSpec->actorSpec == NULL)
 	{
-		curSpec->subvol_spec =
-			malloc(curSpec->NUM_REGIONS *
-			sizeof(struct spec_region3D));
-		curSpec->actorSpec =
-			malloc(curSpec->NUM_ACTORS *
-			sizeof(struct actorStructSpec3D));
-		if(curSpec->subvol_spec == NULL
-			|| curSpec->actorSpec == NULL)
+		fprintf(stderr,"ERROR: Memory could not be allocated to load region or actor details\n");
+		exit(EXIT_FAILURE);
+	}
+	for(curArrayItem = 0;
+		curArrayItem < curSpec->NUM_REGIONS; curArrayItem++)
+	{
+		if(!cJSON_bArrayItemValid(regionSpec, curArrayItem, cJSON_Object))
 		{
-			fprintf(stderr,"ERROR: Memory could not be allocated to load region or actor details\n");
+			fprintf(stderr, "ERROR: Region %d is not described by a JSON object.\n", curArrayItem);
 			exit(EXIT_FAILURE);
 		}
-		for(curArrayItem = 0;
-			curArrayItem < curSpec->NUM_REGIONS; curArrayItem++)
-		{
-			if(!cJSON_bArrayItemValid(regionSpec, curArrayItem, cJSON_Object))
-			{
-				fprintf(stderr, "ERROR: Region %d is not described by a JSON object.\n", curArrayItem);
-				exit(EXIT_FAILURE);
-			}
-			
-			curObj = cJSON_GetArrayItem(regionSpec, curArrayItem);
-			
-			// Region label
-			if(!cJSON_bItemValid(curObj,"Label", cJSON_String))
-			{ // Region does not have a defined Label
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a defined \"Label\". Assigning empy string.\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].label = '\0';
-			} else{
-				curSpec->subvol_spec[curArrayItem].label =
-					stringWrite(cJSON_GetObjectItem(curObj,"Label")->valuestring);
-			}
-			
-			// Region Parent
-			if(!cJSON_bItemValid(curObj,"Parent Label", cJSON_String))
-			{ // Region does not have a defined Parent Label
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a defined \"Parent Label\". Assigning empy string.\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].parent = '\0';
-			} else{
-				curSpec->subvol_spec[curArrayItem].parent =
-					stringWrite(cJSON_GetObjectItem(curObj,"Parent Label")->valuestring);
-			}
-			
-			// Region Shape
-			if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
-			{ // Region does not have a defined Shape
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
-				tempString =
-					stringWrite("Rectangular Box");
-			} else{
-				tempString =
-					stringWrite(cJSON_GetObjectItem(curObj,
-					"Shape")->valuestring);
-			}
-			
-			if(strcmp(tempString,"Rectangle") == 0)
-				curSpec->subvol_spec[curArrayItem].shape = RECTANGLE;
-			else if(strcmp(tempString,"Circle") == 0)
-				curSpec->subvol_spec[curArrayItem].shape = CIRCLE;
-			else if(strcmp(tempString,"Rectangular Box") == 0)
-				curSpec->subvol_spec[curArrayItem].shape = RECTANGULAR_BOX;
-			else if(strcmp(tempString,"Sphere") == 0)
-				curSpec->subvol_spec[curArrayItem].shape = SPHERE;
-			else
-			{
-				bWarn = true;
-				printf("WARNING %d: Region %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].shape = RECTANGULAR_BOX;
-			}
-			free(tempString);
-			
-			// Region Type
-			if(!cJSON_bItemValid(curObj,"Type", cJSON_String))
-			{ // Region does not have a defined Type
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a defined \"Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
-				tempString =
-					stringWrite("Normal");
-			} else{
-				tempString =
-					stringWrite(cJSON_GetObjectItem(curObj,
-					"Type")->valuestring);
-			}
-			
-			if(strcmp(tempString,"Normal") == 0)
-				curSpec->subvol_spec[curArrayItem].type = REGION_NORMAL;
-			else if(strcmp(tempString,"Surface") == 0)
-				curSpec->subvol_spec[curArrayItem].type = REGION_SURFACE;
-			else if(strcmp(tempString,"Membrane") == 0)
-				curSpec->subvol_spec[curArrayItem].type = REGION_MEMBRANE;
-			else
-			{
-				bWarn = true;
-				printf("WARNING %d: Region %d has an invalid \"Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].type = REGION_NORMAL;
-			}
-			free(tempString);
-			
-			// Region Position
-			if(!cJSON_bItemValid(curObj,"Anchor X Coordinate", cJSON_Number))
-			{ // Region does not have a valid Anchor X Coordinate
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a valid \"Anchor X Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].xAnch = 0;
-			} else
-			{
-				curSpec->subvol_spec[curArrayItem].xAnch = 
-					cJSON_GetObjectItem(curObj, "Anchor X Coordinate")->valuedouble;
-			}
-			
-			if(!cJSON_bItemValid(curObj,"Anchor Y Coordinate", cJSON_Number))
-			{ // Region does not have a valid Anchor Y Coordinate
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a valid \"Anchor Y Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].yAnch = 0;
-			} else
-			{
-				curSpec->subvol_spec[curArrayItem].yAnch = 
-					cJSON_GetObjectItem(curObj, "Anchor Y Coordinate")->valuedouble;
-			}
-			
-			if(!cJSON_bItemValid(curObj,"Anchor Z Coordinate", cJSON_Number))
-			{ // Region does not have a valid Anchor Z Coordinate
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a valid \"Anchor Z Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].zAnch = 0;
-			} else
-			{
-				curSpec->subvol_spec[curArrayItem].zAnch = 
-					cJSON_GetObjectItem(curObj, "Anchor Z Coordinate")->valuedouble;
-			}
-			
-			if(cJSON_bItemValid(curObj,"Time Step", cJSON_Number))
-			{
-				bWarn = true;
-				printf("WARNING %d: Region %d does not need \"Time Step\" defined. This will be implemented in a future version. Ignoring.\n", numWarn++, curArrayItem);
-			}
-			
-			// Load remaining parameters depending on region shape
-			if(curSpec->subvol_spec[curArrayItem].shape == RECTANGULAR_BOX ||
-				curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
-			{
-				curSpec->subvol_spec[curArrayItem].radius = 0;
-				// Check for existence of unnecessary parameters and display
-				// warnings if they are defined.
-				if(cJSON_bItemValid(curObj,"Radius", cJSON_Number))
-				{
-					bWarn = true;
-					printf("WARNING %d: Region %d does not need \"Radius\" defined. Ignoring.\n", numWarn++, curArrayItem);
-				}
-			
-				// Width of subvolumes in region (multiple of SUBVOL_BASE_SIZE)
-				if(!cJSON_bItemValid(curObj,"Integer Subvolume Size", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Integer Subvolume Size")->valueint < 1)
-				{ // Region does not have a valid Integer Subvolume Size
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Integer Subvolume Size\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->subvol_spec[curArrayItem].sizeRect = 1;
-				} else
-				{
-					curSpec->subvol_spec[curArrayItem].sizeRect = 
-						cJSON_GetObjectItem(curObj, "Integer Subvolume Size")->valueint;
-				}
-				
-				// Is region microscopic or mesoscopic?
-				if(!cJSON_bItemValid(curObj,"Is Region Microscopic?", cJSON_True))
-				{ // Region does not have a valid Is Region Microscopic?
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Is Region Microscopic?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-					curSpec->subvol_spec[curArrayItem].bMicro = false;
-				} else
-				{
-					curSpec->subvol_spec[curArrayItem].bMicro = 
-						cJSON_GetObjectItem(curObj, "Is Region Microscopic?")->valueint;
-				}
-				
-				if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
-					minSubDim = 0;
-				else
-					minSubDim = 1;
-				
-				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along X")->valueint < minSubDim)
-				{ // Region does not have a valid Number of Subvolumes Along X
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along X\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->subvol_spec[curArrayItem].numX = 1;
-				} else
-				{
-					curSpec->subvol_spec[curArrayItem].numX = 
-						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along X")->valueint;
-				}
-				
-				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Y")->valueint < minSubDim)
-				{ // Region does not have a valid Number of Subvolumes Along Y
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Y\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->subvol_spec[curArrayItem].numY = 1;
-				} else
-				{
-					curSpec->subvol_spec[curArrayItem].numY = 
-						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Y")->valueint;
-				}
-				
-				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Z")->valueint < minSubDim)
-				{ // Region does not have a valid Number of Subvolumes Along Z
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Z\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->subvol_spec[curArrayItem].numZ = 1;
-				} else
-				{
-					curSpec->subvol_spec[curArrayItem].numZ = 
-						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Z")->valueint;
-				}
-				
-				// Confirm that a rectangle region is actually 2D
-				if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
-				{
-					if((curSpec->subvol_spec[curArrayItem].numX == 0
-						&& (curSpec->subvol_spec[curArrayItem].numY < 1
-						|| curSpec->subvol_spec[curArrayItem].numZ < 1))
-						|| (curSpec->subvol_spec[curArrayItem].numY == 0
-						&& (curSpec->subvol_spec[curArrayItem].numX < 1
-						|| curSpec->subvol_spec[curArrayItem].numZ < 1))
-						|| (curSpec->subvol_spec[curArrayItem].numZ == 0
-						&& (curSpec->subvol_spec[curArrayItem].numY < 1
-						|| curSpec->subvol_spec[curArrayItem].numX < 1))
-						|| (curSpec->subvol_spec[curArrayItem].numX > 0
-						&& curSpec->subvol_spec[curArrayItem].numY > 0
-						&& curSpec->subvol_spec[curArrayItem].numZ > 0))
-					{
-						bWarn = true;
-						printf("WARNING %d: Region %d is not properly defined as a Rectangle. Defining along XY plane with 1 subvolume along X and Y.\n", numWarn++, curArrayItem);
-						curSpec->subvol_spec[curArrayItem].numX = 1;
-						curSpec->subvol_spec[curArrayItem].numY = 1;
-						curSpec->subvol_spec[curArrayItem].numZ = 0;
-					}
-				}
-			} else // Region is round
-			{
-				curSpec->subvol_spec[curArrayItem].sizeRect = 0;
-				curSpec->subvol_spec[curArrayItem].bMicro = true;
-				curSpec->subvol_spec[curArrayItem].numX = 1;
-				curSpec->subvol_spec[curArrayItem].numY = 1;
-				curSpec->subvol_spec[curArrayItem].numZ = 1;
-				// Check for existence of unnecessary parameters and display
-				// warnings if they are defined.
-				if(cJSON_bItemValid(curObj,"Integer Subvolume Size", cJSON_Number))
-				{
-					bWarn = true;
-					printf("WARNING %d: Region %d does not need \"Integer Subvolume Size\" defined. Ignoring.\n", numWarn++, curArrayItem);
-				}
-				if(cJSON_bItemValid(curObj,"Is Region Microscopic?", cJSON_True))
-				{
-					bWarn = true;
-					printf("WARNING %d: Region %d does not need \"Is Region Microscopic?\" defined. This region must be microscopic. Ignoring.\n", numWarn++, curArrayItem);
-				}
-				if(cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number))
-				{
-					bWarn = true;
-					printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along X\" defined. Ignoring.\n", numWarn++, curArrayItem);
-				}
-				if(cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number))
-				{
-					bWarn = true;
-					printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along Y\" defined. Ignoring.\n", numWarn++, curArrayItem);
-				}
-				if(cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number))
-				{
-					bWarn = true;
-					printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along Z\" defined. Ignoring.\n", numWarn++, curArrayItem);
-				}
-			
-				// Region radius
-				if(!cJSON_bItemValid(curObj,"Radius", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Radius")->valuedouble < 0)
-				{ // Region does not have a valid Radius
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Radius\". Assigning value of \"Subvolume Base Size\".\n", numWarn++, curArrayItem);
-					curSpec->subvol_spec[curArrayItem].radius = curSpec->SUBVOL_BASE_SIZE;
-				} else
-				{
-					curSpec->subvol_spec[curArrayItem].radius = 
-						cJSON_GetObjectItem(curObj, "Radius")->valuedouble;
-				}
-				
-			}
-			
-			// Override region time step with global one
-			curSpec->subvol_spec[curArrayItem].dt = curSpec->DT_MICRO;
-			//curSpec->subvol_spec[curArrayItem].dt = 
-			//	cJSON_GetObjectItem(curObj,
-			//	"Time Step")->valuedouble;
+		
+		curObj = cJSON_GetArrayItem(regionSpec, curArrayItem);
+		
+		// Region label
+		if(!cJSON_bItemValid(curObj,"Label", cJSON_String))
+		{ // Region does not have a defined Label
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a defined \"Label\". Assigning empy string.\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].label = '\0';
+		} else{
+			curSpec->subvol_spec[curArrayItem].label =
+				stringWrite(cJSON_GetObjectItem(curObj,"Label")->valuestring);
 		}
-		for(curArrayItem = 0;
-			curArrayItem < curSpec->NUM_ACTORS; curArrayItem++)
-		{			
-			if(!cJSON_bArrayItemValid(actorSpec, curArrayItem, cJSON_Object))
+		
+		// Region Parent
+		if(!cJSON_bItemValid(curObj,"Parent Label", cJSON_String))
+		{ // Region does not have a defined Parent Label
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a defined \"Parent Label\". Assigning empy string.\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].parent = '\0';
+		} else{
+			curSpec->subvol_spec[curArrayItem].parent =
+				stringWrite(cJSON_GetObjectItem(curObj,"Parent Label")->valuestring);
+		}
+		
+		// Region Shape
+		if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
+		{ // Region does not have a defined Shape
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
+			tempString =
+				stringWrite("Rectangular Box");
+		} else{
+			tempString =
+				stringWrite(cJSON_GetObjectItem(curObj,
+				"Shape")->valuestring);
+		}
+		
+		if(strcmp(tempString,"Rectangle") == 0)
+			curSpec->subvol_spec[curArrayItem].shape = RECTANGLE;
+		else if(strcmp(tempString,"Circle") == 0)
+			curSpec->subvol_spec[curArrayItem].shape = CIRCLE;
+		else if(strcmp(tempString,"Rectangular Box") == 0)
+			curSpec->subvol_spec[curArrayItem].shape = RECTANGULAR_BOX;
+		else if(strcmp(tempString,"Sphere") == 0)
+			curSpec->subvol_spec[curArrayItem].shape = SPHERE;
+		else
+		{
+			bWarn = true;
+			printf("WARNING %d: Region %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].shape = RECTANGULAR_BOX;
+		}
+		free(tempString);
+		
+		// Region Type
+		if(!cJSON_bItemValid(curObj,"Type", cJSON_String))
+		{ // Region does not have a defined Type
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a defined \"Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+			tempString =
+				stringWrite("Normal");
+		} else{
+			tempString =
+				stringWrite(cJSON_GetObjectItem(curObj,
+				"Type")->valuestring);
+		}
+		
+		if(strcmp(tempString,"Normal") == 0)
+		{
+			curSpec->subvol_spec[curArrayItem].type = REGION_NORMAL;
+			curSpec->subvol_spec[curArrayItem].surfaceType = NO_SURFACE;
+			if(cJSON_bItemValid(curObj,"Surface Type", cJSON_String))
 			{
-				fprintf(stderr, "ERROR: Actor %d is not described by a JSON object.\n", curArrayItem);
-				exit(EXIT_FAILURE);
-			}
-			
-			curObj = cJSON_GetArrayItem(actorSpec, curArrayItem);
-			
-			if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
-			{ // Actor does not have a defined Shape
 				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
-				tempString =
-					stringWrite("Rectangular Box");
-			} else{
-				tempString =
-					stringWrite(cJSON_GetObjectItem(curObj,
-					"Shape")->valuestring);
+				printf("WARNING %d: Region %d does not need \"Surface Type\" defined. Ignoring.\n", numWarn++, curArrayItem);
 			}
-			
-			if(strcmp(tempString,"Rectangle") == 0)
-			{
-				curSpec->actorSpec[curArrayItem].shape = RECTANGLE;
-				arrayLen = 6;
-			}
-			else if(strcmp(tempString,"Circle") == 0)
-			{
-				curSpec->actorSpec[curArrayItem].shape = CIRCLE;
-				arrayLen = 4;
-			}
-			else if(strcmp(tempString,"Rectangular Box") == 0)
-			{
-				curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
-				arrayLen = 6;
-			}
-			else if(strcmp(tempString,"Sphere") == 0)
-			{
-				curSpec->actorSpec[curArrayItem].shape = SPHERE;
-				arrayLen = 4;
-			}
+		}
+		else if(strcmp(tempString,"3D Surface") == 0)
+			curSpec->subvol_spec[curArrayItem].type = REGION_SURFACE_3D;
+		else if(strcmp(tempString,"2D Surface") == 0)
+		{
+			if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
+				curSpec->subvol_spec[curArrayItem].type = REGION_SURFACE_2D;
 			else
 			{
 				bWarn = true;
-				printf("WARNING %d: Actor %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
-				arrayLen = 6;
+				printf("WARNING %d: Region %d is a 3D shape but was classified as a 2D surface. Changing to \"3D surface\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].type = REGION_SURFACE_3D;
 			}
-			
-			if(!cJSON_bItemValid(curObj,"Outer Boundary", cJSON_Array) ||
-				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Outer Boundary")) != arrayLen)
+		}
+		else
+		{
+			bWarn = true;
+			printf("WARNING %d: Region %d has an invalid \"Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].type = REGION_NORMAL;
+			curSpec->subvol_spec[curArrayItem].surfaceType = NO_SURFACE;
+		}
+		free(tempString);
+		
+		if(curSpec->subvol_spec[curArrayItem].type != REGION_NORMAL)
+		{
+			if(!cJSON_bItemValid(curObj,"Surface Type", cJSON_String))
 			{
 				bWarn = true;
-				printf("WARNING %d: Actor %d has a missing or invalid \"Outer Boundary\". Setting to default value all \"0\"s.\n", numWarn++, curArrayItem);
-				for(i = 0; i < arrayLen; i++)
-				{
-					curSpec->actorSpec[curArrayItem].boundary[i] = 0;
-				}
+				printf("WARNING %d: Region %d does not have a valid \"Surface Type\". Assigning default value \"Membrane\".\n", numWarn++, curArrayItem);
+				tempString = stringWrite("Membrane");
+				curSpec->subvol_spec[curArrayItem].surfaceType = SURFACE_MEMBRANE;
 			} else
 			{
-				curObjInner = cJSON_GetObjectItem(curObj,"Outer Boundary");
-				for(i = 0; i < arrayLen; i++)
-				{
-					if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number))
-					{
-						bWarn = true;
-						printf("WARNING %d: Actor %d has an invalid \"Outer Boundary\" parameter %d. Setting to default value \"0\".\n", numWarn++, curArrayItem, i);
-						curSpec->actorSpec[curArrayItem].boundary[i] = 0;
-					} else
-					{
-						curSpec->actorSpec[curArrayItem].boundary[i] =
-							cJSON_GetArrayItem(curObjInner, i)->valuedouble;
-					}					
-				}
+				tempString = stringWrite(cJSON_GetObjectItem(curObj,
+				"Surface Type")->valuestring);
 			}
-			
-			// Add r^2 term for spherical boundaries
-			if(strcmp(tempString,"Sphere") == 0)
+			if(strcmp(tempString,"Membrane") == 0)
+				curSpec->subvol_spec[curArrayItem].surfaceType = SURFACE_MEMBRANE;
+			else if(strcmp(tempString,"Inner") == 0)
+				curSpec->subvol_spec[curArrayItem].surfaceType = SURFACE_INNER;
+			else if(strcmp(tempString,"Outer") == 0)
+				curSpec->subvol_spec[curArrayItem].surfaceType = SURFACE_OUTER;
+			else
 			{
-				curSpec->actorSpec[curArrayItem].boundary[4] =
-					squareDBL(curSpec->actorSpec[curArrayItem].boundary[3]);
+				bWarn = true;
+				printf("WARNING %d: Region %d has an invalid \"Surface Type\". Setting to default value \"Membrane\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].surfaceType = SURFACE_MEMBRANE;
 			}
 			free(tempString);
-			
-			if(!cJSON_bItemValid(curObj,"Is Actor Active?", cJSON_True))
-			{ // Actor does not have a valid Is Actor Active?
+		}
+		
+		// Region Position
+		if(!cJSON_bItemValid(curObj,"Anchor X Coordinate", cJSON_Number))
+		{ // Region does not have a valid Anchor X Coordinate
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a valid \"Anchor X Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].xAnch = 0;
+		} else
+		{
+			curSpec->subvol_spec[curArrayItem].xAnch = 
+				cJSON_GetObjectItem(curObj, "Anchor X Coordinate")->valuedouble;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Anchor Y Coordinate", cJSON_Number))
+		{ // Region does not have a valid Anchor Y Coordinate
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a valid \"Anchor Y Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].yAnch = 0;
+		} else
+		{
+			curSpec->subvol_spec[curArrayItem].yAnch = 
+				cJSON_GetObjectItem(curObj, "Anchor Y Coordinate")->valuedouble;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Anchor Z Coordinate", cJSON_Number))
+		{ // Region does not have a valid Anchor Z Coordinate
+			bWarn = true;
+			printf("WARNING %d: Region %d does not have a valid \"Anchor Z Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+			curSpec->subvol_spec[curArrayItem].zAnch = 0;
+		} else
+		{
+			curSpec->subvol_spec[curArrayItem].zAnch = 
+				cJSON_GetObjectItem(curObj, "Anchor Z Coordinate")->valuedouble;
+		}
+		
+		if(cJSON_bItemValid(curObj,"Time Step", cJSON_Number))
+		{
+			bWarn = true;
+			printf("WARNING %d: Region %d does not need \"Time Step\" defined. This will be implemented in a future version. Ignoring.\n", numWarn++, curArrayItem);
+		}
+		
+		// Load remaining parameters depending on region shape
+		if(curSpec->subvol_spec[curArrayItem].shape == RECTANGULAR_BOX ||
+			curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
+		{
+			curSpec->subvol_spec[curArrayItem].radius = 0;
+			// Check for existence of unnecessary parameters and display
+			// warnings if they are defined.
+			if(cJSON_bItemValid(curObj,"Radius", cJSON_Number))
+			{
 				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Is Actor Active?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].bActive = false;
+				printf("WARNING %d: Region %d does not need \"Radius\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+		
+			// Width of subvolumes in region (multiple of SUBVOL_BASE_SIZE)
+			if(!cJSON_bItemValid(curObj,"Integer Subvolume Size", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Integer Subvolume Size")->valueint < 1)
+			{ // Region does not have a valid Integer Subvolume Size
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Integer Subvolume Size\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].sizeRect = 1;
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].bActive = 
-					cJSON_GetObjectItem(curObj, "Is Actor Active?")->valueint;
+				curSpec->subvol_spec[curArrayItem].sizeRect = 
+					cJSON_GetObjectItem(curObj, "Integer Subvolume Size")->valueint;
 			}
 			
-			if(!cJSON_bItemValid(curObj,"Start Time", cJSON_Number))
-			{ // Actor does not have a valid Start Time
+			// Is region microscopic or mesoscopic?
+			if(!cJSON_bItemValid(curObj,"Is Region Microscopic?", cJSON_True))
+			{ // Region does not have a valid Is Region Microscopic?
 				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Start Time\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].startTime = 0;
+				printf("WARNING %d: Region %d does not have a valid \"Is Region Microscopic?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].bMicro = false;
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].startTime = 
-					cJSON_GetObjectItem(curObj, "Start Time")->valuedouble;
+				curSpec->subvol_spec[curArrayItem].bMicro = 
+					cJSON_GetObjectItem(curObj, "Is Region Microscopic?")->valueint;
 			}
 			
-			if(!cJSON_bItemValid(curObj,"Is There Max Number of Actions?", cJSON_True))
-			{ // Actor does not have a valid Is There Max Number of Actions?
+			if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
+				minSubDim = 0;
+			else
+				minSubDim = 1;
+			
+			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Number of Subvolumes Along X")->valueint < minSubDim)
+			{ // Region does not have a valid Number of Subvolumes Along X
 				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Is There Max Number of Actions?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].bMaxAction = false;
+				printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along X\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].numX = 1;
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].bMaxAction = 
-					cJSON_GetObjectItem(curObj, "Is There Max Number of Actions?")->valueint;
+				curSpec->subvol_spec[curArrayItem].numX = 
+					cJSON_GetObjectItem(curObj, "Number of Subvolumes Along X")->valueint;
 			}
 			
-			if(curSpec->actorSpec[curArrayItem].bMaxAction)
+			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Y")->valueint < minSubDim)
+			{ // Region does not have a valid Number of Subvolumes Along Y
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Y\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].numY = 1;
+			} else
 			{
-				if(!cJSON_bItemValid(curObj,"Max Number of Actions", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Max Number of Actions")->valueint < 1)
-				{ // Region does not have a valid Max Number of Actions
+				curSpec->subvol_spec[curArrayItem].numY = 
+					cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Y")->valueint;
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Z")->valueint < minSubDim)
+			{ // Region does not have a valid Number of Subvolumes Along Z
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Z\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].numZ = 1;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].numZ = 
+					cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Z")->valueint;
+			}
+			
+			// Confirm that a rectangle region is actually 2D
+			if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
+			{
+				if((curSpec->subvol_spec[curArrayItem].numX == 0
+					&& (curSpec->subvol_spec[curArrayItem].numY < 1
+					|| curSpec->subvol_spec[curArrayItem].numZ < 1))
+					|| (curSpec->subvol_spec[curArrayItem].numY == 0
+					&& (curSpec->subvol_spec[curArrayItem].numX < 1
+					|| curSpec->subvol_spec[curArrayItem].numZ < 1))
+					|| (curSpec->subvol_spec[curArrayItem].numZ == 0
+					&& (curSpec->subvol_spec[curArrayItem].numY < 1
+					|| curSpec->subvol_spec[curArrayItem].numX < 1))
+					|| (curSpec->subvol_spec[curArrayItem].numX > 0
+					&& curSpec->subvol_spec[curArrayItem].numY > 0
+					&& curSpec->subvol_spec[curArrayItem].numZ > 0))
+				{
 					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Max Number of Actions\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].numMaxAction = 1;
+					printf("WARNING %d: Region %d is not properly defined as a Rectangle. Defining along XY plane with 1 subvolume along X and Y.\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numX = 1;
+					curSpec->subvol_spec[curArrayItem].numY = 1;
+					curSpec->subvol_spec[curArrayItem].numZ = 0;
+				}
+			}
+		} else // Region is round
+		{
+			curSpec->subvol_spec[curArrayItem].sizeRect = 0;
+			curSpec->subvol_spec[curArrayItem].bMicro = true;
+			curSpec->subvol_spec[curArrayItem].numX = 1;
+			curSpec->subvol_spec[curArrayItem].numY = 1;
+			curSpec->subvol_spec[curArrayItem].numZ = 1;
+			// Check for existence of unnecessary parameters and display
+			// warnings if they are defined.
+			if(cJSON_bItemValid(curObj,"Integer Subvolume Size", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Integer Subvolume Size\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Is Region Microscopic?", cJSON_True))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Is Region Microscopic?\" defined. This region must be microscopic. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along X\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along Y\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along Z\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+		
+			// Region radius
+			if(!cJSON_bItemValid(curObj,"Radius", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Radius")->valuedouble < 0)
+			{ // Region does not have a valid Radius
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Radius\". Assigning value of \"Subvolume Base Size\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].radius = curSpec->SUBVOL_BASE_SIZE;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].radius = 
+					cJSON_GetObjectItem(curObj, "Radius")->valuedouble;
+			}
+			
+		}
+		
+		// Override region time step with global one
+		curSpec->subvol_spec[curArrayItem].dt = curSpec->DT_MICRO;
+		//curSpec->subvol_spec[curArrayItem].dt = 
+		//	cJSON_GetObjectItem(curObj,
+		//	"Time Step")->valuedouble;
+	}
+	for(curArrayItem = 0;
+		curArrayItem < curSpec->NUM_ACTORS; curArrayItem++)
+	{			
+		if(!cJSON_bArrayItemValid(actorSpec, curArrayItem, cJSON_Object))
+		{
+			fprintf(stderr, "ERROR: Actor %d is not described by a JSON object.\n", curArrayItem);
+			exit(EXIT_FAILURE);
+		}
+		
+		curObj = cJSON_GetArrayItem(actorSpec, curArrayItem);
+		
+		if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
+		{ // Actor does not have a defined Shape
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
+			tempString =
+				stringWrite("Rectangular Box");
+		} else{
+			tempString =
+				stringWrite(cJSON_GetObjectItem(curObj,
+				"Shape")->valuestring);
+		}
+		
+		if(strcmp(tempString,"Rectangle") == 0)
+		{
+			curSpec->actorSpec[curArrayItem].shape = RECTANGLE;
+			arrayLen = 6;
+		}
+		else if(strcmp(tempString,"Circle") == 0)
+		{
+			curSpec->actorSpec[curArrayItem].shape = CIRCLE;
+			arrayLen = 4;
+		}
+		else if(strcmp(tempString,"Rectangular Box") == 0)
+		{
+			curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
+			arrayLen = 6;
+		}
+		else if(strcmp(tempString,"Sphere") == 0)
+		{
+			curSpec->actorSpec[curArrayItem].shape = SPHERE;
+			arrayLen = 4;
+		}
+		else
+		{
+			bWarn = true;
+			printf("WARNING %d: Actor %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
+			arrayLen = 6;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Outer Boundary", cJSON_Array) ||
+			cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Outer Boundary")) != arrayLen)
+		{
+			bWarn = true;
+			printf("WARNING %d: Actor %d has a missing or invalid \"Outer Boundary\". Setting to default value all \"0\"s.\n", numWarn++, curArrayItem);
+			for(i = 0; i < arrayLen; i++)
+			{
+				curSpec->actorSpec[curArrayItem].boundary[i] = 0;
+			}
+		} else
+		{
+			curObjInner = cJSON_GetObjectItem(curObj,"Outer Boundary");
+			for(i = 0; i < arrayLen; i++)
+			{
+				if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number))
+				{
+					bWarn = true;
+					printf("WARNING %d: Actor %d has an invalid \"Outer Boundary\" parameter %d. Setting to default value \"0\".\n", numWarn++, curArrayItem, i);
+					curSpec->actorSpec[curArrayItem].boundary[i] = 0;
 				} else
 				{
-					curSpec->actorSpec[curArrayItem].numMaxAction = 
-						cJSON_GetObjectItem(curObj, "Max Number of Actions")->valueint;
-				}
-			} else
-			{
-				curSpec->actorSpec[curArrayItem].numMaxAction = 0;
+					curSpec->actorSpec[curArrayItem].boundary[i] =
+						cJSON_GetArrayItem(curObjInner, i)->valuedouble;
+				}					
 			}
-			
-			if(!cJSON_bItemValid(curObj,"Is Actor Independent?", cJSON_True))
-			{ // Actor does not have a valid Is Actor Independent?
+		}
+		
+		// Add r^2 term for spherical boundaries
+		if(strcmp(tempString,"Sphere") == 0)
+		{
+			curSpec->actorSpec[curArrayItem].boundary[4] =
+				squareDBL(curSpec->actorSpec[curArrayItem].boundary[3]);
+		}
+		free(tempString);
+		
+		if(!cJSON_bItemValid(curObj,"Is Actor Active?", cJSON_True))
+		{ // Actor does not have a valid Is Actor Active?
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a valid \"Is Actor Active?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].bActive = false;
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].bActive = 
+				cJSON_GetObjectItem(curObj, "Is Actor Active?")->valueint;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Start Time", cJSON_Number))
+		{ // Actor does not have a valid Start Time
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a valid \"Start Time\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].startTime = 0;
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].startTime = 
+				cJSON_GetObjectItem(curObj, "Start Time")->valuedouble;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Is There Max Number of Actions?", cJSON_True))
+		{ // Actor does not have a valid Is There Max Number of Actions?
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a valid \"Is There Max Number of Actions?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].bMaxAction = false;
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].bMaxAction = 
+				cJSON_GetObjectItem(curObj, "Is There Max Number of Actions?")->valueint;
+		}
+		
+		if(curSpec->actorSpec[curArrayItem].bMaxAction)
+		{
+			if(!cJSON_bItemValid(curObj,"Max Number of Actions", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Max Number of Actions")->valueint < 1)
+			{ // Region does not have a valid Max Number of Actions
 				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Is Actor Independent?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].bIndependent = true;
+				printf("WARNING %d: Region %d does not have a valid \"Max Number of Actions\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].numMaxAction = 1;
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].bIndependent = 
-					cJSON_GetObjectItem(curObj, "Is Actor Independent?")->valueint;
+				curSpec->actorSpec[curArrayItem].numMaxAction = 
+					cJSON_GetObjectItem(curObj, "Max Number of Actions")->valueint;
+			}
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].numMaxAction = 0;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Is Actor Independent?", cJSON_True))
+		{ // Actor does not have a valid Is Actor Independent?
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a valid \"Is Actor Independent?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].bIndependent = true;
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].bIndependent = 
+				cJSON_GetObjectItem(curObj, "Is Actor Independent?")->valueint;
+		}
+		
+		if(!cJSON_bItemValid(curObj,"Action Interval", cJSON_Number) ||
+			cJSON_GetObjectItem(curObj,"Action Interval")->valuedouble <= 0)
+		{ // Actor does not have a valid Action Interval
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a valid \"Action Interval\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].actionInterval = 1.;
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].actionInterval = 
+				cJSON_GetObjectItem(curObj, "Action Interval")->valuedouble;
+		}
+		
+		if(curSpec->actorSpec[curArrayItem].bActive)
+		{ // Actor is active. Check for all active parameters
+			if(!cJSON_bItemValid(curObj,"Random Number of Molecules?", cJSON_True))
+			{ // Actor does not have a valid value for Random Number of Molecules?
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid value for \"Random Number of Molecules?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].bNumReleaseRand = false;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].bNumReleaseRand = 
+					cJSON_GetObjectItem(curObj, "Random Number of Molecules?")->valueint;
 			}
 			
-			if(!cJSON_bItemValid(curObj,"Action Interval", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Action Interval")->valuedouble <= 0)
+			if(!cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_True))
+			{ // Actor does not have a valid value for Random Molecule Release Times?
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid value for \"Random Molecule Release Times?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].bTimeReleaseRand = false;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].bTimeReleaseRand = 
+					cJSON_GetObjectItem(curObj, "Random Molecule Release Times?")->valueint;
+			}
+		
+			if(!cJSON_bItemValid(curObj,"Release Interval", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Release Interval")->valuedouble < 0)
 			{ // Actor does not have a valid Action Interval
 				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Action Interval\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].actionInterval = 1.;
+				printf("WARNING %d: Actor %d does not have a valid \"Release Interval\". Assigning default value \"0\" seconds.\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].releaseInterval = 0.;
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].actionInterval = 
-					cJSON_GetObjectItem(curObj, "Action Interval")->valuedouble;
+				curSpec->actorSpec[curArrayItem].releaseInterval = 
+					cJSON_GetObjectItem(curObj, "Release Interval")->valuedouble;
+			}
+		
+			if(!cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Slot Interval")->valuedouble < 0)
+			{ // Actor does not have a valid Action Interval
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Slot Interval\". Assigning default value \"0\" seconds.\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].slotInterval = 0.;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].slotInterval = 
+					cJSON_GetObjectItem(curObj, "Slot Interval")->valuedouble;
 			}
 			
-			if(curSpec->actorSpec[curArrayItem].bActive)
-			{ // Actor is active. Check for all active parameters
-				if(!cJSON_bItemValid(curObj,"Random Number of Molecules?", cJSON_True))
-				{ // Actor does not have a valid value for Random Number of Molecules?
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid value for \"Random Number of Molecules?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].bNumReleaseRand = false;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].bNumReleaseRand = 
-						cJSON_GetObjectItem(curObj, "Random Number of Molecules?")->valueint;
-				}
-				
-				if(!cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_True))
-				{ // Actor does not have a valid value for Random Molecule Release Times?
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid value for \"Random Molecule Release Times?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].bTimeReleaseRand = false;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].bTimeReleaseRand = 
-						cJSON_GetObjectItem(curObj, "Random Molecule Release Times?")->valueint;
-				}
-			
-				if(!cJSON_bItemValid(curObj,"Release Interval", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Release Interval")->valuedouble < 0)
-				{ // Actor does not have a valid Action Interval
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Release Interval\". Assigning default value \"0\" seconds.\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].releaseInterval = 0.;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].releaseInterval = 
-						cJSON_GetObjectItem(curObj, "Release Interval")->valuedouble;
-				}
-			
-				if(!cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Slot Interval")->valuedouble < 0)
-				{ // Actor does not have a valid Action Interval
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Slot Interval\". Assigning default value \"0\" seconds.\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].slotInterval = 0.;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].slotInterval = 
-						cJSON_GetObjectItem(curObj, "Slot Interval")->valuedouble;
-				}
-				
-				/*
-				if(!cJSON_bItemValid(curObj,"Bits Random?", cJSON_True))
-				{ // Actor does not have a valid value for Bits Random?
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid value for \"Bits Random?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].bRandBits = true;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].bRandBits = 
-						cJSON_GetObjectItem(curObj, "Bits Random?")->valueint;
-				}*/
-				curSpec->actorSpec[curArrayItem].bRandBits = true; // NOTE: CURRENTLY MUST BE TRUE
-			
-				if(!cJSON_bItemValid(curObj,"Probability of Bit 1", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble < 0. ||
-					cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble > 1.)
-				{ // Actor does not have a valid Action Interval
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Probability of Bit 1\". Assigning default value \"0.5\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].probOne = 0.5;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].probOne = 
-						cJSON_GetObjectItem(curObj, "Probability of Bit 1")->valuedouble;
-				}
-					
-			
-				if(!cJSON_bItemValid(curObj,"Modulation Scheme", cJSON_String))
-				{ // Actor does not have a defined Modulation Scheme
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a defined \"Modulation Scheme\". Setting to default value \"CSK\".\n", numWarn++, curArrayItem);
-					tempString =
-						stringWrite("CSK");
-				} else{
-					tempString =
-						stringWrite(cJSON_GetObjectItem(curObj,
-						"Modulation Scheme")->valuestring);
-				}			
-				
-				if(strcmp(tempString,"CSK") == 0)
-					curSpec->actorSpec[curArrayItem].modScheme = CSK;
-				else
-				{
-					bWarn = true;
-					printf("WARNING %d: Actor %d has an invalid \"Modulation Scheme\". Setting to default value \"CSK\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].modScheme = CSK;
-				}
-				free(tempString);
-			
-				if(!cJSON_bItemValid(curObj,"Modulation Bits", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Modulation Bits")->valueint < 1)
-				{ // Region does not have a valid Modulation Bits
-					bWarn = true;
-					printf("WARNING %d: Region %d does not have a valid \"Modulation Bits\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].modBits = 1;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].modBits = 
-						cJSON_GetObjectItem(curObj, "Modulation Bits")->valueint;
-				}
-			
-				if(!cJSON_bItemValid(curObj,"Modulation Strength", cJSON_Number) ||
-					cJSON_GetObjectItem(curObj,"Modulation Strength")->valuedouble <= 0.)
-				{ // Actor does not have a valid Modulation Strength
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Modulation Strength\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].modStrength = 1.;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].modStrength = 
-						cJSON_GetObjectItem(curObj, "Modulation Strength")->valuedouble;
-				}
-				
-				if(!cJSON_bItemValid(curObj,"Is Molecule Type Released?", cJSON_Array) ||
-					cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Type Released?")) != curSpec->NUM_MOL_TYPES)
-				{ // Config file does not list a valid Is Molecule Type Released? array
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Is Molecule Type Released?\" array or not of correct length. Assigning default value \"true\" to first molecule type.\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].bReleaseMol[0] = true;
-					for(curMolType = 1; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
-					{
-						curSpec->actorSpec[curArrayItem].bReleaseMol[curMolType] = false;
-					}
-				} else{
-					curObjInner = cJSON_GetObjectItem(curObj, "Is Molecule Type Released?");
-					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
-					{
-						if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
-						{
-							bWarn = true;
-							printf("WARNING %d: \"Is Molecule Type Released?\" %d of Actor %d not defined or has an invalid value. Assigning default value of \"false\".\n", numWarn++, curMolType, curArrayItem);
-							curSpec->actorSpec[curArrayItem].bReleaseMol[curMolType] = false;
-						} else
-						{
-							curSpec->actorSpec[curArrayItem].bReleaseMol[curMolType] =
-								cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
-						}
-					}
-				}
+			/*
+			if(!cJSON_bItemValid(curObj,"Bits Random?", cJSON_True))
+			{ // Actor does not have a valid value for Bits Random?
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid value for \"Bits Random?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].bRandBits = true;
 			} else
-			{ // Actor is passive. Check for all passive parameters
+			{
+				curSpec->actorSpec[curArrayItem].bRandBits = 
+					cJSON_GetObjectItem(curObj, "Bits Random?")->valueint;
+			}*/
+			curSpec->actorSpec[curArrayItem].bRandBits = true; // NOTE: CURRENTLY MUST BE TRUE
+		
+			if(!cJSON_bItemValid(curObj,"Probability of Bit 1", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble < 0. ||
+				cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble > 1.)
+			{ // Actor does not have a valid Action Interval
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Probability of Bit 1\". Assigning default value \"0.5\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].probOne = 0.5;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].probOne = 
+					cJSON_GetObjectItem(curObj, "Probability of Bit 1")->valuedouble;
+			}
+				
+		
+			if(!cJSON_bItemValid(curObj,"Modulation Scheme", cJSON_String))
+			{ // Actor does not have a defined Modulation Scheme
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a defined \"Modulation Scheme\". Setting to default value \"CSK\".\n", numWarn++, curArrayItem);
+				tempString =
+					stringWrite("CSK");
+			} else{
+				tempString =
+					stringWrite(cJSON_GetObjectItem(curObj,
+					"Modulation Scheme")->valuestring);
+			}			
 			
-				if(!cJSON_bItemValid(curObj,"Is Actor Activity Recorded?", cJSON_True))
-				{ // Actor does not have a valid Is Actor Activity Recorded?
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Is Actor Activity Recorded?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].bWrite = true;
-				} else
+			if(strcmp(tempString,"CSK") == 0)
+				curSpec->actorSpec[curArrayItem].modScheme = CSK;
+			else
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d has an invalid \"Modulation Scheme\". Setting to default value \"CSK\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].modScheme = CSK;
+			}
+			free(tempString);
+		
+			if(!cJSON_bItemValid(curObj,"Modulation Bits", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Modulation Bits")->valueint < 1)
+			{ // Region does not have a valid Modulation Bits
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Modulation Bits\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].modBits = 1;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].modBits = 
+					cJSON_GetObjectItem(curObj, "Modulation Bits")->valueint;
+			}
+		
+			if(!cJSON_bItemValid(curObj,"Modulation Strength", cJSON_Number) ||
+				cJSON_GetObjectItem(curObj,"Modulation Strength")->valuedouble <= 0.)
+			{ // Actor does not have a valid Modulation Strength
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Modulation Strength\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].modStrength = 1.;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].modStrength = 
+					cJSON_GetObjectItem(curObj, "Modulation Strength")->valuedouble;
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Is Molecule Type Released?", cJSON_Array) ||
+				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Type Released?")) != curSpec->NUM_MOL_TYPES)
+			{ // Config file does not list a valid Is Molecule Type Released? array
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Is Molecule Type Released?\" array or not of correct length. Assigning default value \"true\" to first molecule type.\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].bReleaseMol[0] = true;
+				for(curMolType = 1; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
 				{
-					curSpec->actorSpec[curArrayItem].bWrite = 
-						cJSON_GetObjectItem(curObj, "Is Actor Activity Recorded?")->valueint;
+					curSpec->actorSpec[curArrayItem].bReleaseMol[curMolType] = false;
 				}
-				
-				if(!cJSON_bItemValid(curObj,"Is Time Recorded with Activity?", cJSON_True))
-				{ // Actor does not have a valid Is Time Recorded with Activity?
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Is Time Recorded with Activity?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-					curSpec->actorSpec[curArrayItem].bRecordTime = false;
-				} else
+			} else{
+				curObjInner = cJSON_GetObjectItem(curObj, "Is Molecule Type Released?");
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
 				{
-					curSpec->actorSpec[curArrayItem].bRecordTime = 
-						cJSON_GetObjectItem(curObj, "Is Time Recorded with Activity?")->valueint;
-				}
-				
-				
-				if(!cJSON_bItemValid(curObj,"Is Molecule Type Observed?", cJSON_Array) ||
-					cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Type Observed?")) != curSpec->NUM_MOL_TYPES)
-				{ // Config file does not list a valid Is Molecule Type Observed? array
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Is Molecule Type Observed?\" array or not of correct length. Assigning default value \"true\" to each molecule type.\n", numWarn++, curArrayItem);
-					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+					if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
 					{
+						bWarn = true;
+						printf("WARNING %d: \"Is Molecule Type Released?\" %d of Actor %d not defined or has an invalid value. Assigning default value of \"false\".\n", numWarn++, curMolType, curArrayItem);
+						curSpec->actorSpec[curArrayItem].bReleaseMol[curMolType] = false;
+					} else
+					{
+						curSpec->actorSpec[curArrayItem].bReleaseMol[curMolType] =
+							cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
+					}
+				}
+			}
+		} else
+		{ // Actor is passive. Check for all passive parameters
+		
+			if(!cJSON_bItemValid(curObj,"Is Actor Activity Recorded?", cJSON_True))
+			{ // Actor does not have a valid Is Actor Activity Recorded?
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Is Actor Activity Recorded?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].bWrite = true;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].bWrite = 
+					cJSON_GetObjectItem(curObj, "Is Actor Activity Recorded?")->valueint;
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Is Time Recorded with Activity?", cJSON_True))
+			{ // Actor does not have a valid Is Time Recorded with Activity?
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Is Time Recorded with Activity?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].bRecordTime = false;
+			} else
+			{
+				curSpec->actorSpec[curArrayItem].bRecordTime = 
+					cJSON_GetObjectItem(curObj, "Is Time Recorded with Activity?")->valueint;
+			}
+			
+			
+			if(!cJSON_bItemValid(curObj,"Is Molecule Type Observed?", cJSON_Array) ||
+				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Type Observed?")) != curSpec->NUM_MOL_TYPES)
+			{ // Config file does not list a valid Is Molecule Type Observed? array
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Is Molecule Type Observed?\" array or not of correct length. Assigning default value \"true\" to each molecule type.\n", numWarn++, curArrayItem);
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+				{
+					curSpec->actorSpec[curArrayItem].bRecordMol[curMolType] = true;
+				}
+			} else{
+				curObjInner = cJSON_GetObjectItem(curObj, "Is Molecule Type Observed?");
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+				{
+					if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
+					{
+						bWarn = true;
+						printf("WARNING %d: \"Is Molecule Type Observed?\" %d of Actor %d not defined or has an invalid value. Assigning default value of \"true\".\n", numWarn++, curMolType, curArrayItem);
 						curSpec->actorSpec[curArrayItem].bRecordMol[curMolType] = true;
-					}
-				} else{
-					curObjInner = cJSON_GetObjectItem(curObj, "Is Molecule Type Observed?");
-					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+					} else
 					{
-						if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
-						{
-							bWarn = true;
-							printf("WARNING %d: \"Is Molecule Type Observed?\" %d of Actor %d not defined or has an invalid value. Assigning default value of \"true\".\n", numWarn++, curMolType, curArrayItem);
-							curSpec->actorSpec[curArrayItem].bRecordMol[curMolType] = true;
-						} else
-						{
-							curSpec->actorSpec[curArrayItem].bRecordMol[curMolType] =
-								cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
-						}
+						curSpec->actorSpec[curArrayItem].bRecordMol[curMolType] =
+							cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
 					}
 				}
-				
-				if(!cJSON_bItemValid(curObj,"Is Molecule Position Observed?", cJSON_Array) ||
-					cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Position Observed?")) != curSpec->NUM_MOL_TYPES)
-				{ // Config file does not list a valid Is Molecule Position Observed? array
-					bWarn = true;
-					printf("WARNING %d: Actor %d does not have a valid \"Is Molecule Position Observed?\" array or not of correct length. Assigning default value \"false\" to each molecule type.\n", numWarn++, curArrayItem);
-					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Is Molecule Position Observed?", cJSON_Array) ||
+				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Position Observed?")) != curSpec->NUM_MOL_TYPES)
+			{ // Config file does not list a valid Is Molecule Position Observed? array
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a valid \"Is Molecule Position Observed?\" array or not of correct length. Assigning default value \"false\" to each molecule type.\n", numWarn++, curArrayItem);
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+				{
+					curSpec->actorSpec[curArrayItem].bRecordPos[curMolType] = false;
+				}
+			} else{
+				curObjInner = cJSON_GetObjectItem(curObj, "Is Molecule Position Observed?");
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+				{
+					if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
 					{
+						bWarn = true;
+						printf("WARNING %d: \"Is Molecule Position Observed?\" %d of Actor %d not defined or has an invalid value. Assigning default value of \"false\".\n", numWarn++, curMolType, curArrayItem);
 						curSpec->actorSpec[curArrayItem].bRecordPos[curMolType] = false;
-					}
-				} else{
-					curObjInner = cJSON_GetObjectItem(curObj, "Is Molecule Position Observed?");
-					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+					} else
 					{
-						if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
-						{
-							bWarn = true;
-							printf("WARNING %d: \"Is Molecule Position Observed?\" %d of Actor %d not defined or has an invalid value. Assigning default value of \"false\".\n", numWarn++, curMolType, curArrayItem);
-							curSpec->actorSpec[curArrayItem].bRecordPos[curMolType] = false;
-						} else
-						{
-							curSpec->actorSpec[curArrayItem].bRecordPos[curMolType] =
-								cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
-						}
+						curSpec->actorSpec[curArrayItem].bRecordPos[curMolType] =
+							cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
 					}
 				}
 			}

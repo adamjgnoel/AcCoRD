@@ -14,7 +14,8 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
- * - added types of regions
+ * - removed use of MAX_RXN_PRODUCTS
+ * - added types of regions and surfaces
  *
  * Revision v0.3.1
  * - header added
@@ -47,8 +48,15 @@
 // Types of regions
 // NOTE: Changes to list of names must be reflected in file_io.c
 #define REGION_NORMAL 0
-#define REGION_SURFACE 1
-#define REGION_MEMBRANE 1
+#define REGION_SURFACE_3D 1
+#define REGION_SURFACE_2D 2
+
+// Types of surfaces
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define NO_SURFACE 0
+#define SURFACE_INNER 1
+#define SURFACE_OUTER 2
+#define SURFACE_MEMBRANE 3
 
 // Planes for 2d shapes
 // NOTE: Changes to list of names must be reflected in region.c

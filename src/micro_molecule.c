@@ -10,9 +10,12 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - corrected distance to end point when a molecule is "pushed" into a neighboring region
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -660,7 +663,7 @@ bool followMolecule(const double startPoint[3],
 		
 		// "Push" slightly into region to confirm which region we are really in
 		// Could be child of *endRegion
-		pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);
+		pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);		
 		while(!bPointInBoundary(curIntersectPoint, regionArray[*endRegion].spec.shape,
 			regionArray[*endRegion].boundary))
 		{
@@ -679,7 +682,8 @@ bool followMolecule(const double startPoint[3],
 			endPoint[2] = curIntersectPoint[2];
 			* transRegion = startRegion; // Indicate from which micro region we came from
 			return false;
-		}				
+		}			
+		lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
 		return followMolecule(curIntersectPoint, endPoint, lineVector,
 			lineLength, *endRegion, endRegion, transRegion, regionArray, depth+1)
 			&& startRegion == *endRegion;

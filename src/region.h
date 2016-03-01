@@ -15,7 +15,8 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
- * - added more checks on region parameters to verify placement
+ * - re-structured region array initialization to use more functions
+ * - added more checks on region parameters (including label uniqueness) to verify placement
  * - pushed error exit to end of region initialization so that all errors will be displayed
  * before exiting.
  * - added 2D regions
@@ -92,9 +93,10 @@ struct spec_region3D { // Used to define a region of subvolumes
 	// its boundary.
 	// REGION_SURFACE means that the region is "hollow" and impedes (though
 	// may not necessarily prevent) diffusion across its boundary
-	// REGION_MEMBRANE is similar to REGION_SURFACE but is specifically a
-	// selective diffusion barrier (may not need to keep)
 	int type;
+	
+	// Surface type. Default is NO_SURFACE, which corresponds to REGION_NORMAL
+	int surfaceType;
 	
 	// The simulation configuration has a defined base subvolume size,
 	// SUBVOL_BASE_SIZE. Square/cube subvolumes have a length that is a multiple
@@ -518,6 +520,20 @@ bool bSubFaceRegion(struct region regionArray[],
 	double boundAdjError,
 	unsigned short * numFace,
 	unsigned short dirArray[6]);
+
+// Initialize the region nesting (i.e., determine each region's parent and
+// children regions, if applicable)
+void initializeRegionNesting(const short NUM_REGIONS,
+	struct region regionArray[],
+	bool * bFail);
+
+// Determine number of subvolumes in each region
+void findNumRegionSubvolumes(const short NUM_REGIONS,
+	struct region regionArray[]);
+
+// Allocate memory for each region's neighbors
+void allocateRegionNeighbors(const short NUM_REGIONS,
+	struct region regionArray[]);
 
 // Final check of region overlap and correct adjacency
 void validateRegions(const short NUM_REGIONS,

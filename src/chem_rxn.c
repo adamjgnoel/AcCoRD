@@ -13,6 +13,7 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
+ * - removed limit on number of products in a reaction
  * - added region label when giving errors about region initialization
  *
  * Revision v0.4.1
@@ -64,6 +65,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 	unsigned short curProd; // Index of current product (if a reaction has multiple
 							// products of the same molecule type)
 	uint32_t num_reactants; // Number of reactants in a reaction
+	uint32_t numTotalProd; // Total number of products in a reaction
 	
 	bool bFoundReactant; // Have we found the first reactant yet?
 	
@@ -186,12 +188,22 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 		
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
 		{
+			numTotalProd = 0;
+			curRxn = rxnInRegionID[j][i];
+			
+			// Determine total number of products for this reaction
+			// Then we know how much memory to assign to productID
+			for(k = 0; k < NUM_MOL_TYPES; k++)
+			{
+				numTotalProd += chem_rxn[curRxn].products[k];
+			}
+			
 			regionArray[i].numMolChange[j] =
 				malloc(NUM_MOL_TYPES * sizeof(uint64_t));
 			regionArray[i].bMolAdd[j] =
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			regionArray[i].productID[j] =
-				malloc(MAX_RXN_PRODUCTS * sizeof(unsigned short));
+				malloc(numTotalProd * sizeof(unsigned short));
 			regionArray[i].bUpdateProp[j] =
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			if(regionArray[i].numMolChange[j] == NULL
@@ -202,7 +214,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u (label: \"%s\").\n", j, i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
-		}
+		}		
 		
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
@@ -293,7 +305,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			{
 				case 0:
 					// meso rxnRate must be calculated for one subvolume
-					if (regionArray[i].plane = PLANE_3D)
+					if (regionArray[i].plane == PLANE_3D)
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
 							*regionArray[i].actualSubSize * regionArray[i].actualSubSize * regionArray[i].actualSubSize;
 					else // Region is 2D so need area and not volume
@@ -309,7 +321,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
-					if (regionArray[i].plane = PLANE_3D)
+					if (regionArray[i].plane == PLANE_3D)
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
 							/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
 					else // Region is 2D so need area and not volume

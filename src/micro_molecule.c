@@ -688,19 +688,19 @@ bool followMolecule(const double startPoint[3],
 		// Determine region that we should actually be in (could be child of *endRegion)
 		bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion);
 			
-		if(!regionArray[*endRegion].spec.bMicro)
-		{
+		//if(!regionArray[*endRegion].spec.bMicro)
+		//{
 			// Molecule is entering mesoscopic region. Stop following here.
 			endPoint[0] = curIntersectPoint[0];
 			endPoint[1] = curIntersectPoint[1];
 			endPoint[2] = curIntersectPoint[2];
 			* transRegion = startRegion; // Indicate from which micro region we came from
 			return false;
-		}			
-		lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
-		return followMolecule(curIntersectPoint, endPoint, lineVector,
-			lineLength, *endRegion, endRegion, transRegion, regionArray, depth+1)
-			&& startRegion == *endRegion;
+		//}			
+		//lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
+		//return followMolecule(curIntersectPoint, endPoint, lineVector,
+		//	lineLength, *endRegion, endRegion, transRegion, regionArray, depth+1)
+		//	&& startRegion == *endRegion;
 	} else if(bPointInRegionNotChild(startRegion, regionArray, endPoint))
 	{
 		// Point is still in current region so diffusion is valid with no further modification

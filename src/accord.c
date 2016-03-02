@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * accord.c - main file
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - corrected display of simulation end time
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -937,6 +940,7 @@ int main(int argc, char *argv[])
 				(double) (clock() - startTime)*(1/fracComplete - 1)/CLOCKS_PER_SEC);
 		}
 	}
+	time(&timer);
 	timeInfo = localtime(&timer);
 	strftime(timeBuffer, 26, "%Y-%m-%d %H:%M:%S", timeInfo);
 	printf("Ending simulation at %s.\n", timeBuffer);

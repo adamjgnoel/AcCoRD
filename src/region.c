@@ -1339,8 +1339,10 @@ void initializeRegionNesting(const short NUM_REGIONS,
 				findChildCoordinates(i, j, curChild, regionArray);
 				
 				// If child is RECTANGLE and parent is a normal region, check that
-				// child is not on parent's outer boundary
-				/*if(regionArray[j].spec.shape == RECTANGLE
+				// child is not on parent's outer boundary.
+				// This is not permitted because molecules should not move from a child
+				// to the outer boundary of its parent
+				if(regionArray[j].spec.shape == RECTANGLE
 					&& regionArray[i].spec.type == REGION_NORMAL)
 				{
 					bFailRectangleChild = false;
@@ -1369,7 +1371,6 @@ void initializeRegionNesting(const short NUM_REGIONS,
 						*bFail = true;
 					}
 				}
-				*/
 			} else if(regionArray[i].spec.shape == RECTANGLE &&
 				regionArray[j].spec.shape == RECTANGLE)
 			{

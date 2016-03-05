@@ -267,12 +267,27 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 					
 				if(regionArray[newRegion].spec.bMicro)
 				{ // Region is microscopic. Move to appropriate list
-					if(!addMolecule3D(&p_list[newRegion][curType],
+			
+					if(newRegion == 1 && curType == 0)
+					{
+						if(!addMolecule3D(&p_list[newRegion][1],
+						newPoint[0], newPoint[1], newPoint[2]))
+						{
+							fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+							exit(EXIT_FAILURE);
+						}
+					} else if(!addMolecule3D(&p_list[newRegion][curType],
+						newPoint[0], newPoint[1], newPoint[2]))
+					{
+						fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+						exit(EXIT_FAILURE);
+					}			
+					/*if(!addMolecule3D(&p_list[newRegion][curType],
 						newPoint[0], newPoint[1], newPoint[2]))
 					{
 						fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
 						exit(EXIT_FAILURE);
-					}
+					}*/
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
 					newSub = findNearestSub3D(newRegion, regionArray,

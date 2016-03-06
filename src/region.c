@@ -988,7 +988,7 @@ bool bLineHitRegion(const double p1[3],
 				*d = minDist;
 				intersectPoint[0] = nearestIntersectPoint[0];
 				intersectPoint[1] = nearestIntersectPoint[1];
-				intersectPoint[2] = nearestIntersectPoint[2];
+				intersectPoint[2] = nearestIntersectPoint[2];			
 				return true;
 			} else return false;
 		case SPHERE:
@@ -1097,6 +1097,9 @@ void lockPointToRegion(double point[3],
 	const short faceID)
 {
 	short boundRegion;
+	short lockInd;
+	double coorSq[3];
+	double rSq;
 	if (regionArray[startRegion].isRegionNeigh[endRegion]
 		&& regionArray[startRegion].regionNeighDir[endRegion] == CHILD)
 		boundRegion = endRegion;
@@ -1114,16 +1117,25 @@ void lockPointToRegion(double point[3],
 				point[1] = regionArray[boundRegion].boundary[faceID];	
 			break;
 		case SPHERE:
-			// Arbitrarily adjust x-coordinate to lock point to surface
-			if(point[0] > regionArray[boundRegion].boundary[0])
-				point[0] = sqrt(squareDBL(regionArray[boundRegion].boundary[3]) -
-					squareDBL(regionArray[boundRegion].boundary[1] - point[1]) -
-					squareDBL(regionArray[boundRegion].boundary[2] - point[2]));
+			// Arbitrarily adjust "furthest" coordinate to lock point to sphere surface
+			coorSq[0] = squareDBL(regionArray[boundRegion].boundary[0] - point[0]);
+			coorSq[1] = squareDBL(regionArray[boundRegion].boundary[1] - point[1]);
+			coorSq[2] = squareDBL(regionArray[boundRegion].boundary[2] - point[2]);
+			rSq = coorSq[0] + coorSq[1] + coorSq[2];
+			if(coorSq[0] >= coorSq[1] && coorSq[0] >= coorSq[2])
+				lockInd = 0; // x-coordinate is furthest from center
+			else if (coorSq[1] >= coorSq[0] && coorSq[1] >= coorSq[2])
+				lockInd = 1; // y-coordinate is furthest from center
 			else
-				point[0] = -sqrt(squareDBL(regionArray[boundRegion].boundary[3]) -
-					squareDBL(regionArray[boundRegion].boundary[1] - point[1]) -
-					squareDBL(regionArray[boundRegion].boundary[2] - point[2]));
-			point[0] += regionArray[boundRegion].boundary[0];
+				lockInd = 2; // z-coordinate is furthest from center
+			
+			if(point[lockInd] > regionArray[boundRegion].boundary[lockInd])
+				point[lockInd] = sqrt(squareDBL(regionArray[boundRegion].boundary[3]) -
+					rSq + coorSq[lockInd]);
+			else
+				point[lockInd] = -sqrt(squareDBL(regionArray[boundRegion].boundary[3]) -
+					rSq + coorSq[lockInd]);
+			point[lockInd] += regionArray[boundRegion].boundary[lockInd];
 			break;
 		default:
 			fprintf(stderr,"ERROR: Point cannot be locked to region %u (label: \"%s\") because it is of type %d.\n", boundRegion, regionArray[boundRegion].spec.label, regionArray[boundRegion].spec.shape);

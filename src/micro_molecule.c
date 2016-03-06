@@ -115,8 +115,9 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 	{
 		for(curType = 0; curType < NUM_MOL_TYPES; curType++)
 		{
-			if(isListMol3DEmpty(&p_list[curRegion][curType]))
-				continue; // No need to validate an empty list of molecules
+			if(isListMol3DEmpty(&p_list[curRegion][curType])
+				|| sigma[curRegion][curType] == 0.)
+				continue; // No need to validate an empty list of molecules or ones that can't move
 			
 			curNode = p_list[curRegion][curType];
 			
@@ -133,7 +134,8 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 	{
 		for(curType = 0; curType < NUM_MOL_TYPES; curType++)
 		{
-			if(isListMol3DEmpty(&p_list[curRegion][curType]))
+			if(isListMol3DEmpty(&p_list[curRegion][curType])
+				|| sigma[curRegion][curType] == 0.)
 				continue; // No need to validate an empty list of molecules
 			
 			curNode = p_list[curRegion][curType];
@@ -175,14 +177,26 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 							// Molecule is now in a different region
 							if(regionArray[newRegion].spec.bMicro)
 							{ // New region is microscopic. Move to appropriate list
-								if(!addMolecule3D(&p_list[newRegion][curType],
+								if(curType == 0)
+								{
+									if(!addMolecule3D(&p_list[newRegion][1],
+									newPoint[0], newPoint[1], newPoint[2]))
+									{
+										fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+										exit(EXIT_FAILURE);
+									}
+									// Indicate that molecule doesn't need to be moved again
+									p_list[newRegion][1]->item.bNeedUpdate = false;
+								} else if(!addMolecule3D(&p_list[newRegion][curType],
 									newPoint[0], newPoint[1], newPoint[2]))
 								{
 									fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
 									exit(EXIT_FAILURE);
+								} else
+								{
+									// Indicate that molecule doesn't need to be moved again
+									p_list[newRegion][curType]->item.bNeedUpdate = false;
 								}
-								// Indicate that molecule doesn't need to be moved again
-								p_list[newRegion][curType]->item.bNeedUpdate = false;
 							} else
 							{ // New region is mesoscopic. Find nearest subvolume to new point
 								newSub = findNearestSub3D(newRegion, regionArray,
@@ -233,7 +247,7 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 			curNodeR = p_listRecent[curRegion][curType];
 			curMol = 0;
 			while(curNodeR != NULL)
-			{
+			{				
 				oldPoint[0] = curNodeR->item.x;
 				oldPoint[1] = curNodeR->item.y;
 				oldPoint[2] = curNodeR->item.z;
@@ -253,12 +267,27 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 					
 				if(regionArray[newRegion].spec.bMicro)
 				{ // Region is microscopic. Move to appropriate list
-					if(!addMolecule3D(&p_list[newRegion][curType],
+			
+					if(newRegion == 1 && curType == 0)
+					{
+						if(!addMolecule3D(&p_list[newRegion][1],
+						newPoint[0], newPoint[1], newPoint[2]))
+						{
+							fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+							exit(EXIT_FAILURE);
+						}
+					} else if(!addMolecule3D(&p_list[newRegion][curType],
+						newPoint[0], newPoint[1], newPoint[2]))
+					{
+						fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+						exit(EXIT_FAILURE);
+					}			
+					/*if(!addMolecule3D(&p_list[newRegion][curType],
 						newPoint[0], newPoint[1], newPoint[2]))
 					{
 						fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
 						exit(EXIT_FAILURE);
-					}
+					}*/
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
 					newSub = findNearestSub3D(newRegion, regionArray,
@@ -674,19 +703,19 @@ bool followMolecule(const double startPoint[3],
 		// Determine region that we should actually be in (could be child of *endRegion)
 		bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion);
 			
-		if(!regionArray[*endRegion].spec.bMicro)
-		{
+		//if(!regionArray[*endRegion].spec.bMicro)
+		//{
 			// Molecule is entering mesoscopic region. Stop following here.
 			endPoint[0] = curIntersectPoint[0];
 			endPoint[1] = curIntersectPoint[1];
 			endPoint[2] = curIntersectPoint[2];
 			* transRegion = startRegion; // Indicate from which micro region we came from
 			return false;
-		}			
-		lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
-		return followMolecule(curIntersectPoint, endPoint, lineVector,
-			lineLength, *endRegion, endRegion, transRegion, regionArray, depth+1)
-			&& startRegion == *endRegion;
+		//}			
+		//lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
+		//return followMolecule(curIntersectPoint, endPoint, lineVector,
+		//	lineLength, *endRegion, endRegion, transRegion, regionArray, depth+1)
+		//	&& startRegion == *endRegion;
 	} else if(bPointInRegionNotChild(startRegion, regionArray, endPoint))
 	{
 		// Point is still in current region so diffusion is valid with no further modification

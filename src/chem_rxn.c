@@ -13,6 +13,7 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
+ * - removed limit on number of molecule types
  * - removed limit on number of products in a reaction
  * - added region label when giving errors about region initialization
  *
@@ -52,7 +53,7 @@
  * reactions and initialize their values based on the chem_rxn
  * array of chem_rxn_struct
 */
-void initialize_region_chem_rxn3D(const short NUM_REGIONS,
+void initializeRegionChemRxn(const short NUM_REGIONS,
 	struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
@@ -305,12 +306,17 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			{
 				case 0:
 					// meso rxnRate must be calculated for one subvolume
-					if (regionArray[i].plane == PLANE_3D)
+					if (regionArray[i].plane == PLANE_3D
+						&& regionArray[i].spec.type == REGION_NORMAL)
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
 							*regionArray[i].actualSubSize * regionArray[i].actualSubSize * regionArray[i].actualSubSize;
-					else // Region is 2D so need area and not volume
+					else if (regionArray[i].spec.type == REGION_NORMAL
+						|| regionArray[i].spec.type == REGION_SURFACE_3D) // Region is 2D so need area and not volume
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
 							*regionArray[i].actualSubSize * regionArray[i].actualSubSize;
+					else
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							*regionArray[i].actualSubSize; // Region is 1D so need length
 					// microscopic 0th order rate depends on total region volume
 					regionArray[i].rxnRateZerothMicro[regionArray[i].numZerothRxn] =
 						chem_rxn[curRxn].k * regionArray[i].volume;
@@ -321,12 +327,17 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
-					if (regionArray[i].plane == PLANE_3D)
+					if (regionArray[i].plane == PLANE_3D
+						&& regionArray[i].spec.type == REGION_NORMAL)
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
 							/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
-					else // Region is 2D so need area and not volume
+					else if (regionArray[i].spec.type == REGION_NORMAL
+						|| regionArray[i].spec.type == REGION_SURFACE_3D) // Region is 2D so need area and not volume
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
 							/regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+					else
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							/regionArray[i].actualSubSize; // Region is 1D so need length
 					regionArray[i].secondRxn[regionArray[i].numSecondRxn++] = j;
 					break;
 				default:
@@ -396,7 +407,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 }
 
 // Free memory of region parameters
-void delete_region_chem_rxn3D(const short NUM_REGIONS,
+void deleteRegionChemRxn(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[])
 {

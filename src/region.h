@@ -300,11 +300,11 @@ struct region { // Region boundary parameters
 	bool ** bMolAdd;
 	
 	// Number of products associated with each chemical reaction
-	// Size is numChemRxn; maximum value is MAX_RXN_PRODUCTS (defined in global_param.h)
+	// Size is numChemRxn
 	uint32_t * numRxnProducts;
 	
 	// Molecule ID of each product associated with each chemical reaction
-	// Size is numChemRxn x MAX_RXN_PRODUCTS (defined in global_param.h)
+	// Size is numChemRxn x numRxnProducts
 	unsigned short ** productID;
 	
 	// Indicator of what molecule number changes mean that a reaction propensity

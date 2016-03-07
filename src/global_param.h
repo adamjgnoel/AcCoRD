@@ -14,6 +14,7 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
+ * - removed use of MAX_MOL_TYPES
  * - removed use of MAX_RXN_PRODUCTS
  * - added types of regions and surfaces
  *

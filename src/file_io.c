@@ -19,6 +19,7 @@
  * - added stringWrite function to nest some calls to stringAllocate, strlen,
  * and strcpy
  * - removed NUM_DIM parameter from simulation spec
+ * - removed upper limit on number of molecule types
  *
  * Revision v0.4.1
  * - added search for configuration file. First checks current directory, then
@@ -253,8 +254,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 	chemSpec = cJSON_GetObjectItem(configJSON,"Chemical Properties");
 		
 	if(!cJSON_bItemValid(chemSpec,"Number of Molecule Types", cJSON_Number) ||
-		cJSON_GetObjectItem(chemSpec,"Number of Molecule Types")->valueint < 1 ||
-		cJSON_GetObjectItem(chemSpec,"Number of Molecule Types")->valueint > MAX_MOL_TYPES)
+		cJSON_GetObjectItem(chemSpec,"Number of Molecule Types")->valueint < 1)
 	{ // Config file does not list a valid Number of Molecule Types
 		bWarn = true;
 		printf("WARNING %d: \"Number of Molecule Types\" not defined or has invalid value. Assigning default value of \"1\" type.\n", numWarn++);
@@ -332,7 +332,17 @@ void loadConfig3D(const char * CONFIG_NAME,
 					curSpec->chem_rxn[curArrayItem].products[curMolType] = 0;
 				}
 			} else
-			{			
+			{
+				curSpec->chem_rxn[curArrayItem].reactants =
+					malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
+				curSpec->chem_rxn[curArrayItem].products =
+					malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
+				if(curSpec->chem_rxn[curArrayItem].reactants == NULL
+					|| curSpec->chem_rxn[curArrayItem].products == NULL)
+				{
+					fprintf(stderr,"ERROR: Memory could not be allocated to store chemical reaction reactants and products\n");
+					exit(EXIT_FAILURE);
+				}
 				curObj = cJSON_GetArrayItem(rxnSpec, curArrayItem);
 				if(!cJSON_bItemValid(curObj,"Reaction Rate", cJSON_Number) ||
 					!cJSON_bItemValid(curObj,"Reactants", cJSON_Array) ||
@@ -1235,6 +1245,8 @@ void deleteConfig3D(struct simSpec3D curSpec)
 	
 	for(curRxn = 0; curRxn < curSpec.MAX_RXNS; curRxn++)
 	{
+		free(curSpec.chem_rxn[curRxn].reactants);
+		free(curSpec.chem_rxn[curRxn].products);
 		for(curRegion = 0; curRegion < curSpec.chem_rxn[curRxn].numRegionExceptions; curRegion++)
 		{
 			free(curSpec.chem_rxn[curRxn].regionExceptionLabel[curRegion]);

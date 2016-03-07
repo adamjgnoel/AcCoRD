@@ -45,12 +45,10 @@
 */
 struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Indicate the indices of the reactants and the number of each
-	// Only the first NUM_MOL_TYPES values will be defined
-	uint32_t reactants[MAX_MOL_TYPES];
+	uint32_t * reactants;
 	
 	// Indicate the indices of the products and the number of each
-	// Only the first NUM_MOL_TYPES values will be defined
-	uint32_t products[MAX_MOL_TYPES];
+	uint32_t * products;
 	
 	// Base reaction rate k (units depends on order of reaction)
 	double k;
@@ -77,13 +75,13 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
  * reactions and initialize their values based on the chem_rxn
  * array of chem_rxn_struct
 */
-void initialize_region_chem_rxn3D(const short NUM_REGIONS,
+void initializeRegionChemRxn(const short NUM_REGIONS,
 	struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
 	const struct chem_rxn_struct chem_rxn[]);
 
-void delete_region_chem_rxn3D(const short NUM_REGIONS,
+void deleteRegionChemRxn(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[]);
 

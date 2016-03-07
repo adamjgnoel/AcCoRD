@@ -180,7 +180,7 @@ void initializeRegionArray(struct region regionArray[],
 	findNumRegionSubvolumes(NUM_REGIONS, regionArray);
 	
 	// Define chemical reaction network
-	initialize_region_chem_rxn3D(NUM_REGIONS, regionArray,
+	initializeRegionChemRxn(NUM_REGIONS, regionArray,
 		NUM_MOL_TYPES, MAX_RXNS, chem_rxn);
 }
 
@@ -420,7 +420,7 @@ void delete_boundary_region_3D(const short NUM_REGIONS,
 	if(regionArray == NULL)
 		return;
 	
-	delete_region_chem_rxn3D(NUM_REGIONS, NUM_MOL_TYPES, regionArray);
+	deleteRegionChemRxn(NUM_REGIONS, NUM_MOL_TYPES, regionArray);
 	
 	for(i = 0; i < NUM_REGIONS; i++)
 	{

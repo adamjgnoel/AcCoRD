@@ -836,7 +836,7 @@ int main(int argc, char *argv[])
 						
 						// Find ID of current subvolume in region boundary list
 						destRegion = subvolArray[destSub].regionID;
-						curBoundSub = find_sub_in_bound_list3D(curRegion, destRegion, regionArray,
+						curBoundSub = findSubInBoundaryList3D(curRegion, destRegion, regionArray,
 							curSub);
 						
 						if(curBoundSub < UINT32_MAX)

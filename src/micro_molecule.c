@@ -15,7 +15,11 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
- * - corrected distance to end point when a molecule is "pushed" into a neighboring region
+ * - corrected distance to end point when a molecule is "pushed" into a neighboring
+ * region
+ * - added fail check to while loop when a molecule is "pushed" into a 
+ * neighboring region. Error will display if we did not end up in specified
+ * region or one of its children.
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -579,7 +583,7 @@ bool validateMolecule(double newPoint[3],
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
 // start and end points
-// Return whether molecule path had to be changed
+// Return false if molecule path had to be changed
 bool followMolecule(const double startPoint[3],
 	double endPoint[3],
 	double lineVector[3],
@@ -667,14 +671,26 @@ bool followMolecule(const double startPoint[3],
 		// Could be child of *endRegion
 		pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);		
 		while(!bPointInBoundary(curIntersectPoint, regionArray[*endRegion].spec.shape,
-			regionArray[*endRegion].boundary))
+			regionArray[*endRegion].boundary) && pushFrac > 0.)
 		{
 			pushFrac *= 0.1;
 			pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);
 		}
 		
 		// Determine region that we should actually be in (could be child of *endRegion)
-		bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion);
+		if(!bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion))
+		{ // Something went wrong here because we are not actually
+			// in the endRegion region (or its children)
+			fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",
+				startRegion, regionArray[startRegion].spec.label,
+				*endRegion, regionArray[*endRegion].spec.label,
+				regionArray[startRegion].spec.label);
+			endPoint[0] = startPoint[0];
+			endPoint[1] = startPoint[1];
+			endPoint[2] = startPoint[2];
+			*endRegion = startRegion;
+			return false;
+		}
 			
 		if(!regionArray[*endRegion].spec.bMicro)
 		{

@@ -752,7 +752,7 @@ void findRegionTouch3D(const short NUM_REGIONS,
 }
 
 // Find index of desired subvolume in list defining region's boundary with another region
-uint32_t find_sub_in_bound_list3D(const short curRegion,
+uint32_t findSubInBoundaryList3D(const short curRegion,
 	const short destRegion,
 	const struct region regionArray[],
 	uint32_t curSub)
@@ -1435,7 +1435,7 @@ void initializeRegionNesting(const short NUM_REGIONS,
 			} else if(regionArray[i].spec.shape == RECTANGULAR_BOX &&
 				regionArray[j].spec.shape == SPHERE)
 			{
-				if(!regionArray[i].spec.bMicro && regionArray[i].spec.type == REGION_NORMAL)
+				if(!regionArray[i].spec.bMicro)
 				{
 					// A mesoscopic parent cannot have a spherical child
 					fprintf(stderr, "ERROR: Normal mesoscopic region %u (label: \"%s\") has a spherical child region %u (label: \"%s\").\n", i, regionArray[i].spec.label, j, regionArray[j].spec.label);
@@ -1817,7 +1817,7 @@ void validateRegions(const short NUM_REGIONS,
 					&& fabs(curVol - 2* regionArray[curRegion].volume) > minVol)
 					|| fabs(curVol - regionArray[curRegion].volume) > minVol)
 				{
-					fprintf(stderr, "ERROR: Region %u (label: \"%s\") is a rectangle in mesoscopic 3D region %u (label: \"%s\") but is not on boundary of region %u's children.\n",
+					fprintf(stderr, "ERROR: Region %u (label: \"%s\") is a rectangle child of mesoscopic 3D region %u (label: \"%s\") but is not on boundary of region %u's children.\n",
 						curRegion, regionArray[curRegion].spec.label, otherRegion,
 						regionArray[otherRegion].spec.label, otherRegion);
 					*bFail = true;

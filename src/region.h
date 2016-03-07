@@ -26,6 +26,8 @@
  * - adjusted clearance between spherical and rectangular regions such that the clearance
  * between them (when one is nested inside the other) is scaled by the subvolume adjacency
  * error
+ * - corrected "locking" to spherical region so that the coordinate that is "locked" is
+ * the one that is the furthest from the center of the sphere
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -418,7 +420,7 @@ void findRegionTouch3D(const short NUM_REGIONS,
 	const double SUBVOL_BASE_SIZE);
 
 // Find index of desired subvolume in list defining region's boundary with another region
-uint32_t find_sub_in_bound_list3D(const short curRegion,
+uint32_t findSubInBoundaryList3D(const short curRegion,
 	const short destRegion,
 	const struct region regionArray[],
 	uint32_t curSub);

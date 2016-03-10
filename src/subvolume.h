@@ -103,11 +103,12 @@ void allocateSubvolArray(const uint32_t numSub,
 void allocateSubvolHelper(const uint32_t numSub,
 	uint32_t (** subCoorInd)[3],
 	uint32_t ***** subID,
+	uint32_t (*** subIDSize)[2],
 	const short NUM_REGIONS,
 	struct region regionArray[]);
 
 // Free memory of subvolume structure
-void delete_subvol_array3D(const uint32_t numSub,
+void deleteSubvolArray(const uint32_t numSub,
 	struct subvolume3D subvolArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const short NUM_REGIONS,
@@ -115,6 +116,7 @@ void delete_subvol_array3D(const uint32_t numSub,
 	
 void deleteSubvolHelper(uint32_t subCoorInd[][3],
 	uint32_t **** subID,
+	uint32_t (** subIDSize)[2],
 	const short NUM_REGIONS,
 	struct region regionArray[]);
 

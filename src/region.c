@@ -135,7 +135,29 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].boundary[4] = squareDBL(subvol_spec[i].radius);
 			regionArray[i].boundary[5] = 0.;
 			regionArray[i].plane = PLANE_3D;
-		}		
+		}
+		
+		switch(regionArray[i].spec.type)
+		{
+			case REGION_NORMAL:
+				if(regionArray[i].plane == PLANE_3D)
+					regionArray[i].numFace = 0;
+				else
+					regionArray[i].numFace = 1;
+				break;
+			case REGION_SURFACE_3D:
+				if(subvol_spec[i].shape == RECTANGULAR_BOX)
+					regionArray[i].numFace = 6;
+				else
+					regionArray[i].numFace = 1;
+				break;
+			case REGION_SURFACE_2D:
+				if(subvol_spec[i].shape == RECTANGLE)
+					regionArray[i].numFace = 4;
+				else
+					regionArray[i].numFace = 1;
+				break;
+		}
 			
 		regionArray[i].numChildren = 0;
 		regionArray[i].subResolution = SUBVOL_BASE_SIZE * SUB_ADJ_RESOLUTION;
@@ -1523,7 +1545,7 @@ void findNumRegionSubvolumes(const short NUM_REGIONS,
 					regionArray[i].numSub = (uint32_t) curX * curY;
 				} else
 				{
-					regionArray[i].numSub = (uint32_t) 2*curY + 2*curZ;
+					regionArray[i].numSub = (uint32_t) 2*curX + 2*curY;
 				}
 			}			
 			

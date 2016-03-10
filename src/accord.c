@@ -209,7 +209,8 @@ int main(int argc, char *argv[])
 	// Allocate temporary arrays for managing subvolume validity and placement
 	uint32_t (* subCoorInd)[3]; // List (within region) index coordinates for each subvolume
 	uint32_t **** subID; // Subvolume indices in master list
-	allocateSubvolHelper(numSub, &subCoorInd, &subID, spec.NUM_REGIONS, regionArray);
+	uint32_t (** subIDSize)[2]; // Reader array for subID
+	allocateSubvolHelper(numSub, &subCoorInd, &subID, &subIDSize, spec.NUM_REGIONS, regionArray);
 	
 	// Build subvolume array from subvolume specifications
 	buildSubvolArray3D(numSub, &numMesoSub, subvolArray,
@@ -264,7 +265,7 @@ int main(int argc, char *argv[])
 	printf("Number of passive actors: %u\n", NUM_ACTORS_PASSIVE);
 	
 	// Delete temporary arrays for managing subvolume validity and placement
-	deleteSubvolHelper(subCoorInd, subID, spec.NUM_REGIONS, regionArray);
+	deleteSubvolHelper(subCoorInd, subID, subIDSize, spec.NUM_REGIONS, regionArray);
 	
 	ListMol3D molListPassive3D[spec.NUM_MOL_TYPES];
 	for(j = 0; j < spec.NUM_MOL_TYPES; j++)
@@ -989,7 +990,7 @@ int main(int argc, char *argv[])
 	heapMesoDelete(numSub, heap_subvolID, heap_childID, b_heap_childValid);
 	heapTimerDelete(heapTimer, heapTimerChildID, b_heapTimerChildValid);
 	deleteTimerHeapArray(timerArray);
-	delete_subvol_array3D(numSub, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS, regionArray);
+	deleteSubvolArray(numSub, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS, regionArray);
 	deleteMesoSubArray3D(numMesoSub, mesoSubArray);
 	delete_boundary_region_3D(spec.NUM_REGIONS,
 		spec.NUM_MOL_TYPES, regionArray);

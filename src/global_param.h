@@ -36,6 +36,11 @@
 // Maximum number of products that a single chemical reaction can have
 #define MAX_RXN_PRODUCTS 4
 
+// Dimensions
+#define DIM_X 0
+#define DIM_Y 1
+#define DIM_Z 2
+
 // Shape Indicators
 // NOTE: Changes to list of names must be reflected in file_io.c
 // if regions or actors can have the updated shapes

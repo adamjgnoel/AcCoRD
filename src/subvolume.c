@@ -10,9 +10,13 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - corrected memory allocation for subvolume helper arrays
+ * - added surface subvolumes
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -62,37 +66,145 @@ void allocateSubvolArray(const uint32_t numSub,
 void allocateSubvolHelper(const uint32_t numSub,
 	uint32_t (** subCoorInd)[3],
 	uint32_t ***** subID,
+	uint32_t (*** subIDSize)[2],
 	const short NUM_REGIONS,
 	struct region regionArray[])
 {	
 	short i;
-	uint32_t x,y,z;
+	unsigned int j,k;
+	unsigned int length[3];
 	*subCoorInd = malloc(numSub*sizeof(uint32_t [3]));
+	*subIDSize = malloc(NUM_REGIONS*sizeof(*subIDSize));
 	*subID = malloc(NUM_REGIONS*sizeof(*subID));
-		
-	if(subCoorInd == NULL || *subID == NULL){
+	
+	if(subCoorInd == NULL || *subID == NULL || *subIDSize == NULL){
 		fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
 		exit(EXIT_FAILURE);
 	}
 	
+	// Fill in subIDSize for surface regions
 	for(i = 0; i < NUM_REGIONS; i++)
 	{
-		(*subID)[i] = malloc(regionArray[i].spec.numX*sizeof(*subID));
+		if(regionArray[i].numFace > 0)
+		{
+			(*subIDSize)[i] = malloc(regionArray[i].numFace*sizeof((*subIDSize)[i]));
+			if((*subIDSize)[i] == NULL){
+				fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
+				exit(EXIT_FAILURE);
+			}
+			if(regionArray[i].spec.shape == RECTANGULAR_BOX)
+			{				
+				(*subIDSize)[i][0][0] = regionArray[i].spec.numX;
+				(*subIDSize)[i][0][1] = regionArray[i].spec.numY;
+				(*subIDSize)[i][1][0] = regionArray[i].spec.numX;
+				(*subIDSize)[i][1][1] = regionArray[i].spec.numY;
+				(*subIDSize)[i][2][0] = regionArray[i].spec.numX;
+				(*subIDSize)[i][2][1] = regionArray[i].spec.numZ;
+				(*subIDSize)[i][3][0] = regionArray[i].spec.numX;
+				(*subIDSize)[i][3][1] = regionArray[i].spec.numZ;
+				(*subIDSize)[i][4][0] = regionArray[i].spec.numY;
+				(*subIDSize)[i][4][1] = regionArray[i].spec.numZ;
+				(*subIDSize)[i][5][0] = regionArray[i].spec.numY;
+				(*subIDSize)[i][5][1] = regionArray[i].spec.numZ;
+			} else if (regionArray[i].spec.type == REGION_SURFACE_3D
+				|| regionArray[i].spec.type == REGION_NORMAL)
+			{ // Region is 2D surface to a 3D shape
+				switch(regionArray[i].plane)
+				{
+					case PLANE_3D: // Spherical surface; will only be 1 subvolume anyway
+					case PLANE_XY:
+						(*subIDSize)[i][0][0] = regionArray[i].spec.numX;
+						(*subIDSize)[i][0][1] = regionArray[i].spec.numY;
+						break;
+					case PLANE_XZ:
+						(*subIDSize)[i][0][0] = regionArray[i].spec.numX;
+						(*subIDSize)[i][0][1] = regionArray[i].spec.numZ;
+						break;
+					case PLANE_YZ:
+						(*subIDSize)[i][0][0] = regionArray[i].spec.numY;
+						(*subIDSize)[i][0][1] = regionArray[i].spec.numZ;
+						break;
+				}
+			} else
+			{ // Region must be a 2D surface
+				if(regionArray[i].spec.shape == RECTANGLE)
+				{
+					for(j = 0; j < 4; j++)
+					{					
+						(*subIDSize)[i][j][0] = 1;
+						(*subIDSize)[i][j][1] = 1;
+					}
+					switch(regionArray[i].plane)
+					{
+						case PLANE_XY:
+							(*subIDSize)[i][0][0] = regionArray[i].spec.numX;
+							(*subIDSize)[i][1][0] = regionArray[i].spec.numX;
+							(*subIDSize)[i][2][0] = regionArray[i].spec.numY;
+							(*subIDSize)[i][3][0] = regionArray[i].spec.numY;
+							break;
+						case PLANE_XZ:
+							(*subIDSize)[i][0][0] = regionArray[i].spec.numX;
+							(*subIDSize)[i][1][0] = regionArray[i].spec.numX;
+							(*subIDSize)[i][2][0] = regionArray[i].spec.numZ;
+							(*subIDSize)[i][3][0] = regionArray[i].spec.numZ;
+							break;
+						case PLANE_YZ:
+							(*subIDSize)[i][0][0] = regionArray[i].spec.numY;
+							(*subIDSize)[i][1][0] = regionArray[i].spec.numY;
+							(*subIDSize)[i][2][0] = regionArray[i].spec.numZ;
+							(*subIDSize)[i][3][0] = regionArray[i].spec.numZ;
+							break;
+					}
+				} else
+				{
+					fprintf(stderr, "ERROR: Region %u (Label: \"%s\") has an invalid type/shape configuration, which prevents valid subvolume creation.\n", i, regionArray[i].spec.label);
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+	}
+	
+	for(i = 0; i < NUM_REGIONS; i++)
+	{
+		if(regionArray[i].numFace > 0)
+		{ // Region is a surface. First dimension is the number of faces
+			length[0] = regionArray[i].numFace;
+			if(regionArray[i].numFace == 1)
+			{
+				length[1] = (*subIDSize)[i][0][0];
+				length[2] = (*subIDSize)[i][0][1];
+			}
+		}
+		else
+		{ // Region is not a surface. Dimensions are default
+			length[0] = regionArray[i].spec.numX;
+			length[1] = regionArray[i].spec.numY;
+			length[2] = regionArray[i].spec.numZ;
+		}
+		
+		(*subID)[i] = malloc(length[0]*sizeof((*subID)[i]));
 		if((*subID)[i] == NULL){
 			fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
 			exit(EXIT_FAILURE);
 		}
-		for(x = 0; x < regionArray[i].spec.numX; x++)
+		
+		for(j = 0; j < length[0]; j++)
 		{
-			(*subID)[i][x] = malloc(regionArray[i].spec.numY*sizeof(*subID));
-			if((*subID)[i][x] == NULL){
+			if(regionArray[i].numFace > 1)
+			{ // If a surface has more than 1 face, then these 2 dimensions vary with each face
+				length[1] = (*subIDSize)[i][j][0];
+				length[2] = (*subIDSize)[i][j][1];
+			}		
+			
+			(*subID)[i][j] = malloc(length[1]*sizeof((*subID)[i][j]));
+			if((*subID)[i][j] == NULL){
 				fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
 				exit(EXIT_FAILURE);
 			}
-			for(y = 0; y < regionArray[i].spec.numY; y++)
+			for(k = 0; k < length[1]; k++)
 			{
-				(*subID)[i][x][y] = malloc(regionArray[i].spec.numZ*sizeof(*subID));
-				if((*subID)[i][x][y] == NULL){
+				(*subID)[i][j][k] = malloc(length[2]*sizeof((*subID)[i][j][k]));
+				if((*subID)[i][j][k] == NULL){
 					fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
 					exit(EXIT_FAILURE);
 				}
@@ -107,7 +219,7 @@ void allocateSubvolHelper(const uint32_t numSub,
 * allocated to the structure array itself. It should be called after BOTH
 * allocate_subvol_array3D AND build_subvol_array3D, but is written to avoid
 * any attempts to free memory that was not previously allocated */
-void delete_subvol_array3D(const uint32_t numSub,
+void deleteSubvolArray(const uint32_t numSub,
 	struct subvolume3D subvolArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const short NUM_REGIONS,
@@ -144,25 +256,46 @@ void delete_subvol_array3D(const uint32_t numSub,
 
 void deleteSubvolHelper(uint32_t subCoorInd[][3],
 	uint32_t **** subID,
+	uint32_t (** subIDSize)[2],
 	const short NUM_REGIONS,
 	struct region regionArray[])
 {	
 	short i;
 	uint32_t x,y;
+	uint32_t length[2];
 	
 	if(subCoorInd != NULL) free(subCoorInd);
 	
-	if(subID != NULL)
+	if(subID != NULL && subIDSize != NULL)
 	{
 		for(i = 0; i < NUM_REGIONS; i++)
 		{
-			if(subID[i] != NULL)
-			{
-				for(x = 0; x < regionArray[i].spec.numX; x++)
+			if(regionArray[i].numFace > 0)
+			{ // Region is a surface. First dimension is the number of faces
+				length[0] = regionArray[i].numFace;
+				if(regionArray[i].numFace == 1)
 				{
+					length[1] = subIDSize[i][0][0];
+				}
+			}
+			else
+			{ // Region is not a surface. Dimensions are default
+				length[0] = regionArray[i].spec.numX;
+				length[1] = regionArray[i].spec.numY;
+			}
+			
+			if(subID[i] != NULL && subIDSize[i] != NULL)
+			{
+				for(x = 0; x < length[0]; x++)
+				{
+					if(regionArray[i].numFace > 1)
+					{ // If a surface has more than 1 face, then 2 dimensions vary with each face
+						length[1] = subIDSize[i][x][0];
+					}
+					
 					if(subID[i][x] != NULL)
 					{
-						for(y = 0; y < regionArray[i].spec.numY; y++)
+						for(y = 0; y < length[1]; y++)
 						{
 							if(subID[i][x][y] != NULL) free(subID[i][x][y]);
 						}
@@ -170,9 +303,11 @@ void deleteSubvolHelper(uint32_t subCoorInd[][3],
 					}
 				}
 				free(subID[i]);
+				free(subIDSize[i]);
 			}
 		}
 		free(subID);
+		free(subIDSize);
 	}
 }
 
@@ -263,6 +398,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 					subCoorInd[curID][1] = curY;
 					subCoorInd[curID][2] = curZ;
 					
+					// Check that current location is actually part of region
+					
 					// Check that current location is not in nested region
 					for(j = 0; j < regionArray[i].numChildren; j++)
 					{
@@ -271,7 +408,7 @@ void buildSubvolArray3D(const uint32_t numSub,
 						{
 							// Need real coordinates of subvolume
 							findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
-							if(bBoundarySurround(RECTANGULAR_BOX, curSubBound,
+							if(bBoundarySurround(regionArray[i].spec.shape, curSubBound,
 								SPHERE, regionArray[regionArray[i].childrenID[j]].boundary, 0.))
 							{
 								// subvolume is entirely within spherical child

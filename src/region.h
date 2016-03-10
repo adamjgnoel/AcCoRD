@@ -140,6 +140,9 @@ struct region { // Region boundary parameters
 	// Values are defined in global_param.h
 	short plane;
 	
+	// Number of faces. 0 if region is not a surface
+	short numFace;
+	
 	// Is this region nested inside another region
 	bool bParent;
 	

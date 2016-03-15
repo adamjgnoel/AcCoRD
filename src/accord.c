@@ -213,11 +213,11 @@ int main(int argc, char *argv[])
 	allocateSubvolHelper(numSub, &subCoorInd, &subID, &subIDSize, spec.NUM_REGIONS, regionArray);
 	
 	// Build subvolume array from subvolume specifications
-	buildSubvolArray3D(numSub, &numMesoSub, subvolArray,
+	buildSubvolArray(numSub, &numMesoSub, subvolArray,
 		spec.subvol_spec, regionArray,
 		spec.NUM_REGIONS, spec.NUM_MOL_TYPES,
 		spec.MAX_RXNS, spec.SUBVOL_BASE_SIZE,
-		DIFF_COEF, subCoorInd, subID);
+		DIFF_COEF, subCoorInd, subID, subIDSize);
 		
 	// Determine rates associated with chemical reaction events
 	// Record dependencies (i.e., if a given rxn fires, what propensities need to be updated?)

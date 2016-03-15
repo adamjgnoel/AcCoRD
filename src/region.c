@@ -140,22 +140,39 @@ void initializeRegionArray(struct region regionArray[],
 		switch(regionArray[i].spec.type)
 		{
 			case REGION_NORMAL:
+				regionArray[i].subShape = regionArray[i].spec.shape;
 				if(regionArray[i].plane == PLANE_3D)
+				{
 					regionArray[i].numFace = 0;
+				}
 				else
+				{
 					regionArray[i].numFace = 1;
+				}
 				break;
 			case REGION_SURFACE_3D:
 				if(subvol_spec[i].shape == RECTANGULAR_BOX)
+				{
 					regionArray[i].numFace = 6;
+					regionArray[i].subShape = RECTANGLE;
+				}
 				else
+				{
 					regionArray[i].numFace = 1;
+					regionArray[i].subShape = regionArray[i].spec.shape;
+				}
 				break;
 			case REGION_SURFACE_2D:
 				if(subvol_spec[i].shape == RECTANGLE)
+				{
 					regionArray[i].numFace = 4;
+					regionArray[i].subShape = LINE;
+				}
 				else
+				{
 					regionArray[i].numFace = 1;
+					regionArray[i].subShape = regionArray[i].spec.shape;
+				}
 				break;
 		}
 			
@@ -609,6 +626,7 @@ void findRegionTouch3D(const short NUM_REGIONS,
 	const double SUBVOL_BASE_SIZE)
 {
 	short int i,j,k; // Current Region
+	short int surfRegion, normalRegion;
 	short int curNeigh; // Current neighbor region
 	
 	unsigned short direction = 0;
@@ -645,9 +663,51 @@ void findRegionTouch3D(const short NUM_REGIONS,
 				continue;
 			}
 			
-			if(bBoundaryAdjacent(regionArray[i].spec.shape, regionArray[i].boundary, regionArray[j].spec.shape,
-				regionArray[j].boundary, error, &direction))
-			{	// Regions share a face
+			if(regionArray[i].plane != regionArray[j].plane)
+			{ // Regions can only touch if one is normal 3D and other is 3D surface
+				if(!(regionArray[i].plane == PLANE_3D
+					&& regionArray[j].spec.type == REGION_SURFACE_3D)
+					&& !(regionArray[i].spec.type == REGION_SURFACE_3D
+					&& regionArray[j].plane == PLANE_3D))
+					continue;
+			}
+			
+			if(bBoundaryAdjacent(regionArray[i].spec.shape, regionArray[i].boundary,
+				regionArray[j].spec.shape, regionArray[j].boundary, error, &direction))
+			{	// Regions share a geometric face
+				// Check for surfaces
+				if((regionArray[i].spec.type == REGION_NORMAL
+					&& regionArray[j].spec.type != REGION_NORMAL)
+					|| (regionArray[i].spec.type != REGION_NORMAL
+					&& regionArray[j].spec.type == REGION_NORMAL))
+				{
+					if(regionArray[i].spec.type == REGION_NORMAL)
+					{
+						normalRegion = i;
+						surfRegion = j;
+					} else
+					{
+						normalRegion = j;
+						surfRegion = i;
+					}
+					switch (regionArray[surfRegion].spec.surfaceType)
+					{
+						case SURFACE_INNER:
+							if((surfRegion == i
+								&& (direction == IN || direction == LEFT || direction == DOWN))
+								|| (surfRegion == j
+								&& (direction == OUT || direction == RIGHT || direction == UP)))
+								continue;
+							break;
+						case SURFACE_OUTER:
+							if((surfRegion == j
+								&& (direction == IN || direction == LEFT || direction == DOWN))
+								|| (surfRegion == i
+								&& (direction == OUT || direction == RIGHT || direction == UP)))
+								continue;
+							break;
+					}
+				}
 				regionArray[i].boundaryRegion[direction] = true;
 				regionArray[i].boundaryRegionMicro[direction] = regionArray[j].spec.bMicro;
 				regionArray[i].isRegionNeigh[j] = true;
@@ -1344,10 +1404,9 @@ void initializeRegionNesting(const short NUM_REGIONS,
 			j = regionArray[i].childrenID[curChild];
 			
 			if(regionArray[i].spec.shape == RECTANGULAR_BOX &&
-				(regionArray[j].spec.shape == RECTANGULAR_BOX
-				|| regionArray[j].spec.shape == RECTANGLE))
-			{
-				// Neither parent nor child are spheres
+				regionArray[j].spec.shape == RECTANGULAR_BOX)
+			{				
+				// Parent and child are boxes
 				// Check for flush subvolumes first
 				if(bChildRegionNotFlush(i, j, regionArray, regionArray[i].subResolution))
 				{
@@ -1358,8 +1417,17 @@ void initializeRegionNesting(const short NUM_REGIONS,
 					continue;
 				}
 				
+				// If child is a surface, confirm that it is an outer surface or membrane
+				if(regionArray[j].spec.surfaceType == SURFACE_INNER)
+				{
+					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is an inner-pointing surface with parent region %u (label: \"%s\").\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+					fprintf(stderr, "A 3D child that is a surface must be outward-pointing or a membrane.\n");
+					*bFail = true;
+					continue;
+				}
+				
 				// Confirm that child is inside of parent
-				if(!bBoundarySurround(regionArray[j].spec.shape, regionArray[j].boundary,
+				if(!bBoundarySurround(RECTANGULAR_BOX, regionArray[j].boundary,
 					RECTANGULAR_BOX, regionArray[i].boundary, -regionArray[i].subResolution))
 				{
 					// Child is sticking out of parent
@@ -1372,39 +1440,6 @@ void initializeRegionNesting(const short NUM_REGIONS,
 				// Determine coordinates of child relative to parent subvolumes
 				findChildCoordinates(i, j, curChild, regionArray);
 				
-				// If child is RECTANGLE and parent is a normal region, check that
-				// child is not on parent's outer boundary.
-				// This is not permitted because molecules should not move from a child
-				// to the outer boundary of its parent
-				if(regionArray[j].spec.shape == RECTANGLE
-					&& regionArray[i].spec.type == REGION_NORMAL)
-				{
-					bFailRectangleChild = false;
-					switch (regionArray[j].plane)
-					{
-						case PLANE_XY:
-							bFailRectangleChild =
-								regionArray[i].childrenCoor[curChild][4] == 0
-								|| regionArray[i].childrenCoor[curChild][4] == regionArray[i].spec.numZ;
-							break;
-						case PLANE_XZ:		
-							bFailRectangleChild =
-								regionArray[i].childrenCoor[curChild][2] == 0
-								|| regionArray[i].childrenCoor[curChild][2] == regionArray[i].spec.numY;
-							break;				
-						case PLANE_YZ:
-							bFailRectangleChild =
-								regionArray[i].childrenCoor[curChild][0] == 0
-								|| regionArray[i].childrenCoor[curChild][0] == regionArray[i].spec.numX;
-							break;
-					}
-					if(bFailRectangleChild)
-					{
-						fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is on boundary of parent region %u (label: \"%s\").\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
-						fprintf(stderr, "Rectangle regions with rectangular box parents must not be defined on the parent's outer boundary. Place rectangle inside or do not define it as a child of region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
-						*bFail = true;
-					}
-				}
 			} else if(regionArray[i].spec.shape == RECTANGLE &&
 				regionArray[j].spec.shape == RECTANGLE)
 			{
@@ -1444,9 +1479,8 @@ void initializeRegionNesting(const short NUM_REGIONS,
 					regionArray[i].childrenCoor[curChild][1] = 0;
 				}
 			} else if(regionArray[i].spec.shape == SPHERE &&
-				(regionArray[j].spec.shape == RECTANGULAR_BOX
-				|| regionArray[j].spec.shape == RECTANGLE))
-			{				
+				regionArray[j].spec.shape == RECTANGULAR_BOX)
+			{
 				if(!bBoundarySurround(regionArray[j].spec.shape, regionArray[j].boundary, SPHERE, regionArray[i].boundary, regionArray[j].actualSubSize - regionArray[i].subResolution))
 				{
 					// Child is sticking out of parent

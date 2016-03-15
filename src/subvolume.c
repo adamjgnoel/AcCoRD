@@ -71,8 +71,8 @@ void allocateSubvolHelper(const uint32_t numSub,
 	struct region regionArray[])
 {	
 	short i;
-	unsigned int j,k;
-	unsigned int length[3];
+	uint32_t j,k;
+	uint32_t length[3];
 	*subCoorInd = malloc(numSub*sizeof(uint32_t [3]));
 	*subIDSize = malloc(NUM_REGIONS*sizeof(*subIDSize));
 	*subID = malloc(NUM_REGIONS*sizeof(*subID));
@@ -130,8 +130,7 @@ void allocateSubvolHelper(const uint32_t numSub,
 				if(regionArray[i].spec.shape == RECTANGLE)
 				{
 					for(j = 0; j < 4; j++)
-					{					
-						(*subIDSize)[i][j][0] = 1;
+					{
 						(*subIDSize)[i][j][1] = 1;
 					}
 					switch(regionArray[i].plane)
@@ -254,6 +253,7 @@ void deleteSubvolArray(const uint32_t numSub,
 	free(subvolArray);
 }
 
+// Free memory allocated to helper initialization arrays
 void deleteSubvolHelper(uint32_t subCoorInd[][3],
 	uint32_t **** subID,
 	uint32_t (** subIDSize)[2],
@@ -312,7 +312,7 @@ void deleteSubvolHelper(uint32_t subCoorInd[][3],
 }
 
 // Construct the array of structures with details of each subvolume
-void buildSubvolArray3D(const uint32_t numSub,
+void buildSubvolArray(const uint32_t numSub,
 	uint32_t * numMesoSub,
 	struct subvolume3D subvolArray[],
 	const struct spec_region3D subvol_spec[],
@@ -323,12 +323,15 @@ void buildSubvolArray3D(const uint32_t numSub,
 	const double SUBVOL_BASE_SIZE,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	uint32_t subCoorInd[numSub][3],
-	uint32_t **** subID)
+	uint32_t **** subID,
+	uint32_t (** subIDSize)[2])
 {	
 	short int i,j, curRegion, neighRegion, sphRegion, rectRegion; // Current Region
 	unsigned short curMolType;
-	uint32_t curX, curY, curZ; // Coordinates of current subvolume within current region
-	bool bRealSub;
+	uint32_t cur1, cur2, cur3; // Coordinates of current subvolume within current region
+	uint32_t length[3]; // Sizes of dimensions used for cur1, cur2, cur3
+	uint32_t curX, curY, curZ; // Coordinates of current subvolume within current face
+	bool bRealSub, bHaveCoor;
 	uint32_t curID = 0; // Current Subvolume ID
 	uint32_t curBoundID = 0; // Current subvolume in region boundary list
 	uint32_t curMesoID = 0; // Current Mesoscopic Subvolume ID
@@ -386,46 +389,108 @@ void buildSubvolArray3D(const uint32_t numSub,
 			continue;
 		}
 		
-		for(curZ = 0; curZ < subvol_spec[i].numZ; curZ++)
-		{
-			for(curY = 0; curY < subvol_spec[i].numY; curY++)
+		// Determine lengths for cur1, cur2, cur3 based on number of faces
+		if(regionArray[i].numFace > 0)
+		{ // Region is a surface. First dimension is the number of faces
+			length[0] = regionArray[i].numFace;
+			if(regionArray[i].numFace == 1)
 			{
-				for(curX = 0; curX < subvol_spec[i].numX; curX++)
+				length[1] = subIDSize[i][0][0];
+				length[2] = subIDSize[i][0][1];
+			}
+		}
+		else
+		{ // Region is not a surface. Dimensions are default
+			length[0] = regionArray[i].spec.numX;
+			length[1] = regionArray[i].spec.numY;
+			length[2] = regionArray[i].spec.numZ;
+		}
+		
+		for(cur1 = 0; cur1 < length[0]; cur1++)
+		{
+			if(regionArray[i].numFace > 1)
+			{ // If a surface has more than 1 face, then these 2 dimensions vary with each face
+				length[1] = subIDSize[i][j][0];
+				length[2] = subIDSize[i][j][1];
+			}
+			
+			for(cur2 = 0; cur2 < length[1]; cur2++)
+			{
+				for(cur3 = 0; cur3 < length[2]; cur3++)				
 				{
 					bRealSub = true;
 					
-					subCoorInd[curID][0] = curX;
-					subCoorInd[curID][1] = curY;
-					subCoorInd[curID][2] = curZ;
+					// Assign tentative subvolume coordinates
+					subCoorInd[curID][0] = cur1;
+					subCoorInd[curID][1] = cur2;
+					subCoorInd[curID][2] = cur3;
 					
 					// Check that current location is actually part of region
+					bHaveCoor = false;
 					
 					// Check that current location is not in nested region
-					for(j = 0; j < regionArray[i].numChildren; j++)
-					{
-						// Is current location actually within a child?
-						if(regionArray[regionArray[i].childrenID[j]].spec.shape == SPHERE)
+					if(regionArray[i].numChildren > 0)
+					{						
+						for(j = 0; j < regionArray[i].numChildren; j++)
 						{
-							// Need real coordinates of subvolume
-							findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
-							if(bBoundarySurround(regionArray[i].spec.shape, curSubBound,
-								SPHERE, regionArray[regionArray[i].childrenID[j]].boundary, 0.))
+							// Is it possible for child to block subvolumes of parent?
+							if((regionArray[i].spec.type != REGION_NORMAL
+								&& regionArray[regionArray[i].childrenID[j]].spec.type
+								== REGION_NORMAL)
+								|| (regionArray[i].plane == PLANE_3D
+								&& regionArray[regionArray[i].childrenID[j]].plane
+								!= PLANE_3D))
 							{
-								// subvolume is entirely within spherical child
-								bRealSub = false;
-								subID[i][curX][curY][curZ] = UINT32_MAX;
-								continue;
+								continue; // This child cannot interfere with the
+										  // subvolumes of the parent
 							}
-						} else if(curX >= regionArray[i].childrenCoor[j][0]
-							&& curX <= regionArray[i].childrenCoor[j][1]
-							&& curY >= regionArray[i].childrenCoor[j][2]
-							&& curY <= regionArray[i].childrenCoor[j][3]
-							&& curZ >= regionArray[i].childrenCoor[j][4]
-							&& curZ <= regionArray[i].childrenCoor[j][5])
-						{
-							bRealSub = false;
-							subID[i][curX][curY][curZ] = UINT32_MAX;
-							continue;
+														
+							if(regionArray[i].numFace > 0)
+							{
+								if(!bHaveCoor)
+								{
+									// Need actual subvolume coordinates in order to
+									// compare with child regions
+									findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
+									bHaveCoor = true;
+								}
+								
+								if(bBoundarySurround(regionArray[i].subShape, curSubBound,
+									regionArray[regionArray[i].childrenID[j]].spec.shape,
+									regionArray[regionArray[i].childrenID[j]].boundary, 0.))
+								{
+									// subvolume is entirely within spherical child
+									bRealSub = false;
+									subID[i][cur1][cur2][cur3] = UINT32_MAX;
+									break;
+								}
+							} else if(regionArray[regionArray[i].childrenID[j]].spec.shape == SPHERE)
+							{
+								// Need real coordinates of subvolume
+								if(!bHaveCoor)
+								{
+									findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
+									bHaveCoor = true;
+								}
+								if(bBoundarySurround(regionArray[i].subShape, curSubBound,
+									SPHERE, regionArray[regionArray[i].childrenID[j]].boundary, 0.))
+								{
+									// subvolume is entirely within spherical child
+									bRealSub = false;
+									subID[i][cur1][cur2][cur3] = UINT32_MAX;
+									break;
+								}
+							} else if(cur1 >= regionArray[i].childrenCoor[j][0]
+								&& cur1 <= regionArray[i].childrenCoor[j][1]
+								&& cur2 >= regionArray[i].childrenCoor[j][2]
+								&& cur2 <= regionArray[i].childrenCoor[j][3]
+								&& cur3 >= regionArray[i].childrenCoor[j][4]
+								&& cur3 <= regionArray[i].childrenCoor[j][5])
+							{
+								bRealSub = false;
+								subID[i][cur1][cur2][cur3] = UINT32_MAX;
+								break;
+							}
 						}
 					}
 						
@@ -435,12 +500,11 @@ void buildSubvolArray3D(const uint32_t numSub,
 						continue;
 					}
 					
-					subID[i][curX][curY][curZ] = curID;
+					subID[i][cur1][cur2][cur3] = curID;
 					
 					subvolArray[curID].regionID = i;
 					
-					// Assign memory to array parameters and confirm success
-					
+					// Assign memory to array parameters					
 					if(!regionArray[i].spec.bMicro)
 					{ // Parameter only needed for mesoscopic regions
 						subvolArray[curID].num_mol = malloc(NUM_MOL_TYPES*sizeof(uint64_t));
@@ -460,53 +524,58 @@ void buildSubvolArray3D(const uint32_t numSub,
 					subvolArray[curID].bBoundary = false;
 					
 					// Find if an interior subvolume borders a nested region
-					for(j = 0; j < regionArray[i].numChildren; j++)
+					if(regionArray[i].numFace > 0)
+					{ // All 2D subvolumes are boundary subvolumes
+						subvolArray[curID].bBoundary = true;
+					} else
 					{
-						if(regionArray[regionArray[i].childrenID[j]].spec.shape == SPHERE)
+						for(j = 0; j < regionArray[i].numChildren; j++)
 						{
-							// Sphere and subvolume are adjacent if they intersect
-							// We already determined curSubBound above
-							if(bBoundaryIntersect(RECTANGULAR_BOX, curSubBound,
-								SPHERE, regionArray[regionArray[i].childrenID[j]].boundary,
-								regionArray[i].actualSubSize))
+							if(regionArray[regionArray[i].childrenID[j]].spec.shape == SPHERE)
+							{
+								// Sphere and subvolume are adjacent if they intersect
+								// We already determined curSubBound above
+								if(bBoundaryIntersect(RECTANGULAR_BOX, curSubBound,
+									SPHERE, regionArray[regionArray[i].childrenID[j]].boundary,
+									regionArray[i].actualSubSize))
+								{
+									subvolArray[curID].bBoundary = true;
+									continue; // No need to keep comparing with other children
+								}							
+							} else if(((cur1 == regionArray[i].childrenCoor[j][0]-1 ||
+								cur1 == regionArray[i].childrenCoor[j][1]+1)
+								&& cur2 >= regionArray[i].childrenCoor[j][2]
+								&& cur2 <= regionArray[i].childrenCoor[j][3]
+								&& cur3 >= regionArray[i].childrenCoor[j][4]
+								&& cur3 <= regionArray[i].childrenCoor[j][5])
+								||
+								((cur2 == regionArray[i].childrenCoor[j][2]-1 ||
+								cur2 == regionArray[i].childrenCoor[j][3]+1)
+								&& cur1 >= regionArray[i].childrenCoor[j][0]
+								&& cur1 <= regionArray[i].childrenCoor[j][1]
+								&& cur3 >= regionArray[i].childrenCoor[j][4]
+								&& cur3 <= regionArray[i].childrenCoor[j][5])
+								||
+								((cur3 == regionArray[i].childrenCoor[j][4]-1 ||
+								cur3 == regionArray[i].childrenCoor[j][5]+1)
+								&& cur1 >= regionArray[i].childrenCoor[j][0]
+								&& cur1 <= regionArray[i].childrenCoor[j][1]
+								&& cur2 >= regionArray[i].childrenCoor[j][2]
+								&& cur2 <= regionArray[i].childrenCoor[j][3]))
 							{
 								subvolArray[curID].bBoundary = true;
 								continue; // No need to keep comparing with other children
-							}							
-						} else if(((curX == regionArray[i].childrenCoor[j][0]-1 ||
-							curX == regionArray[i].childrenCoor[j][1]+1)
-							&& curY >= regionArray[i].childrenCoor[j][2]
-							&& curY <= regionArray[i].childrenCoor[j][3]
-							&& curZ >= regionArray[i].childrenCoor[j][4]
-							&& curZ <= regionArray[i].childrenCoor[j][5])
-							||
-							((curY == regionArray[i].childrenCoor[j][2]-1 ||
-							curY == regionArray[i].childrenCoor[j][3]+1)
-							&& curX >= regionArray[i].childrenCoor[j][0]
-							&& curX <= regionArray[i].childrenCoor[j][1]
-							&& curZ >= regionArray[i].childrenCoor[j][4]
-							&& curZ <= regionArray[i].childrenCoor[j][5])
-							||
-							((curZ == regionArray[i].childrenCoor[j][4]-1 ||
-							curZ == regionArray[i].childrenCoor[j][5]+1)
-							&& curX >= regionArray[i].childrenCoor[j][0]
-							&& curX <= regionArray[i].childrenCoor[j][1]
-							&& curY >= regionArray[i].childrenCoor[j][2]
-							&& curY <= regionArray[i].childrenCoor[j][3]))
-						{
-							subvolArray[curID].bBoundary = true;
-							continue; // No need to keep comparing with other children
+							}
 						}
 					}
-						
 					curID++;
 				}
 			}
 		}
 	}
 		
-	// Store basic subvolume information based on the specification
-	// Populate subvolArray based on subvol_spec
+	// Identify subvolumes on boundary of normal 3D regions and count number
+	// of subvolume neighbors in same region
 	for(i = 0,curID=0; i < NUM_REGIONS; i++)
 	{
 		if(regionArray[i].spec.shape == SPHERE)
@@ -516,43 +585,69 @@ void buildSubvolArray3D(const uint32_t numSub,
 			continue;
 		}
 		
-		for(curZ = 0; curZ < subvol_spec[i].numZ; curZ++)
-		{
-			for(curY = 0; curY < subvol_spec[i].numY; curY++)
+		// Determine lengths for cur1, cur2, cur3 based on number of faces
+		if(regionArray[i].numFace > 0)
+		{ // Region is a surface. First dimension is the number of faces
+			length[0] = regionArray[i].numFace;
+			if(regionArray[i].numFace == 1)
 			{
-				for(curX = 0; curX < subvol_spec[i].numX; curX++)
+				length[1] = subIDSize[i][0][0];
+				length[2] = subIDSize[i][0][1];
+			}
+		}
+		else
+		{ // Region is not a surface. Dimensions are default
+			length[0] = regionArray[i].spec.numX;
+			length[1] = regionArray[i].spec.numY;
+			length[2] = regionArray[i].spec.numZ;
+		}
+		
+		for(cur1 = 0; cur1 < length[0]; cur1++)
+		{
+			if(regionArray[i].numFace > 1)
+			{ // If a surface has more than 1 face, then these 2 dimensions vary with each face
+				length[1] = subIDSize[i][j][0];
+				length[2] = subIDSize[i][j][1];
+			}
+			
+			for(cur2 = 0; cur2 < length[1]; cur2++)
+			{
+				for(cur3 = 0; cur1 < length[2]; cur3++)
 				{
-					if(subID[i][curX][curY][curZ] < UINT32_MAX)
+					if(subID[i][cur1][cur2][cur3] < UINT32_MAX)
 					{	// Current subvolume is valid
 					
-						if(subCoorInd[curID][0] > 0)
-						{ // Neighbor is 1 "x" index "down"
-							if(subID[i][curX-1][curY][curZ] < UINT32_MAX)
-								subvolArray[curID].num_neigh++;
-						} else subvolArray[curID].bBoundary = true;
-						if(subCoorInd[curID][0] < subvol_spec[i].numX-1)
-						{ // Neighbor is 1 "x" index "up"
-							if(subID[i][curX+1][curY][curZ] < UINT32_MAX)
-								subvolArray[curID].num_neigh++;
-						} else subvolArray[curID].bBoundary = true;
+						if(regionArray[i].numFace == 0)
+						{ // Neighbors along cur1 dimension only possible for normal 3D regions
+							if(subCoorInd[curID][0] > 0)
+							{ // Neighbor is 1 "x" index "down"
+								if(subID[i][cur1-1][cur2][cur3] < UINT32_MAX)
+									subvolArray[curID].num_neigh++;
+							} else subvolArray[curID].bBoundary = true;
+							if(subCoorInd[curID][0] < length[0]-1)
+							{ // Neighbor is 1 "x" index "up"
+								if(subID[i][cur1+1][cur2][cur3] < UINT32_MAX)
+									subvolArray[curID].num_neigh++;
+							} else subvolArray[curID].bBoundary = true;
+						}
 						if(subCoorInd[curID][1] > 0)
 						{ // Neighbor is 1 "y" index "down"
-							if(subID[i][curX][curY-1][curZ] < UINT32_MAX)
+							if(subID[i][cur1][cur2-1][cur3] < UINT32_MAX)
 								subvolArray[curID].num_neigh++;
 						} else subvolArray[curID].bBoundary = true;
-						if(subCoorInd[curID][1] < subvol_spec[i].numY-1)
+						if(subCoorInd[curID][1] < length[1]-1)
 						{ // Neighbor is 1 "y" index "up"
-							if(subID[i][curX][curY+1][curZ] < UINT32_MAX)
+							if(subID[i][cur1][cur2+1][cur3] < UINT32_MAX)
 								subvolArray[curID].num_neigh++;
 						} else subvolArray[curID].bBoundary = true;
 						if(subCoorInd[curID][2] > 0)
 						{ // Neighbor is 1 "z" index "down"
-							if(subID[i][curX][curY][curZ-1] < UINT32_MAX)
+							if(subID[i][cur1][cur2][cur3-1] < UINT32_MAX)
 								subvolArray[curID].num_neigh++;
 						} else subvolArray[curID].bBoundary = true;
-						if(subCoorInd[curID][2] < subvol_spec[i].numZ-1)
+						if(subCoorInd[curID][2] < length[2]-1)
 						{ // Neighbor is 1 "z" index "up"
-							if(subID[i][curX][curY][curZ+1] < UINT32_MAX)
+							if(subID[i][cur1][cur2][cur3+1] < UINT32_MAX)
 								subvolArray[curID].num_neigh++;
 						} else subvolArray[curID].bBoundary = true;
 						
@@ -851,17 +946,20 @@ bool checkSubvolNeigh(struct region regionArray[],
 {
 	unsigned short dirArray[6];
 
-	if (regionArray[curRegion].spec.shape == RECTANGULAR_BOX
-		&& regionArray[neighRegion].spec.shape == RECTANGULAR_BOX)
+	if ((regionArray[curRegion].spec.shape == RECTANGULAR_BOX
+		|| regionArray[curRegion].spec.shape == RECTANGLE)
+		&& (regionArray[neighRegion].spec.shape == RECTANGULAR_BOX
+		|| regionArray[curRegion].spec.shape == RECTANGLE))
 	{
 		findSubvolCoor(curSubBound, regionArray[curRegion], subCoorInd[curID]);
 		findSubvolCoor(curNeighBound, regionArray[neighRegion],
 			subCoorInd[curNeighID]);
 			
 		// Are the two subvolumes close enough to be neighbours?
-		if(bBoundaryAdjacent(RECTANGULAR_BOX, curSubBound, RECTANGULAR_BOX,
+		if(bBoundaryAdjacent(regionArray[curRegion].spec.shape, curSubBound,
+			regionArray[neighRegion].spec.shape,
 			curNeighBound, boundAdjError, adjDirection))
-		{ // Subvolumes are neighbours. Record
+		{ // Subvolumes are geometric neighbours. Record
 			return true;
 		}
 	} else if (regionArray[curRegion].spec.shape == SPHERE
@@ -930,16 +1028,264 @@ bool checkSubvolNeigh(struct region regionArray[],
 
 // Calculate cartesian coordinates of rectangular subvolume
 void findSubvolCoor(double subBound[6],
-	struct region regionSingle,
+	const struct region regionSingle,
 	uint32_t subCoorInd[3])
 {
-	subBound[0] = regionSingle.spec.xAnch +
+	if(regionSingle.numFace > 0)
+	{ // Region is a surface. First dimension is the number of faces
+		if(regionSingle.spec.shape == RECTANGULAR_BOX)
+		{ // There are 6 faces
+			switch(subCoorInd[0])
+			{
+				case 0: // Lower XY plane
+					subBound[0] = regionSingle.boundary[0] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+					subBound[2] = regionSingle.boundary[2] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+					subBound[4] = regionSingle.boundary[4];
+					subBound[5] = regionSingle.boundary[4];
+					break;
+				case 1: // Upper XY plane
+					subBound[0] = regionSingle.boundary[0] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+					subBound[2] = regionSingle.boundary[2] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+					subBound[4] = regionSingle.boundary[5];
+					subBound[5] = regionSingle.boundary[5];
+					break;
+				case 2: // Lower XZ plane
+					subBound[0] = regionSingle.boundary[0] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+					subBound[2] = regionSingle.boundary[2];
+					subBound[3] = regionSingle.boundary[2];
+					subBound[4] = regionSingle.boundary[4] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+					break;
+				case 3: // Upper XZ plane
+					subBound[0] = regionSingle.boundary[0] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+					subBound[2] = regionSingle.boundary[3];
+					subBound[3] = regionSingle.boundary[3];
+					subBound[4] = regionSingle.boundary[4] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+					break;
+				case 4: // Lower YZ plane
+					subBound[0] = regionSingle.boundary[0];
+					subBound[1] = regionSingle.boundary[0];
+					subBound[2] = regionSingle.boundary[2] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[3] = subBound[1] +	regionSingle.actualSubSize;
+					subBound[4] = regionSingle.boundary[4] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+					break;
+				case 5: // Upper YZ plane
+					subBound[0] = regionSingle.boundary[1];
+					subBound[1] = regionSingle.boundary[1];
+					subBound[2] = regionSingle.boundary[2] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[3] = subBound[1] +	regionSingle.actualSubSize;
+					subBound[4] = regionSingle.boundary[4] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+					break;
+				default:
+					// Something went wrong here
+					fprintf(stderr, "ERROR: Face %" PRIu32 " is invalid for a rectangular box.\nWe should not have gotten here!\n", subCoorInd[0]);
+					exit(EXIT_FAILURE);
+			}
+			
+		} else if(regionSingle.spec.type == REGION_SURFACE_3D
+			|| regionSingle.spec.type == REGION_NORMAL)
+		{ // Region is 2D surface to a 3D shape
+			switch(regionSingle.plane)
+			{
+				case PLANE_XY:
+					subBound[0] = regionSingle.boundary[0] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+					subBound[2] = regionSingle.boundary[2] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+					subBound[4] = regionSingle.boundary[4];
+					subBound[5] = regionSingle.boundary[4];
+					break;
+				case PLANE_XZ:
+					subBound[0] = regionSingle.boundary[0] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+					subBound[2] = regionSingle.boundary[2];
+					subBound[3] = regionSingle.boundary[2];
+					subBound[4] = regionSingle.boundary[4] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+					break;
+				case PLANE_YZ:
+					subBound[0] = regionSingle.boundary[0];
+					subBound[1] = regionSingle.boundary[0];
+					subBound[2] = regionSingle.boundary[2] +
+						regionSingle.actualSubSize*subCoorInd[1];
+					subBound[3] = subBound[1] +	regionSingle.actualSubSize;
+					subBound[4] = regionSingle.boundary[4] +
+						regionSingle.actualSubSize*subCoorInd[2];
+					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+					break;
+				default:
+					// Something went wrong here
+					fprintf(stderr, "ERROR: \"plane\" member of 2D region structure was not properly defined!.\nWe should not have gotten here!\n");
+					exit(EXIT_FAILURE);
+			}			
+		} else if(regionSingle.spec.type == REGION_SURFACE_2D)
+		{ // Region is the surface of 2D region
+			switch(regionSingle.plane)
+			{
+				case PLANE_XY:
+					switch(subCoorInd[0])
+					{
+						case 0: // Lower Y
+							subBound[0] = regionSingle.boundary[0] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+							subBound[2] = regionSingle.boundary[2];
+							subBound[3] = regionSingle.boundary[2];
+							break;
+						case 1: // Upper Y
+							subBound[0] = regionSingle.boundary[0] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+							subBound[2] = regionSingle.boundary[3];
+							subBound[3] = regionSingle.boundary[3];
+							break;
+						case 2: // Lower X
+							subBound[0] = regionSingle.boundary[0];
+							subBound[1] = regionSingle.boundary[0];
+							subBound[2] = regionSingle.boundary[2] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+							break;
+						case 3: // Upper X
+							subBound[0] = regionSingle.boundary[1];
+							subBound[1] = regionSingle.boundary[1];
+							subBound[2] = regionSingle.boundary[2] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+							break;
+						default:
+							// Something went wrong here
+							fprintf(stderr, "ERROR: Face %" PRIu32 " is invalid for a rectangle.\nWe should not have gotten here!\n", subCoorInd[0]);
+							exit(EXIT_FAILURE);
+					}
+					subBound[4] = regionSingle.boundary[4];
+					subBound[5] = regionSingle.boundary[4];
+					break;
+				case PLANE_XZ:
+					switch(subCoorInd[0])
+					{
+						case 0: // Lower Z
+							subBound[0] = regionSingle.boundary[0] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+							subBound[4] = regionSingle.boundary[4];
+							subBound[5] = regionSingle.boundary[5];
+							break;
+						case 1: // Upper Z
+							subBound[0] = regionSingle.boundary[0] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[1] = subBound[0] +	regionSingle.actualSubSize;
+							subBound[4] = regionSingle.boundary[5];
+							subBound[5] = regionSingle.boundary[5];
+							break;
+						case 2: // Lower X
+							subBound[0] = regionSingle.boundary[0];
+							subBound[1] = regionSingle.boundary[0];
+							subBound[4] = regionSingle.boundary[4] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+							break;
+						case 3: // Upper X
+							subBound[0] = regionSingle.boundary[1];
+							subBound[1] = regionSingle.boundary[1];
+							subBound[4] = regionSingle.boundary[4] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+							break;
+						default:
+							// Something went wrong here
+							fprintf(stderr, "ERROR: Face %" PRIu32 " is invalid for a rectangle.\nWe should not have gotten here!\n", subCoorInd[0]);
+							exit(EXIT_FAILURE);
+					}
+					subBound[2] = regionSingle.boundary[2];
+					subBound[3] = regionSingle.boundary[2];
+					break;
+				case PLANE_YZ:
+					switch(subCoorInd[0])
+					{
+						case 0: // Lower Z
+							subBound[2] = regionSingle.boundary[2] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+							subBound[4] = regionSingle.boundary[4];
+							subBound[5] = regionSingle.boundary[5];
+							break;
+						case 1: // Upper Z
+							subBound[2] = regionSingle.boundary[2] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[3] = subBound[2] +	regionSingle.actualSubSize;
+							subBound[4] = regionSingle.boundary[5];
+							subBound[5] = regionSingle.boundary[5];
+							break;
+						case 2: // Lower Y
+							subBound[2] = regionSingle.boundary[2];
+							subBound[3] = regionSingle.boundary[2];
+							subBound[4] = regionSingle.boundary[4] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+							break;
+						case 3: // Upper Y
+							subBound[2] = regionSingle.boundary[3];
+							subBound[3] = regionSingle.boundary[3];
+							subBound[4] = regionSingle.boundary[4] +
+								regionSingle.actualSubSize*subCoorInd[1];
+							subBound[5] = subBound[4] +	regionSingle.actualSubSize;
+							break;
+						default:
+							// Something went wrong here
+							fprintf(stderr, "ERROR: Face %" PRIu32 " is invalid for a rectangle.\nWe should not have gotten here!\n", subCoorInd[0]);
+							exit(EXIT_FAILURE);
+					}
+					subBound[0] = regionSingle.boundary[0];
+					subBound[1] = regionSingle.boundary[0];
+					break;
+				default:
+					// Something went wrong here
+					fprintf(stderr, "ERROR: \"plane\" member of 2D region structure was not properly defined!.\nWe should not have gotten here!\n");
+					exit(EXIT_FAILURE);
+			}
+		} else
+		{
+			// Something went wrong here
+			fprintf(stderr, "ERROR: Subvolume coordinates could not be determined for a region with shape %u and type %u.\nWe should not have gotten here!\n",
+				regionSingle.spec.shape, regionSingle.spec.type);
+			exit(EXIT_FAILURE);
+		}
+	} else
+	{ // Region is not a surface. Dimensions are default
+		subBound[0] = regionSingle.spec.xAnch +
 		regionSingle.actualSubSize*subCoorInd[0];
-	subBound[1] = subBound[0] + regionSingle.actualSubSize;
-	subBound[2] = regionSingle.spec.yAnch +
-		regionSingle.actualSubSize*subCoorInd[1];
-	subBound[3] = subBound[2] + regionSingle.actualSubSize;
-	subBound[4] = regionSingle.spec.zAnch +
-		regionSingle.actualSubSize*subCoorInd[2];
-	subBound[5] = subBound[4] + regionSingle.actualSubSize;
+		subBound[1] = subBound[0] + regionSingle.actualSubSize;
+		subBound[2] = regionSingle.spec.yAnch +
+			regionSingle.actualSubSize*subCoorInd[1];
+		subBound[3] = subBound[2] + regionSingle.actualSubSize;
+		subBound[4] = regionSingle.spec.zAnch +
+			regionSingle.actualSubSize*subCoorInd[2];
+		subBound[5] = subBound[4] + regionSingle.actualSubSize;
+	}
 }

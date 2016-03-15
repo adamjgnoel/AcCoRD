@@ -123,7 +123,7 @@ void deleteSubvolHelper(uint32_t subCoorInd[][3],
 // Construct the array of structures with details of each subvolume
 /* Each structure in the array subvol_spec defines a square/cube region of
 * subvolumes with common properties */
-void buildSubvolArray3D(const uint32_t numSub,
+void buildSubvolArray(const uint32_t numSub,
 	uint32_t * numMesoSub,
 	struct subvolume3D subvolArray[],
 	const struct spec_region3D subvol_spec[],
@@ -134,7 +134,8 @@ void buildSubvolArray3D(const uint32_t numSub,
 	const double SUBVOL_BASE_SIZE,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	uint32_t subCoorInd[numSub][3],
-	uint32_t **** subID);
+	uint32_t **** subID,
+	uint32_t (** subIDSize)[2]);
 
 // Determine whether two subvolumes in neighboring regions are neighbors themselves
 // Assert that each subvolume is along its own region's boundary
@@ -161,7 +162,7 @@ bool checkSubvolNeigh(struct region regionArray[],
 
 // Calculate cartesian coordinates of rectangular subvolume
 void findSubvolCoor(double subBound[6],
-	struct region regionSingle,
+	const struct region regionSingle,
 	uint32_t subCoorInd[3]);
 	
 #endif // SUBVOLUME_H

@@ -143,6 +143,10 @@ struct region { // Region boundary parameters
 	// Number of faces. 0 if region is not a surface
 	short numFace;
 	
+	// What shape do the region's subvolumes have?
+	// May not match region shape if region is a surface
+	short subShape;
+	
 	// Is this region nested inside another region
 	bool bParent;
 	

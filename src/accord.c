@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 	
 	// Define subvolume array
 	printf("Initializing microscopic and mesoscopic subvolume parameters.\n");
-	numSub = count_subvol3D(regionArray, spec.NUM_REGIONS);
+	numSub = countAllSubvolumes(regionArray, spec.NUM_REGIONS);
 	printf("Number of subvolumes: %" PRIu32 "\n", numSub);
 	struct subvolume3D * subvolArray;
 	allocateSubvolArray(numSub,&subvolArray);

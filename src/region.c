@@ -205,7 +205,7 @@ void initializeRegionArray(struct region regionArray[],
 	initializeRegionNesting(NUM_REGIONS, regionArray, &bFail);
 	
 	// Determine what regions are touching (reduces neighbour search computation)
-	findRegionTouch3D(NUM_REGIONS, subvol_spec, regionArray, SUBVOL_BASE_SIZE);
+	findRegionTouch(NUM_REGIONS, subvol_spec, regionArray, SUBVOL_BASE_SIZE);
 	
 	// Confirm validity of all regions now that neighbors have been identified
 	validateRegions(NUM_REGIONS, regionArray, &bFail);
@@ -609,7 +609,7 @@ double findRegionVolume(const struct region regionArray[],
 }
 	
 // Count the cumulative number of subvolumes defined by subvol_spec
-uint32_t count_subvol3D(const struct region regionArray[],
+uint32_t countAllSubvolumes(const struct region regionArray[],
 	const short NUM_REGIONS)
 {
 	short i; // Current Region
@@ -620,7 +620,7 @@ uint32_t count_subvol3D(const struct region regionArray[],
 }
 
 // Determine which regions of subvolumes are adjacent
-void findRegionTouch3D(const short NUM_REGIONS,
+void findRegionTouch(const short NUM_REGIONS,
 	const struct spec_region3D subvol_spec[],
 	struct region regionArray[],
 	const double SUBVOL_BASE_SIZE)
@@ -1574,7 +1574,7 @@ void findNumRegionSubvolumes(const short NUM_REGIONS,
 						curY = regionArray[i].spec.numZ;
 						break;
 				}
-				if(regionArray[i].spec.type == REGION_NORMAL)
+				if(regionArray[i].spec.type != REGION_SURFACE_2D)
 				{		
 					regionArray[i].numSub = (uint32_t) curX * curY;
 				} else

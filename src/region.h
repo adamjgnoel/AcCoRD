@@ -417,11 +417,11 @@ double findRegionVolume(const struct region regionArray[],
 	bool bOuter);
 	
 // Count the cumulative number of subvolumes defined by subvol_spec
-uint32_t count_subvol3D(const struct region regionArray[],
+uint32_t countAllSubvolumes(const struct region regionArray[],
 	const short NUM_REGIONS);
 
 // Determine which regions of subvolumes are adjacent
-void findRegionTouch3D(const short NUM_REGIONS,
+void findRegionTouch(const short NUM_REGIONS,
 	const struct spec_region3D subvol_spec[],
 	struct region regionArray[],
 	const double SUBVOL_BASE_SIZE);

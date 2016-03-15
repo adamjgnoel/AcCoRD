@@ -142,6 +142,7 @@ void buildSubvolArray(const uint32_t numSub,
 // If subvolumes are neighbors, then the direction from curID towards neighID
 // is written to adjDirection
 bool checkSubvolNeigh(struct region regionArray[],
+	const short NUM_REGIONS,
 	short int curRegion,
 	short int neighRegion,
 	short int * sphRegion,

@@ -49,8 +49,8 @@
 //
 
 // Initialize Subvolume Structure
-/* A call to this function should have a corresponding call to delete_subvol_array2D,
-* usually AFTER build_subvol_array2D has been called */
+// A call to this function should have a corresponding call to delete_subvol_array2D,
+// usually AFTER build_subvol_array2D has been called
 void allocateSubvolArray(const uint32_t numSub,
 	struct subvolume3D ** subvolArray)
 {	
@@ -213,11 +213,11 @@ void allocateSubvolHelper(const uint32_t numSub,
 }
 
 // Free Memory of Subvolume Structure
-/* This function is needed to free the memory allocated to each
-* array member of each structure element before releasing the memory
-* allocated to the structure array itself. It should be called after BOTH
-* allocate_subvol_array3D AND build_subvol_array3D, but is written to avoid
-* any attempts to free memory that was not previously allocated */
+// This function is needed to free the memory allocated to each
+// array member of each structure element before releasing the memory
+// allocated to the structure array itself. It should be called after BOTH
+// allocate_subvol_array3D AND build_subvol_array3D, but is written to avoid
+// any attempts to free memory that was not previously allocated
 void deleteSubvolArray(const uint32_t numSub,
 	struct subvolume3D subvolArray[],
 	const unsigned short NUM_MOL_TYPES,
@@ -410,8 +410,8 @@ void buildSubvolArray(const uint32_t numSub,
 		{
 			if(regionArray[i].numFace > 1)
 			{ // If a surface has more than 1 face, then these 2 dimensions vary with each face
-				length[1] = subIDSize[i][j][0];
-				length[2] = subIDSize[i][j][1];
+				length[1] = subIDSize[i][cur1][0];
+				length[2] = subIDSize[i][cur1][1];
 			}
 			
 			for(cur2 = 0; cur2 < length[1]; cur2++)
@@ -606,8 +606,8 @@ void buildSubvolArray(const uint32_t numSub,
 		{
 			if(regionArray[i].numFace > 1)
 			{ // If a surface has more than 1 face, then these 2 dimensions vary with each face
-				length[1] = subIDSize[i][j][0];
-				length[2] = subIDSize[i][j][1];
+				length[1] = subIDSize[i][cur1][0];
+				length[2] = subIDSize[i][cur1][1];
 			}
 			
 			for(cur2 = 0; cur2 < length[1]; cur2++)
@@ -736,20 +736,35 @@ void buildSubvolArray(const uint32_t numSub,
 	{
 		// Calculate neighbors in the same region
 		curRegion = subvolArray[curID].regionID;
+		
+		if(regionArray[curRegion].numFace > 0)
+		{
+			length[0] = regionArray[curRegion].numFace;
+			length[1] = subIDSize[curRegion][subCoorInd[curID][0]][0];
+			length[2] = subIDSize[curRegion][subCoorInd[curID][0]][1];
+		} else
+		{
+			length[0] = regionArray[curRegion].spec.numX;
+			length[1] = regionArray[curRegion].spec.numY;
+			length[2] = regionArray[curRegion].spec.numZ;
+		}
 				
 		if(regionArray[curRegion].spec.shape != SPHERE)
 		{
-			if(subCoorInd[curID][0] > 0)
-			{ // Neighbor is 1 "x" index "down"
-				if(subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
-				subvolArray[curID].neighID[curSubNeigh[curID]++] =
-					subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]];
-			}
-			if(subCoorInd[curID][0] < subvol_spec[curRegion].numX-1)
-			{ // Neighbor is 1 "x" index "up"
-				if(subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
-				subvolArray[curID].neighID[curSubNeigh[curID]++] =
-					subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+			if(regionArray[curRegion].numFace == 0)
+			{ // Neighbors along first dimension only possible for normal 3D regions
+				if(subCoorInd[curID][0] > 0)
+				{ // Neighbor is 1 "x" index "down"
+					if(subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
+					subvolArray[curID].neighID[curSubNeigh[curID]++] =
+						subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+				}
+				if(subCoorInd[curID][0] < length[0]-1)
+				{ // Neighbor is 1 "x" index "up"
+					if(subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
+					subvolArray[curID].neighID[curSubNeigh[curID]++] =
+						subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+				}
 			}
 			if(subCoorInd[curID][1] > 0)
 			{ // Neighbor is 1 "y" index "down"
@@ -757,7 +772,7 @@ void buildSubvolArray(const uint32_t numSub,
 				subvolArray[curID].neighID[curSubNeigh[curID]++] =
 					subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]-1][subCoorInd[curID][2]];
 			}
-			if(subCoorInd[curID][1] < subvol_spec[curRegion].numY-1)
+			if(subCoorInd[curID][1] < length[1]-1)
 			{ // Neighbor is 1 "y" index "up"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]+1][subCoorInd[curID][2]] < UINT32_MAX)
 				subvolArray[curID].neighID[curSubNeigh[curID]++] =
@@ -769,7 +784,7 @@ void buildSubvolArray(const uint32_t numSub,
 				subvolArray[curID].neighID[curSubNeigh[curID]++] =
 					subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]-1];
 			}
-			if(subCoorInd[curID][2] < subvol_spec[curRegion].numZ-1)
+			if(subCoorInd[curID][2] < length[2]-1)
 			{ // Neighbor is 1 "z" index "up"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]+1] < UINT32_MAX)
 				subvolArray[curID].neighID[curSubNeigh[curID]++] =
@@ -1133,7 +1148,7 @@ void findSubvolCoor(double subBound[6],
 					subBound[1] = regionSingle.boundary[0];
 					subBound[2] = regionSingle.boundary[2] +
 						regionSingle.actualSubSize*subCoorInd[1];
-					subBound[3] = subBound[1] +	regionSingle.actualSubSize;
+					subBound[3] = subBound[2] +	regionSingle.actualSubSize;
 					subBound[4] = regionSingle.boundary[4] +
 						regionSingle.actualSubSize*subCoorInd[2];
 					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
@@ -1143,7 +1158,7 @@ void findSubvolCoor(double subBound[6],
 					subBound[1] = regionSingle.boundary[1];
 					subBound[2] = regionSingle.boundary[2] +
 						regionSingle.actualSubSize*subCoorInd[1];
-					subBound[3] = subBound[1] +	regionSingle.actualSubSize;
+					subBound[3] = subBound[2] +	regionSingle.actualSubSize;
 					subBound[4] = regionSingle.boundary[4] +
 						regionSingle.actualSubSize*subCoorInd[2];
 					subBound[5] = subBound[4] +	regionSingle.actualSubSize;
@@ -1184,7 +1199,7 @@ void findSubvolCoor(double subBound[6],
 					subBound[1] = regionSingle.boundary[0];
 					subBound[2] = regionSingle.boundary[2] +
 						regionSingle.actualSubSize*subCoorInd[1];
-					subBound[3] = subBound[1] +	regionSingle.actualSubSize;
+					subBound[3] = subBound[2] +	regionSingle.actualSubSize;
 					subBound[4] = regionSingle.boundary[4] +
 						regionSingle.actualSubSize*subCoorInd[2];
 					subBound[5] = subBound[4] +	regionSingle.actualSubSize;

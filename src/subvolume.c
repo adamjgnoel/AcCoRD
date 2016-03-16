@@ -17,6 +17,7 @@
  * Revision LATEST_RELEASE
  * - corrected memory allocation for subvolume helper arrays
  * - added surface subvolumes
+ * - preliminary implementation of interaction between mesoscopic subvolumes and surfaces
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -884,6 +885,25 @@ void buildSubvolArray(const uint32_t numSub,
 					}						
 				} else
 				{
+					if(regionArray[curRegion].spec.type !=
+						regionArray[neighRegion].spec.type)
+					{
+						// Regions are not of the same type (at least one is a surface)
+						// Normal diffusion between these regions is not possible
+						for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
+						{
+							// TODO: Correct this preliminary solution which prevents
+							// any transition out of a meso subvolume to a surface.
+							// Correct implementation would base transition rate
+							// on corresponding chemical reaction probabilities
+							subvolArray[curID].diffRateNeigh[curMolType][curNeighID] = 0.;
+						}
+						continue;
+					}
+					
+					// TODO: Need to catch cases where a membrane lies in between two
+					// subvolumes so that the diffusion rate can be adjusted properly
+					
 					if(regionArray[neighRegion].spec.bMicro)
 						h_j = h_i;
 					else

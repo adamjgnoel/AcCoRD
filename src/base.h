@@ -95,6 +95,7 @@ bool bLineHitBoundary(const double p1[3],
 	const int boundary1Type,
 	const double boundary1[],
 	short * planeID,
+	const short planeIDConst,
 	const bool bInside,
 	double * d,
 	double intersectPoint[3]);

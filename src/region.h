@@ -398,7 +398,6 @@ void initializeRegionArray(struct region regionArray[],
 // Initialize region knowledge of the subvolumes that are adjacent to it
 void initializeRegionSubNeighbor(struct region regionArray[],
 	const struct spec_region3D subvol_spec[],
-	const double subHalfSize[],
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const double SUBVOL_BASE_SIZE,
@@ -521,11 +520,8 @@ short findRegionNotChild(const short NUM_REGIONS,
 // Assert that current subvolume is mesoscopic, along its own region boundary, and that
 // neighbor region is microscopic
 bool bSubFaceRegion(struct region regionArray[],
-	const short curRegion,
 	const short neighRegion,
 	const double curSubBound[6],
-	const double subHalfSize,
-	const uint32_t subCoorInd[3],
 	double boundAdjError,
 	unsigned short * numFace,
 	unsigned short dirArray[6]);
@@ -555,5 +551,15 @@ void checkSurfaceRegionChildren(const short curRegion,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
 	bool * bFail);
+
+// Does a one-sided surface exist between 2 rectangular boundaries?
+// Such a surface would prevent the boundaries from being neighbors
+bool bSurfaceBetweenBoundaries(const struct region regionArray[],
+	const short NUM_REGIONS,
+	const short region1,
+	const short region2,
+	const double boundary1[6],
+	const double boundary2[6],
+	unsigned short * surfaceRegion);
 
 #endif // REGION_H

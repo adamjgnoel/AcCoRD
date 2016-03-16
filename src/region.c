@@ -205,6 +205,7 @@ void initializeRegionArray(struct region regionArray[],
 	initializeRegionNesting(NUM_REGIONS, regionArray, &bFail);
 	
 	// Determine what regions are touching (reduces neighbour search computation)
+	// Includes some (but not exhaustive) checks on spec.type
 	findRegionTouch(NUM_REGIONS, subvol_spec, regionArray, SUBVOL_BASE_SIZE);
 	
 	// Confirm validity of all regions now that neighbors have been identified
@@ -227,7 +228,6 @@ void initializeRegionArray(struct region regionArray[],
 // This function is called by build_subvol_array3D in subvolume.c
 void initializeRegionSubNeighbor(struct region regionArray[],
 	const struct spec_region3D subvol_spec[],
-	const double subHalfSize[],
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const double SUBVOL_BASE_SIZE,
@@ -295,8 +295,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				
 				findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
 				
-				if(bSubFaceRegion(regionArray, i, j, curSubBound,
-					subHalfSize[i], subCoorInd[curID], boundAdjError, &numDir, dirArray))
+				if(bSubFaceRegion(regionArray, j, curSubBound,
+					boundAdjError, &numDir, dirArray))
 				{
 					// This subvolume borders microscopic region j along numDir faces
 					regionArray[i].numSubRegionNeigh[j]++;
@@ -305,7 +305,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 			
 			if(regionArray[i].numSubRegionNeigh[j] < 1)
 				continue; // No neighbours found
-						  // (failsafe; should not have reached here)
+						  // We could reach here if a surface region prevents all possible
+						  // subvolumes from being neighbors
 			
 			regionArray[i].neighID[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(uint32_t));
@@ -358,9 +359,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
 				
 				// Determine whether the subvolume faces the neighbor region in any direction
-				if(bSubFaceRegion(regionArray, i, j, curSubBound,
-					subHalfSize[i], subCoorInd[curID], boundAdjError,
-					&numDir, dirArray))
+				if(bSubFaceRegion(regionArray, j, curSubBound,
+					boundAdjError, &numDir, dirArray))
 				{
 					// This subvolume borders microscopic region j along numDir faces
 					regionArray[i].boundSubNumFace[j][curBoundID] = numDir;
@@ -376,11 +376,11 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 					
 					regionArray[i].neighID[j][curBoundID] = curID;
 					regionArray[i].boundSubCoor[j][curBoundID][0] =
-						curSubBound[0] + subHalfSize[i];
+						(curSubBound[0] + curSubBound[1])/2;
 					regionArray[i].boundSubCoor[j][curBoundID][1] =
-						curSubBound[2] + subHalfSize[i];
+						(curSubBound[2] + curSubBound[3])/2;
 					regionArray[i].boundSubCoor[j][curBoundID][2] =
-						curSubBound[4] + subHalfSize[i];
+						(curSubBound[4] + curSubBound[5])/2;
 					
 					for(curDir = 0;
 						curDir < regionArray[i].boundSubNumFace[j][curBoundID]; curDir++)
@@ -713,6 +713,24 @@ void findRegionTouch(const short NUM_REGIONS,
 				regionArray[i].isRegionNeigh[j] = true;
 				regionArray[i].regionNeighDir[j] = direction;
 				regionArray[i].numRegionNeigh++;
+			}
+		}
+	}
+
+	// Make a pass to check for surface regions being in the same regime as their neighbors
+	for(i = 0; i < NUM_REGIONS; i++)
+	{
+		for(j = i+1; j < NUM_REGIONS; j++)
+		{
+			if(regionArray[i].isRegionNeigh[j]
+				&& (regionArray[i].spec.type != REGION_NORMAL
+				|| regionArray[j].spec.type != REGION_NORMAL))
+			{ // Regions are neighbors and at least one of them is a surface
+				if(regionArray[i].spec.bMicro != regionArray[j].spec.bMicro)
+				{
+					fprintf(stderr, "ERROR: Regions %u and %u (labels: \"%s\" and \"%s\") are neighbors in different regimes but at least one of them is a surface.\n", i, j, subvol_spec[i].label, subvol_spec[j].label);
+					exit(EXIT_FAILURE);
+				}
 			}
 		}
 	}
@@ -1261,71 +1279,64 @@ short findRegionNotChild(const short NUM_REGIONS,
 // Assert that current subvolume is along its own region boundary, and that
 // neighbor region is microscopic
 bool bSubFaceRegion(struct region regionArray[],
-	const short curRegion,
 	const short neighRegion,
 	const double curSubBound[6],
-	const double subHalfSize,
-	const uint32_t subCoorInd[3],
 	double boundAdjError,
 	unsigned short * numFace,
 	unsigned short dirArray[6])
 {
-	double curNeighBound[3];
-	int i;
-	
-	for(i = 0; i < 3; i++)
-	{
-		curNeighBound[i] = 0.;
-	}
-	
-	curNeighBound[0] = curSubBound[0] + subHalfSize;
-	curNeighBound[1] = curSubBound[2] + subHalfSize;
-	curNeighBound[2] = curSubBound[4] + subHalfSize;
+	double neighPoint[3];
 	
 	*numFace = 0;
 	
+	// Initialize neighbor point to center of current subvolume
+	neighPoint[0] = (curSubBound[0] + curSubBound[1])/2;
+	neighPoint[1] = (curSubBound[2] + curSubBound[3])/2;
+	neighPoint[2] = (curSubBound[4] + curSubBound[5])/2;
+	
 	// Check to see if point just to "left" is within neighbor
-	curNeighBound[0] = curSubBound[0] - boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray,
-		curNeighBound))
+	neighPoint[0] = curSubBound[0] - boundAdjError;
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	{
 		dirArray[(*numFace)++] = LEFT;
-	curNeighBound[0] = curSubBound[0] + subHalfSize;
+	}
 	
 	// Check to see if point just to "right" is within neighbor
-	curNeighBound[0] = curSubBound[1] + boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray,
-		curNeighBound))
+	neighPoint[0] = curSubBound[1] + boundAdjError;
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	{
 		dirArray[(*numFace)++] = RIGHT;
-	curNeighBound[0] = curSubBound[0] + subHalfSize;
+	}
+	neighPoint[0] = (curSubBound[0] + curSubBound[1])/2;
 	
 	// Check to see if point just to "down" is within neighbor
-	curNeighBound[1] = curSubBound[2] - boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray,
-		curNeighBound))
+	neighPoint[1] = curSubBound[2] - boundAdjError;
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	{
 		dirArray[(*numFace)++] = DOWN;
-	curNeighBound[1] = curSubBound[2] + subHalfSize;
+	}
 	
 	// Check to see if point just to "up" is within neighbor
-	curNeighBound[1] = curSubBound[3] + boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray,
-		curNeighBound))
+	neighPoint[1] = curSubBound[3] + boundAdjError;
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	{
 		dirArray[(*numFace)++] = UP;
-	curNeighBound[1] = curSubBound[2] + subHalfSize;
+	}
+	neighPoint[1] = (curSubBound[2] + curSubBound[3])/2;
 	
 	// Check to see if point just to "in" is within neighbor
-	curNeighBound[2] = curSubBound[4] - boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray,
-		curNeighBound))
+	neighPoint[2] = curSubBound[4] - boundAdjError;
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	{
 		dirArray[(*numFace)++] = IN;
-	curNeighBound[2] = curSubBound[4] + subHalfSize;
+	}
 	
 	// Check to see if point just to "out" is within neighbor
-	curNeighBound[2] = curSubBound[5] + boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray,
-		curNeighBound))
+	neighPoint[2] = curSubBound[5] + boundAdjError;
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	{
 		dirArray[(*numFace)++] = OUT;
-	curNeighBound[2] = curSubBound[4] + subHalfSize;
-	
+	}
 	
 	return *numFace > 0;
 }
@@ -1967,4 +1978,49 @@ void checkSurfaceRegionChildren(const short curRegion,
 			*bFail = true;
 			return;
 	}
+}
+
+// Does a one-sided surface exist between 2 rectangular boundaries?
+// Such a surface would prevent the boundaries from being neighbors
+bool bSurfaceBetweenBoundaries(const struct region regionArray[],
+	const short NUM_REGIONS,
+	const short region1,
+	const short region2,
+	const double boundary1[6],
+	const double boundary2[6],
+	unsigned short * surfaceRegion)
+{
+	double p1[3];
+	double p2[3];
+	double trajLine[3];
+	double lineLength;
+	short planeID;
+	double d;
+	
+	for(*surfaceRegion  = 0; *surfaceRegion < NUM_REGIONS; (*surfaceRegion)++)
+	{
+		if(regionArray[*surfaceRegion].spec.type != REGION_NORMAL
+			&& regionArray[*surfaceRegion].spec.surfaceType != SURFACE_MEMBRANE
+			&& ((regionArray[region1].isRegionNeigh[*surfaceRegion]
+				&& regionArray[region1].regionNeighDir[*surfaceRegion] != CHILD)
+			|| (regionArray[region2].isRegionNeigh[*surfaceRegion]
+				&& regionArray[region2].regionNeighDir[*surfaceRegion] != CHILD)))
+		{ // surfaceRegion is a "one-sided" surface.
+			// Make sure line between these subvolumes doesn't cross this region
+			p1[0] = (boundary1[0] + boundary1[1])/2;
+			p1[1] = (boundary1[2] + boundary1[3])/2;
+			p1[2] = (boundary1[4] + boundary1[5])/2;
+			p2[0] = (boundary2[0] + boundary2[1])/2;
+			p2[1] = (boundary2[2] + boundary2[3])/2;
+			p2[2] = (boundary2[4] + boundary2[5])/2;
+			defineLine(p1, p2, trajLine, &lineLength);						
+			if(bLineHitBoundary(p1, trajLine, lineLength,
+				regionArray[*surfaceRegion].subShape, regionArray[*surfaceRegion].boundary,
+				NULL, regionArray[*surfaceRegion].plane, false, &d, p2))
+			{ // Subvolumes are not true neighbors
+				return false;
+			}
+		}
+	}
+	return true;
 }

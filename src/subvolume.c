@@ -368,7 +368,6 @@ void buildSubvolArray(const uint32_t numSub,
 	}
 	unsigned short adjDirection = 0;
 	double boundAdjError = SUBVOL_BASE_SIZE * SUB_ADJ_RESOLUTION;
-	double subHalfSize[NUM_REGIONS]; // Half of the actual size of subvolumes in a region
 	
 	double h_i, h_j; // Subvolume sizes (used for finding transition rates)
 			
@@ -663,12 +662,6 @@ void buildSubvolArray(const uint32_t numSub,
 	// Assign total number of mesoscopic subvolumes
 	*numMesoSub = curMesoID;
 	
-	// Determine the threshold distances for any two subvolumes to be neighbors
-	for(i = 0; i < NUM_REGIONS; i++)
-	{
-		subHalfSize[i] = regionArray[i].actualSubSize/2;
-	}
-	
 	// Determine the neighbors of each subvolume that are in other regions
 	printf("Finding Neighbours of Each Subvolume...\n");
 	if(NUM_REGIONS > 1)
@@ -694,8 +687,8 @@ void buildSubvolArray(const uint32_t numSub,
 				// Subvolumes are in neighboring regions and each is along its region
 				// boundary
 				if(checkSubvolNeigh(regionArray, NUM_REGIONS, curRegion, neighRegion,
-					&sphRegion,	&rectRegion, subvolArray, curID, curNeighID, &sphSub,
-					&rectSub, numSub, subCoorInd, boundAdjError, &adjDirection, subHalfSize,
+					&sphRegion,	&rectRegion, curID, curNeighID, &sphSub,
+					&rectSub, numSub, subCoorInd, boundAdjError, &adjDirection,
 					curSubBound, curNeighBound, &numFaceSph))
 				{
 					// Subvolumes are neighbors. Record IDs
@@ -811,8 +804,8 @@ void buildSubvolArray(const uint32_t numSub,
 			// Subvolumes are in neighboring regions and each is along its region
 			// boundary
 			if(checkSubvolNeigh(regionArray, NUM_REGIONS, curRegion, neighRegion, &sphRegion,
-				&rectRegion, subvolArray, curID, curNeighID, &sphSub, &rectSub,
-				numSub, subCoorInd, boundAdjError, &adjDirection, subHalfSize,
+				&rectRegion, curID, curNeighID, &sphSub, &rectSub,
+				numSub, subCoorInd, boundAdjError, &adjDirection,
 				curSubBound, curNeighBound, &numFaceSph))
 			{
 				// Subvolumes are neighbors. Record IDs
@@ -947,7 +940,7 @@ void buildSubvolArray(const uint32_t numSub,
 		
 		// Initialize region knowledge of the subvolumes that are adjacent to it
 		initializeRegionSubNeighbor(regionArray, subvol_spec,
-			subHalfSize, NUM_REGIONS, NUM_MOL_TYPES, SUBVOL_BASE_SIZE,
+			NUM_REGIONS, NUM_MOL_TYPES, SUBVOL_BASE_SIZE,
 			boundAdjError, subvolArray, subCoorInd);
 	}
 	
@@ -966,7 +959,6 @@ bool checkSubvolNeigh(struct region regionArray[],
 	short int neighRegion,
 	short int * sphRegion,
 	short int * rectRegion,
-	struct subvolume3D subvolArray[],
 	uint32_t curID,
 	uint32_t curNeighID,
 	uint32_t * sphSub,
@@ -975,19 +967,12 @@ bool checkSubvolNeigh(struct region regionArray[],
 	uint32_t subCoorInd[numSub][3],
 	double boundAdjError,
 	unsigned short * adjDirection,
-	double subHalfSize[],
 	double curSubBound[6],
 	double curNeighBound[6],
 	unsigned short * numFaceSph)
 {
 	unsigned short dirArray[6];
 	unsigned short surfaceRegion;
-	double p1[3];
-	double p2[3];
-	double trajLine[3];
-	double lineLength;
-	short planeID;
-	double d;
 
 	if ((regionArray[curRegion].spec.shape == RECTANGULAR_BOX
 		|| regionArray[curRegion].spec.shape == RECTANGLE)
@@ -1011,34 +996,9 @@ bool checkSubvolNeigh(struct region regionArray[],
 				return true;
 			} else
 			{ // Both regions are normal.
-				// Check whether there is a surface region between them
-				for(surfaceRegion  = 0; surfaceRegion < NUM_REGIONS; surfaceRegion++)
-				{
-					if(regionArray[surfaceRegion].spec.type != REGION_NORMAL
-						&& regionArray[surfaceRegion].spec.surfaceType != SURFACE_MEMBRANE
-						&& ((regionArray[curRegion].isRegionNeigh[surfaceRegion]
-							&& regionArray[curRegion].regionNeighDir[surfaceRegion] != CHILD)
-						|| (regionArray[neighRegion].isRegionNeigh[surfaceRegion]
-							&& regionArray[neighRegion].regionNeighDir[surfaceRegion] != CHILD)))
-					{ // surfaceRegion is a "one-sided" surface.
-						// Make sure line between these subvolumes doesn't cross this region
-						p1[0] = (curSubBound[0] + curSubBound[1])/2;
-						p1[1] = (curSubBound[2] + curSubBound[3])/2;
-						p1[2] = (curSubBound[4] + curSubBound[5])/2;
-						p2[0] = (curNeighBound[0] + curNeighBound[1])/2;
-						p2[1] = (curNeighBound[2] + curNeighBound[3])/2;
-						p2[2] = (curNeighBound[4] + curNeighBound[5])/2;
-						defineLine(p1, p2, trajLine, &lineLength);						
-						if(bLineHitBoundary(p1, trajLine, lineLength,
-							regionArray[surfaceRegion].subShape,
-							regionArray[surfaceRegion].boundary,
-							&regionArray[surfaceRegion].plane,
-							false, &d, p2))
-						{ // Subvolumes are not true neighbors
-							return false;
-						}
-					}
-				}
+				// Check whether there is a surface region between them				
+				return bSurfaceBetweenBoundaries(regionArray, NUM_REGIONS, curRegion,
+					neighRegion, curSubBound, curNeighBound, &surfaceRegion);
 			}
 			return true;
 		}
@@ -1078,9 +1038,8 @@ bool checkSubvolNeigh(struct region regionArray[],
 			// neighbor for each face that is along outer boundary, in order
 			// to properly account for all of the virtual subvolumes. The number
 			// of faces will be stored to numFaceSph and their directions to dirArray
-			return bSubFaceRegion(regionArray, *rectRegion, *sphRegion, curSubBound,
-				subHalfSize[*rectRegion], subCoorInd[*rectSub],
-				boundAdjError, numFaceSph, dirArray);				
+			return bSubFaceRegion(regionArray, *sphRegion, 
+				curSubBound, boundAdjError, numFaceSph, dirArray);				
 		} else if (regionArray[*sphRegion].parentID == *rectRegion)
 		{
 			curNeighBound[0] = regionArray[*sphRegion].boundary[0];

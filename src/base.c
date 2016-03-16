@@ -456,6 +456,7 @@ bool bLineHitBoundary(const double p1[3],
 	const int boundary1Type,
 	const double boundary1[],
 	short * planeID,
+	const short planeIDConst,
 	const bool bInside,
 	double * d,
 	double intersectPoint[3])
@@ -469,8 +470,8 @@ bool bLineHitBoundary(const double p1[3],
 	{
 		case RECTANGLE:
 			if(bLineHitInfinitePlane(p1, L, length, RECTANGLE, boundary1,
-				*planeID, false, d, intersectPoint)
-				&& bPointOnFace(intersectPoint, RECTANGLE, boundary1, *planeID)
+				planeIDConst, false, d, intersectPoint)
+				&& bPointOnFace(intersectPoint, RECTANGLE, boundary1, planeIDConst)
 				&& *d < minDist)
 			{
 				return true;
@@ -947,11 +948,11 @@ bool reflectPoint(const double oldPoint[3],
 	newPoint[2] = curPoint[2];
 	
 	if(!bLineHitBoundary(oldPoint, L, length, boundary1Type, boundary1,
-		planeID, bReflectInside, &dist, intersectPoint))
+		planeID, *planeID, bReflectInside, &dist, intersectPoint))
 	{ // Line did not hit the boundary that it needs to reflect off of
 		// We should just lock boundary closest to endPoint
 		if(!bLineHitBoundary(oldPoint, L, INFINITY, boundary1Type, boundary1,
-			planeID, bReflectInside, &dist, intersectPoint))
+			planeID, *planeID, bReflectInside, &dist, intersectPoint))
 		{ // Assume that point is already at boundary we want to reflect off of
 		  // Just keep point at start
 			intersectPoint[0] = oldPoint[0];

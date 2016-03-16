@@ -1016,10 +1016,10 @@ bool checkSubvolNeigh(struct region regionArray[],
 				{
 					if(regionArray[surfaceRegion].spec.type != REGION_NORMAL
 						&& regionArray[surfaceRegion].spec.surfaceType != SURFACE_MEMBRANE
-						&& (regionArray[curRegion].isRegionNeigh[surfaceRegion]
+						&& ((regionArray[curRegion].isRegionNeigh[surfaceRegion]
 							&& regionArray[curRegion].regionNeighDir[surfaceRegion] != CHILD)
 						|| (regionArray[neighRegion].isRegionNeigh[surfaceRegion]
-							&& regionArray[neighRegion].regionNeighDir[surfaceRegion] != CHILD))
+							&& regionArray[neighRegion].regionNeighDir[surfaceRegion] != CHILD)))
 					{ // surfaceRegion is a "one-sided" surface.
 						// Make sure line between these subvolumes doesn't cross this region
 						p1[0] = (curSubBound[0] + curSubBound[1])/2;
@@ -1030,8 +1030,9 @@ bool checkSubvolNeigh(struct region regionArray[],
 						p2[2] = (curNeighBound[4] + curNeighBound[5])/2;
 						defineLine(p1, p2, trajLine, &lineLength);						
 						if(bLineHitBoundary(p1, trajLine, lineLength,
-							regionArray[surfaceRegion].spec.shape,
-							regionArray[surfaceRegion].boundary, &planeID,
+							regionArray[surfaceRegion].subShape,
+							regionArray[surfaceRegion].boundary,
+							&regionArray[surfaceRegion].plane,
 							false, &d, p2))
 						{ // Subvolumes are not true neighbors
 							return false;

@@ -467,6 +467,15 @@ bool bLineHitBoundary(const double p1[3],
 	
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			if(bLineHitInfinitePlane(p1, L, length, RECTANGLE, boundary1,
+				*planeID, false, d, intersectPoint)
+				&& bPointOnFace(intersectPoint, RECTANGLE, boundary1, *planeID)
+				&& *d < minDist)
+			{
+				return true;
+			}
+			return false;
 		case RECTANGULAR_BOX:
 			for(curPlane = 0; curPlane < 6; curPlane++)
 			{
@@ -517,6 +526,23 @@ bool bLineHitInfinitePlane(const double p1[3],
 	
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			switch(planeID)
+			{
+				case PLANE_XY:
+					*d = (boundary1[4]-p1[2])/L[2];
+					break;
+				case PLANE_XZ:
+					*d = (boundary1[2]-p1[1])/L[1];
+					break;
+				case PLANE_YZ:
+					*d = (boundary1[0]-p1[0])/L[0];
+					break;
+			}
+			intersectPoint[0] = (*d)*L[0] + p1[0];
+			intersectPoint[1] = (*d)*L[1] + p1[1];
+			intersectPoint[2] = (*d)*L[2] + p1[2];
+			break;
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{
@@ -583,6 +609,25 @@ bool bPointOnFace(const double p1[3],
 {
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			switch(planeID)
+			{
+				case PLANE_XY:
+					return (p1[1] >= boundary1[2]
+						&& p1[1] <= boundary1[3]
+						&& p1[0] >= boundary1[0]
+						&& p1[0] <= boundary1[1]);
+				case PLANE_XZ:
+					return (p1[0] >= boundary1[0]
+						&& p1[0] <= boundary1[1]
+						&& p1[2] >= boundary1[4]
+						&& p1[2] <= boundary1[5]);
+				case PLANE_YZ:
+					return (p1[1] >= boundary1[2]
+						&& p1[1] <= boundary1[3]
+						&& p1[2] >= boundary1[4]
+						&& p1[2] <= boundary1[5]);					
+			}
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{

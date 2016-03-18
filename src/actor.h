@@ -164,6 +164,11 @@ struct actorStruct3D { // Common actor parameters
 	// The number of regions that are (at least partially) within actor space
 	unsigned short numRegion;
 	
+	// What is the largest effective dimension of any region within actor space?
+	// If 3, then only normal 3D regions count towards actor volume
+	// If 2, then only 3D surface regions and normal 2D regions count towards actor volume
+	unsigned short maxDim;
+	
 	// Array of IDs of regions that are (at least partially) within actor space
 	// Length is numRegion
 	unsigned short * regionID;
@@ -343,6 +348,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 	short * numActorRecord,
 	short ** actorRecordID,
 	uint32_t **** subID,
+	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE);
 
 void allocateActorActivePassiveArray3D(const short NUM_ACTORS_ACTIVE,
@@ -452,5 +458,21 @@ void placeMoleculesInSub3D(struct region region[],
 	uint32_t * heap_subvolID,
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2]);
+
+// Find range of subvolumes to search over for intersection with an actor
+void findSubSearchRange(const struct region region[],
+	const short curRegion,
+	const short curInterRegion,
+	const struct actorStruct3D actorCommonArray[],
+	const short curActor,
+	uint32_t subCoorInd[][3],
+	uint32_t * first1,
+	uint32_t * first2,
+	uint32_t * first3,
+	uint32_t * last1,
+	uint32_t * last2,
+	uint32_t * last3,
+	bool bHaveCur1,
+	uint32_t cur1);
 
 #endif // ACTOR_H

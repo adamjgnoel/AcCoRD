@@ -15,13 +15,13 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
- * - re-structured region array initialization to use more functions
+ * - re-structured region array initialization to nest more code in functions
  * - added more checks on region parameters (including label uniqueness) to verify placement
  * - pushed error exit to end of region initialization so that all errors will be displayed
  * before exiting.
  * - added 2D regions
- * - added type member to spec and plane member to main struct in order to accommodate
- * surface and other 2D regions
+ * - added type member to spec and plane, dimension, and effectiveDim members to main
+ * struct in order to accommodate surface and other 2D regions
  * - added region label when giving errors about region initialization
  * - adjusted clearance between spherical and rectangular regions such that the clearance
  * between them (when one is nested inside the other) is scaled by the subvolume adjacency
@@ -146,6 +146,12 @@ struct region { // Region boundary parameters
 	// What shape do the region's subvolumes have?
 	// May not match region shape if region is a surface
 	short subShape;
+	
+	// Dimension and effective dimension of shape
+	// Dimension depends only on the shape
+	// The effective dimension depends on the shape and the type
+	short dimension;
+	short effectiveDim;
 	
 	// Is this region nested inside another region
 	bool bParent;
@@ -561,5 +567,15 @@ bool bSurfaceBetweenBoundaries(const struct region regionArray[],
 	const double boundary1[6],
 	const double boundary2[6],
 	unsigned short * surfaceRegion);
+
+// Does a boundary intersect a specified region?
+// Determined by measuring volume of intersection.
+// Intersection should be rectangular. Region can be spherical if it
+// fully contains or is contained by the other boundary
+// Round children must be entirely inside or outside intersection
+bool bIntersectRegion(const short curRegion,
+	const struct region regionArray[],
+	const int boundary2Type,
+	const double boundary2[]);
 
 #endif // REGION_H

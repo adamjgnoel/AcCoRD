@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 		spec.actorSpec,
 		regionArray, spec.NUM_REGIONS, &NUM_ACTORS_ACTIVE,
 		&NUM_ACTORS_PASSIVE, &numActorRecord, &actorRecordID,
-		subID, spec.SUBVOL_BASE_SIZE);
+		subID, subCoorInd, spec.SUBVOL_BASE_SIZE);
 	allocateActorActivePassiveArray3D(NUM_ACTORS_ACTIVE, &actorActiveArray,
 		NUM_ACTORS_PASSIVE, &actorPassiveArray);
 	initializeActorActivePassive3D(spec.NUM_ACTORS, actorCommonArray,

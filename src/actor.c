@@ -8,9 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * actor.c - operations on array of actors and its elements
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - added 2D and surface regions
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -67,6 +70,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 	short * numActorRecord,
 	short ** actorRecordID,
 	uint32_t **** subID,
+	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE)
 {
 	short curActor;
@@ -82,12 +86,10 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 	short curActorRecord;
 	
 	// Used to find subvolumes inside actor
-	uint32_t curX, curY, curZ, firstX, firstY, firstZ, lastX, lastY, lastZ, firstSub;
+	uint32_t cur1, cur2, cur3, first1, first2, first3, last1, last2, last3;
 	uint32_t curSub;
 	uint32_t curInterSub;
 	double curSubBound[6];
-	double minVolume = regionArray[0].subResolution * regionArray[0].subResolution
-		* regionArray[0].subResolution;
 	
 	for(curActor = 0; curActor < NUM_ACTORS; curActor++)
 	{		
@@ -102,6 +104,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 				actorCommonArray[curActor].spec.boundary);
 		
 		actorCommonArray[curActor].numRegion = 0;
+		actorCommonArray[curActor].maxDim = 1;
 		
 		if(actorCommonArray[curActor].spec.bActive)
 		{
@@ -115,10 +118,10 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 		// Find number of regions within actor space
 		for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
 		{
-			// Do the region and actor overlap?
-			if(intersectRegionVolume(curRegion, regionArray,
+			
+			if(bIntersectRegion(curRegion, regionArray,
 				actorCommonArray[curActor].spec.shape,
-				actorCommonArray[curActor].spec.boundary) > minVolume)
+				actorCommonArray[curActor].spec.boundary))
 			{
 				// Non-zero volume. Make sure that shape/regime combination is not
 				// invalid (i.e., round actor in meso region)
@@ -132,9 +135,35 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 					// Invalid actor for region
 					fprintf(stderr, "ERROR: Round actor %u placed inside mesoscopic region %u.\n",
 						curActor, curRegion);
-					exit(EXIT_FAILURE);	
+					exit(EXIT_FAILURE);
 				}
+				// If an actor intersects a 3D surface that is a 3D region, or a
+				// 2D surface that is a 2D region, then it must surround the
+				// entire region
+				if(regionArray[curRegion].dimension != regionArray[curRegion].effectiveDim
+					&& !bBoundarySurround(regionArray[curRegion].spec.shape,
+					regionArray[curRegion].boundary,
+					actorCommonArray[curActor].spec.shape,
+					actorCommonArray[curActor].spec.boundary, 0.))
+				{
+					// Invalid actor for region
+					fprintf(stderr, "ERROR: Actor %u intersects surface region %u.\n",
+						curActor, curRegion);
+					fprintf(stderr, "An actor's surface cannot intersect a 3D surface region that is a 3D shape or a 2D surface region that is a 2D shape.\n");
+					exit(EXIT_FAILURE);
+				}
+				
+				// Region intersection is valid
 				actorCommonArray[curActor].numRegion++;
+				if(regionArray[curRegion].effectiveDim == DIM_3D)
+				{ // Region is effectively 3D
+					if(actorCommonArray[curActor].maxDim < 3)
+						actorCommonArray[curActor].maxDim = 3;
+				} else if(regionArray[curRegion].effectiveDim == DIM_2D)
+				{ // Region is effectively 2D
+					if(actorCommonArray[curActor].maxDim < 2)
+						actorCommonArray[curActor].maxDim = 2;
+				}
 			}		
 		}
 		
@@ -178,9 +207,9 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 		for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
 		{
 			// Is current region within actor space?
-			if(intersectRegionVolume(curRegion, regionArray,
+			if(bIntersectRegion(curRegion, regionArray,
 				actorCommonArray[curActor].spec.shape,
-				actorCommonArray[curActor].spec.boundary) > minVolume)
+				actorCommonArray[curActor].spec.boundary))
 			{
 				actorCommonArray[curActor].regionID[curInterRegion] = curRegion;
 				actorCommonArray[curActor].numSub[curInterRegion] = 0UL;
@@ -199,9 +228,11 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 					actorCommonArray[curActor].spec.boundary);
 				
 				// Is all of region inside the actor?
-				actorCommonArray[curActor].bRegionInside[curInterRegion] = fabs(actorCommonArray[curActor].regionInterArea[curInterRegion] -
-					regionArray[curRegion].volume) < SUBVOL_BASE_SIZE*
-					SUBVOL_BASE_SIZE*SUBVOL_BASE_SIZE*SUB_ADJ_RESOLUTION;
+				actorCommonArray[curActor].bRegionInside[curInterRegion] =
+					bBoundarySurround(regionArray[curRegion].spec.shape,
+					regionArray[curRegion].boundary,
+					actorCommonArray[curActor].spec.shape,
+					actorCommonArray[curActor].spec.boundary, 0.);
 				
 				// Determine (cumulative) fraction of actor in region
 				if(curInterRegion > 0)
@@ -212,9 +243,13 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 				{
 					actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] = 0.;
 				}
-				actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] +=
-					actorCommonArray[curActor].regionInterArea[curInterRegion] /
-					actorCommonArray[curActor].volume;
+				if(actorCommonArray[curActor].maxDim == regionArray[curRegion].effectiveDim)
+				{ 	// Do not add region volumes that are effectively of a lower dimension
+					// than the actor
+					actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] +=
+						actorCommonArray[curActor].regionInterArea[curInterRegion] /
+						actorCommonArray[curActor].volume;
+				}
 				
 				if(regionArray[curRegion].spec.bMicro)
 				{
@@ -233,57 +268,39 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 					// the intersection boundary to limit the search.
 					// Even if actor is spherical, regionInterBound is guaranteed
 					// to be coordinates for a rectangular box in this case
-					firstX = (uint32_t) floor(
-						(actorCommonArray[curActor].regionInterBound[curInterRegion][0] - regionArray[curRegion].spec.xAnch)
-						/regionArray[curRegion].actualSubSize);
-					firstY = (uint32_t) floor(
-						(actorCommonArray[curActor].regionInterBound[curInterRegion][2] - regionArray[curRegion].spec.yAnch)
-						/regionArray[curRegion].actualSubSize);
-					firstZ = (uint32_t) floor(
-						(actorCommonArray[curActor].regionInterBound[curInterRegion][4] - regionArray[curRegion].spec.zAnch)
-						/regionArray[curRegion].actualSubSize);
-					lastX = (uint32_t) ceil(
-						(actorCommonArray[curActor].regionInterBound[curInterRegion][1] - regionArray[curRegion].spec.xAnch - regionArray[curRegion].actualSubSize)
-						/regionArray[curRegion].actualSubSize);
-					lastY = (uint32_t) ceil(
-						(actorCommonArray[curActor].regionInterBound[curInterRegion][3] - regionArray[curRegion].spec.yAnch - regionArray[curRegion].actualSubSize)
-						/regionArray[curRegion].actualSubSize);
-					lastZ = (uint32_t) ceil(
-						(actorCommonArray[curActor].regionInterBound[curInterRegion][5] - regionArray[curRegion].spec.zAnch - regionArray[curRegion].actualSubSize)
-						/regionArray[curRegion].actualSubSize);
 					
-					// Find "Anchor" subvolume in intersection
-					//firstSub = region2D[curRegion].firstID
-					//	+ firstY*region2D[curRegion].spec.numX + firstX;
+					findSubSearchRange(regionArray, curRegion, curInterRegion, 
+						actorCommonArray, curActor, subCoorInd, &first1, &first2,
+						&first3, &last1, &last2, &last3,
+						false, 0);
 					
-					for(curZ = firstZ; curZ <= lastZ; curZ++)
+					for(cur1 = first1; cur1 <= last1; cur1++)
 					{
-						for(curY = firstY; curY <= lastY; curY++)
+						if(regionArray[curRegion].dimension
+							!= regionArray[curRegion].effectiveDim)
+						{ // NOTE: We should never actually enter here because 
+							// Regions of this type must be fully within the actor
+							findSubSearchRange(regionArray, curRegion, curInterRegion,
+								actorCommonArray, curActor, subCoorInd, &first1, &first2,
+								&first3, &last1, &last2, &last3,
+								true, cur1);
+						}
+						
+						for(cur2 = first2; cur2 <= last2; cur2++)
 						{
-							for(curX = firstX; curX <= lastX; curX++)
+							for(cur3 = first3; cur3 <= last3; cur3++)
 							{
 								// Is subvolume valid?
-								if(subID[curRegion][curX][curY][curZ] == UINT32_MAX)
+								if(subID[curRegion][cur1][cur2][cur3] == UINT32_MAX)
 									continue; // Subvolume space is within a child
 								
-								// Confirm that subvolume is within actor space
-								curSubBound[0] = regionArray[curRegion].spec.xAnch
-									+ curX*regionArray[curRegion].actualSubSize;
-								curSubBound[1] = curSubBound[0]
-									+ regionArray[curRegion].actualSubSize;
-								curSubBound[2] = regionArray[curRegion].spec.yAnch
-									+ curY*regionArray[curRegion].actualSubSize;
-								curSubBound[3] = curSubBound[2]
-									+ regionArray[curRegion].actualSubSize;
-								curSubBound[4] = regionArray[curRegion].spec.zAnch
-									+ curZ*regionArray[curRegion].actualSubSize;
-								curSubBound[5] = curSubBound[4]
-									+ regionArray[curRegion].actualSubSize;
+								findSubvolCoor(curSubBound, regionArray[curRegion],
+									subCoorInd[subID[curRegion][cur1][cur2][cur3]]);
 								
 								if(bBoundaryIntersect(
 									actorCommonArray[curActor].spec.shape,
 									actorCommonArray[curActor].spec.boundary,
-									RECTANGULAR_BOX, curSubBound, 0.))
+									regionArray[curRegion].subShape, curSubBound, 0.))
 								{ // The subvolume does overlap the actor space
 									actorCommonArray[curActor].numSub[curInterRegion]++;
 								}
@@ -319,36 +336,36 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 				} else
 				{	
 					curInterSub = 0;
-					for(curZ = firstZ; curZ <= lastZ; curZ++)
+					for(cur1 = first1; cur1 <= last1; cur1++)
 					{
-						for(curY = firstY; curY <= lastY; curY++)
+						if(regionArray[curRegion].dimension
+							!= regionArray[curRegion].effectiveDim)
+						{ // NOTE: We should never actually enter here because 
+							// Regions of this type must be fully within the actor
+							findSubSearchRange(regionArray, curRegion, curInterRegion,
+								actorCommonArray, curActor, subCoorInd, &first1, &first2,
+								&first3, &last1, &last2, &last3,
+								true, cur1);
+						}
+						
+						for(cur2 = first2; cur2 <= last2; cur2++)
 						{
-							for(curX = firstX; curX <= lastX; curX++)
+							for(cur3 = first3; cur3 <= last3; cur3++)
 							{
 								// Is subvolume valid?
-								if(subID[curRegion][curX][curY][curZ] == UINT32_MAX)
+								if(subID[curRegion][cur1][cur2][cur3] == UINT32_MAX)
 									continue; // Subvolume space is within a child
 								
 								// Confirm that subvolume is within actor space
-								curSubBound[0] = regionArray[curRegion].spec.xAnch
-									+ curX*regionArray[curRegion].actualSubSize;
-								curSubBound[1] = curSubBound[0]
-									+ regionArray[curRegion].actualSubSize;
-								curSubBound[2] = regionArray[curRegion].spec.yAnch
-									+ curY*regionArray[curRegion].actualSubSize;
-								curSubBound[3] = curSubBound[2]
-									+ regionArray[curRegion].actualSubSize;
-								curSubBound[4] = regionArray[curRegion].spec.zAnch
-									+ curZ*regionArray[curRegion].actualSubSize;
-								curSubBound[5] = curSubBound[4]
-									+ regionArray[curRegion].actualSubSize;
+								findSubvolCoor(curSubBound, regionArray[curRegion],
+									subCoorInd[subID[curRegion][cur1][cur2][cur3]]);
 								
 								if(bBoundaryIntersect(
 									actorCommonArray[curActor].spec.shape,
 									actorCommonArray[curActor].spec.boundary,
 									RECTANGULAR_BOX, curSubBound, 0.))
 								{ // The subvolume does intersect the actor space
-									curSub = subID[curRegion][curX][curY][curZ];
+									curSub = subID[curRegion][cur1][cur2][cur3];
 									actorCommonArray[curActor].subID[curInterRegion][curInterSub] = curSub;
 									curInterSub++;
 								}
@@ -598,10 +615,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 				
 			if(regionArray[curRegion].spec.bMicro)
 				continue; // Following only applies if region is mesoscopic
-			
-			// TODO: Could also skip the following if entire region is
-			// inside of actor, if indicated by an additional member
-			
+						
 			actorPassiveArray[curPassive].bRecordMesoAnyPos[curInterRegion] = false;
 			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
 			{
@@ -1236,4 +1250,210 @@ void placeMoleculesInSub3D(struct region region[],
 		NUM_REGIONS, NUM_MOL_TYPES, region);
 	heapMesoUpdate3D(numMesoSub, mesoSubArray, heap_subvolID,
 		mesoSubArray[curMeso].heapID, heap_childID, b_heap_childValid);
+}
+
+// Find range of subvolumes to search over for intersection with an actor
+void findSubSearchRange(const struct region regionArray[],
+	const short curRegion,
+	const short curInterRegion,
+	const struct actorStruct3D actorCommonArray[],
+	const short curActor,
+	uint32_t subCoorInd[][3],
+	uint32_t * first1,
+	uint32_t * first2,
+	uint32_t * first3,
+	uint32_t * last1,
+	uint32_t * last2,
+	uint32_t * last3,
+	bool bHaveCur1,
+	uint32_t cur1)
+{
+	uint32_t maxSize[3];
+	short dim[6];
+	double yAnch, zAnch;
+	
+	if(bHaveCur1)
+	{
+		// Region has more than one face and we have current face
+		// Applies to 3D surfaces that are 3D regions and 2D surfaces that are 2D regions
+		// These kinds of regions are always surrounded by actor, so we have to search
+		// all of the subvolumes
+		*first2 = 0;
+		*first3 = 0;
+		if(regionArray[curRegion].spec.shape == RECTANGULAR_BOX)
+		{
+			switch(cur1)
+			{
+				case 0:
+				case 1:
+					*last2 = regionArray[curRegion].spec.numX-1;
+					*last3 = regionArray[curRegion].spec.numY-1;
+					break;
+				case 2:
+				case 3:
+					*last2 = regionArray[curRegion].spec.numX-1;
+					*last3 = regionArray[curRegion].spec.numZ-1;
+					break;
+				case 4:
+				case 5:
+					*last2 = regionArray[curRegion].spec.numY-1;
+					*last3 = regionArray[curRegion].spec.numZ-1;
+					break;
+				default:
+					// Something went wrong
+					fprintf(stderr, "ERROR: Intersection between actor %u and meso subvolumes of region %u could not be determined.\n",
+						curActor, curRegion);
+					exit(EXIT_FAILURE);
+			}
+		} else if (regionArray[curRegion].spec.shape == RECTANGLE)
+		{
+			// Third dimension will always have just length 1
+			*last3 = 1;
+			switch(regionArray[curRegion].plane)
+			{
+				case PLANE_XY:
+					switch(cur1)
+					{
+						case 0:
+						case 1:
+							*last2 = regionArray[curRegion].spec.numX-1;
+						case 2:
+						case 3:
+							*last2 = regionArray[curRegion].spec.numY-1;
+						default:
+							// Something went wrong
+							fprintf(stderr, "ERROR: Intersection between actor %u and meso subvolumes of region %u could not be determined.\n",
+								curActor, curRegion);
+							exit(EXIT_FAILURE);
+					}
+					break;
+				case PLANE_XZ:
+					switch(cur1)
+					{
+						case 0:
+						case 1:
+							*last2 = regionArray[curRegion].spec.numX-1;
+						case 2:
+						case 3:
+							*last2 = regionArray[curRegion].spec.numZ-1;
+						default:
+							// Something went wrong
+							fprintf(stderr, "ERROR: Intersection between actor %u and meso subvolumes of region %u could not be determined.\n",
+								curActor, curRegion);
+							exit(EXIT_FAILURE);
+					}
+					break;
+				case PLANE_YZ:
+					switch(cur1)
+					{
+						case 0:
+						case 1:
+							*last2 = regionArray[curRegion].spec.numY-1;
+						case 2:
+						case 3:
+							*last2 = regionArray[curRegion].spec.numZ-1;
+						default:
+							// Something went wrong
+							fprintf(stderr, "ERROR: Intersection between actor %u and meso subvolumes of region %u could not be determined.\n",
+								curActor, curRegion);
+							exit(EXIT_FAILURE);
+					}
+					break;
+				default:
+					// Something went wrong
+					fprintf(stderr, "ERROR: Intersection between actor %u and meso subvolumes of region %u could not be determined.\n",
+						curActor, curRegion);
+					exit(EXIT_FAILURE);
+			}
+		}
+		return;
+	} else if(regionArray[curRegion].numFace > 0)
+	{
+		// Indices along first dimension will be all of the faces
+		*first1 = 0;
+		*last1 = regionArray[curRegion].numFace-1;
+		maxSize[0] = *last1;
+		if(regionArray[curRegion].numFace == 1)
+		{
+			// Meso subvolumes with 1 face must be in a rectangle region
+			switch(regionArray[curRegion].plane)
+			{
+				case PLANE_XY:
+					dim[2] = 0;
+					dim[3] = 1;
+					dim[4] = 2;
+					dim[5] = 3;
+					yAnch = regionArray[curRegion].spec.xAnch;
+					zAnch = regionArray[curRegion].spec.yAnch;
+					maxSize[1] = regionArray[curRegion].spec.numX-1;
+					maxSize[2] = regionArray[curRegion].spec.numY-1;
+					break;
+				case PLANE_XZ:
+					dim[2] = 0;
+					dim[3] = 1;
+					dim[4] = 4;
+					dim[5] = 5;
+					yAnch = regionArray[curRegion].spec.xAnch;
+					zAnch = regionArray[curRegion].spec.zAnch;
+					maxSize[1] = regionArray[curRegion].spec.numX-1;
+					maxSize[2] = regionArray[curRegion].spec.numZ-1;
+					break;
+				case PLANE_YZ:
+					dim[2] = 2;
+					dim[3] = 3;
+					dim[4] = 4;
+					dim[5] = 5;
+					yAnch = regionArray[curRegion].spec.yAnch;
+					zAnch = regionArray[curRegion].spec.zAnch;
+					maxSize[1] = regionArray[curRegion].spec.numY-1;
+					maxSize[2] = regionArray[curRegion].spec.numZ-1;
+					break;
+				default:
+					// Something went wrong
+					fprintf(stderr, "ERROR: Intersection between actor %u and meso subvolumes of region %u could not be determined.\n",
+						curActor, curRegion);
+					exit(EXIT_FAILURE);
+			}
+		} else
+		{ // Cannot yet determine the remaining indices
+			return;
+		}		
+	}
+	else
+	{ // Region is not a surface. Dimensions are default
+		*first1 = (uint32_t) floor(
+			(actorCommonArray[curActor].regionInterBound[curInterRegion][0]
+			- regionArray[curRegion].spec.xAnch) /regionArray[curRegion].actualSubSize);
+		*last1 = (uint32_t) ceil(
+			(actorCommonArray[curActor].regionInterBound[curInterRegion][1]
+			- regionArray[curRegion].spec.xAnch - regionArray[curRegion].actualSubSize)
+			/regionArray[curRegion].actualSubSize);
+			
+		dim[2] = 2;
+		dim[3] = 3;
+		dim[4] = 4;
+		dim[5] = 5;	
+		yAnch = regionArray[curRegion].spec.yAnch;
+		zAnch = regionArray[curRegion].spec.zAnch;
+		maxSize[0] = regionArray[curRegion].spec.numX-1;
+		maxSize[1] = regionArray[curRegion].spec.numY-1;
+		maxSize[2] = regionArray[curRegion].spec.numZ-1;
+	}
+	
+	*first2 = (uint32_t) floor(
+		(actorCommonArray[curActor].regionInterBound[curInterRegion][dim[2]] - yAnch)
+		/regionArray[curRegion].actualSubSize);
+	*first3 = (uint32_t) floor(
+		(actorCommonArray[curActor].regionInterBound[curInterRegion][dim[4]] - zAnch)
+		/regionArray[curRegion].actualSubSize);
+	*last2 = (uint32_t) ceil(
+		(actorCommonArray[curActor].regionInterBound[curInterRegion][dim[3]] - yAnch - regionArray[curRegion].actualSubSize)
+		/regionArray[curRegion].actualSubSize);
+	*last3 = (uint32_t) ceil(
+		(actorCommonArray[curActor].regionInterBound[curInterRegion][dim[5]] - zAnch - regionArray[curRegion].actualSubSize)
+		/regionArray[curRegion].actualSubSize);
+	
+	if(*last1 > maxSize[0]) *last1 = maxSize[0];
+	if(*last2 > maxSize[1]) *last2 = maxSize[1];
+	if(*last3 > maxSize[2]) *last3 = maxSize[2];
 }

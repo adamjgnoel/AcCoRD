@@ -106,6 +106,7 @@ void initializeRegionArray(struct region regionArray[],
 			
 			if(subvol_spec[i].shape == RECTANGLE)
 			{ // Determine which plane the rectangle is in
+				regionArray[i].dimension = DIM_2D;
 				if(regionArray[i].actualSubSize*subvol_spec[i].numX == 0)
 				{
 					regionArray[i].plane = PLANE_YZ;
@@ -123,6 +124,7 @@ void initializeRegionArray(struct region regionArray[],
 				}
 			} else
 			{ // There is no single plane
+				regionArray[i].dimension = DIM_3D;
 				regionArray[i].plane = PLANE_3D;
 			}
 		} else
@@ -134,6 +136,7 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].boundary[3] = subvol_spec[i].radius;
 			regionArray[i].boundary[4] = squareDBL(subvol_spec[i].radius);
 			regionArray[i].boundary[5] = 0.;
+			regionArray[i].dimension = DIM_3D;
 			regionArray[i].plane = PLANE_3D;
 		}
 		
@@ -143,14 +146,17 @@ void initializeRegionArray(struct region regionArray[],
 				regionArray[i].subShape = regionArray[i].spec.shape;
 				if(regionArray[i].plane == PLANE_3D)
 				{
+					regionArray[i].effectiveDim = DIM_3D;
 					regionArray[i].numFace = 0;
 				}
 				else
 				{
+					regionArray[i].effectiveDim = DIM_2D;
 					regionArray[i].numFace = 1;
 				}
 				break;
 			case REGION_SURFACE_3D:
+				regionArray[i].effectiveDim = DIM_2D;
 				if(subvol_spec[i].shape == RECTANGULAR_BOX)
 				{
 					regionArray[i].numFace = 6;
@@ -163,6 +169,7 @@ void initializeRegionArray(struct region regionArray[],
 				}
 				break;
 			case REGION_SURFACE_2D:
+				regionArray[i].effectiveDim = DIM_1D;
 				if(subvol_spec[i].shape == RECTANGLE)
 				{
 					regionArray[i].numFace = 4;
@@ -988,47 +995,79 @@ double intersectRegionVolume(const short curRegion,
 	short curChild, childRegion;
 	double interBoundary[6];
 	double volume, childVolume;
-	int intersectType;
+	int intersectType;	
 	
-	// Calculate intersection area including children
+	bool bArea = regionArray[curRegion].effectiveDim != regionArray[curRegion].dimension;
+	
+	// Calculate overall intersection area (including space occupied by children)
 	intersectType = intersectBoundary(regionArray[curRegion].spec.shape,
 		regionArray[curRegion].boundary,	boundary2Type, boundary2, interBoundary);
 	if(intersectType == UNDEFINED_SHAPE)
 	{
 		// Invalid intersection of boundary with region		
-		fprintf(stderr, "ERROR: An intersection with region %u (label: \"%s\") is invalid.\n", curRegion, regionArray[curRegion].spec.label);
+		fprintf(stderr, "ERROR: An intersection with region %u (label: \"%s\") is invalid.\nShapes are %s and %s",
+			curRegion, regionArray[curRegion].spec.label, boundaryString(regionArray[curRegion].spec.shape),
+			boundaryString(boundary2Type));
 		exit(EXIT_FAILURE);			
 	}
-	volume = boundaryVolume(intersectType, interBoundary);
+	if(regionArray[curRegion].plane != PLANE_3D
+		&& intersectType == RECTANGULAR_BOX)
+	{
+		intersectType = RECTANGLE;
+	}
+	if(bArea)
+	{
+		volume = boundarySurfaceArea(intersectType, interBoundary);
+	} else
+	{
+		volume = boundaryVolume(intersectType, interBoundary);
+	}
 	
 	if(volume <= 0)
 		return 0.;	// Region does not intersect at all
+	
+	// Surface regions whose shape is the same dimension that they are a surface
+	// for cannot have children that are also surfaces so do not consider their
+	// children.
+	if(bArea)
+	{
+		return volume;
+	}
 	
 	// Subtract area populated by children
 	for(curChild = 0; curChild < regionArray[curRegion].numChildren; curChild++)
 	{
 		childRegion = regionArray[curRegion].childrenID[curChild];
 		
-		if(regionArray[curRegion].plane == PLANE_3D
-			&& regionArray[childRegion].plane != PLANE_3D)
-			continue; // Do not calculate 2D area to subtract from 3D volume
+		// Only consider children that are of the same plane
+		// Note that regions whose effective dimension is different from their shape
+		// dimension are not considered in this for loop because bArea == true
+		if(regionArray[curRegion].plane != regionArray[childRegion].plane)
+			continue;
 		
 		intersectType = intersectBoundary(regionArray[childRegion].spec.shape,
 			regionArray[childRegion].boundary, boundary2Type, boundary2, interBoundary);
-		
+				
 		if(intersectType == UNDEFINED_SHAPE)
 		{
 			// Invalid intersection of boundary with child		
-			fprintf(stderr, "ERROR: An intersection with region %u (label: \"%s\") is invalid.\n", curRegion, regionArray[curRegion].spec.label);
+			fprintf(stderr, "ERROR: An intersection with region %u (label: \"%s\") is invalid.\n", childRegion, regionArray[childRegion].spec.label);	
+			fprintf(stderr, "Shapes are %s and %s",
+				boundaryString(regionArray[childRegion].spec.shape),
+				boundaryString(boundary2Type));
 			exit(EXIT_FAILURE);			
-		} else
-		{
-			childVolume = boundaryVolume(intersectType, interBoundary);
-			if(childVolume > 0.)
-				volume -= childVolume; // Only subtract positive child volumes
 		}
-	}
-	
+		
+		if(regionArray[childRegion].plane != PLANE_3D
+			&& intersectType == RECTANGULAR_BOX)
+		{ // We still want to measure area of 2D region within 3D boundary
+			intersectType = regionArray[childRegion].spec.shape;
+		}		
+		childVolume = boundaryVolume(intersectType, interBoundary);
+		if(childVolume > 0.)
+			volume -= childVolume; // Only subtract positive child volumes
+
+	}	
 	return volume;
 }
 
@@ -1529,6 +1568,9 @@ void initializeRegionNesting(const short NUM_REGIONS,
 			{
 				// Combination of child and parent is invalid
 				fprintf(stderr, "ERROR: Combination of child/parent for region %u (label: \"%s\") nested in region %u (label: \"%s\") is invalid.\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+				fprintf(stderr, "Shapes are %s and %s, respectively.\n",
+					boundaryString(regionArray[j].spec.shape),
+					boundaryString(regionArray[i].spec.shape));
 				*bFail = true;
 			}
 		}
@@ -1747,9 +1789,9 @@ void validateRegions(const short NUM_REGIONS,
 			{
 				curChild2ID = regionArray[curRegion].childrenID[curChild2];
 				
-				intersectType = intersectBoundary(regionArray[curChild1].spec.shape,
-					regionArray[curChild1].boundary, regionArray[curChild2].spec.shape,
-					regionArray[curChild2].boundary, intersection);
+				intersectType = intersectBoundary(regionArray[curChild1ID].spec.shape,
+					regionArray[curChild1ID].boundary, regionArray[curChild2ID].spec.shape,
+					regionArray[curChild2ID].boundary, intersection);
 				
 				if(intersectType == UNDEFINED_SHAPE ||
 					boundaryVolume(intersectType, intersection) > minVol)
@@ -2023,4 +2065,34 @@ bool bSurfaceBetweenBoundaries(const struct region regionArray[],
 		}
 	}
 	return true;
+}
+
+// Does a boundary intersect a specified region?
+// Determined by measuring volume of intersection.
+// Intersection should be rectangular. Region can be spherical if it
+// fully contains or is contained by the other boundary
+// Round children must be entirely inside or outside intersection
+bool bIntersectRegion(const short curRegion,
+	const struct region regionArray[],
+	const int boundary2Type,
+	const double boundary2[])
+{
+	double minVol, volume;
+	
+	if(regionArray[curRegion].effectiveDim == DIM_3D)
+	{
+		minVol = regionArray[0].subResolution * regionArray[0].subResolution *
+			regionArray[0].subResolution;
+	} else if (regionArray[curRegion].effectiveDim == DIM_2D)
+	{
+		minVol = regionArray[0].subResolution * regionArray[0].subResolution;
+	} else
+	{
+		minVol = regionArray[0].subResolution;
+	}
+	
+	volume = intersectRegionVolume(curRegion, regionArray, boundary2Type,
+		boundary2);
+		
+	return volume > minVol;
 }

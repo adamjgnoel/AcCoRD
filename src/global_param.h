@@ -71,6 +71,12 @@
 #define PLANE_XZ 2
 #define PLANE_YZ 3
 
+// Effective dimension for volume/area
+// Depends on shape and type
+#define DIM_1D 1
+#define DIM_2D 2
+#define DIM_3D 3
+
 // Resolution of adjacency
 // (i.e., what fraction of base subvolume size do the edges of shapes need to be
 // in order to be declared adjacent?)

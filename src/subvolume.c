@@ -285,11 +285,11 @@ void deleteSubvolHelper(uint32_t subCoorInd[][3],
 				length[1] = regionArray[i].spec.numY;
 			}
 			
-			if(subID[i] != NULL && subIDSize[i] != NULL)
+			if(subID[i] != NULL)
 			{
 				for(x = 0; x < length[0]; x++)
 				{
-					if(regionArray[i].numFace > 1)
+					if(regionArray[i].numFace > 1 && subIDSize[i] != NULL)
 					{ // If a surface has more than 1 face, then 2 dimensions vary with each face
 						length[1] = subIDSize[i][x][0];
 					}
@@ -304,7 +304,7 @@ void deleteSubvolHelper(uint32_t subCoorInd[][3],
 					}
 				}
 				free(subID[i]);
-				free(subIDSize[i]);
+				if(regionArray[i].numFace > 0 && subIDSize[i] != NULL) free(subIDSize[i]);
 			}
 		}
 		free(subID);

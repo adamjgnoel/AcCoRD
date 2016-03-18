@@ -8,5 +8,6 @@ update_instructions.txt
 AcCoRD_wiki.txt
 config/Config.txt
 config/test.txt
-bin/results/accord_sample_reactor_SEED1.txt
+bin/results/
+results/
 config/accord_ppp_passive1.txt

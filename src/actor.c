@@ -13,7 +13,11 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
- * - added 2D and surface regions
+ * - added 2D and surface regions. Regions that have an effective dimension different
+ * from their actual dimension cannot be intersected by a actor boundary (such regions
+ * must be fully inside). Molecules will not be placed by an actor on a 2D region if
+ * the actor overlaps at least 1 3D region
+ * - tidied up calculations of subvolume coordinates
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -270,7 +274,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 					// to be coordinates for a rectangular box in this case
 					
 					findSubSearchRange(regionArray, curRegion, curInterRegion, 
-						actorCommonArray, curActor, subCoorInd, &first1, &first2,
+						actorCommonArray, curActor, &first1, &first2,
 						&first3, &last1, &last2, &last3,
 						false, 0);
 					
@@ -281,7 +285,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 						{ // NOTE: We should never actually enter here because 
 							// Regions of this type must be fully within the actor
 							findSubSearchRange(regionArray, curRegion, curInterRegion,
-								actorCommonArray, curActor, subCoorInd, &first1, &first2,
+								actorCommonArray, curActor, &first1, &first2,
 								&first3, &last1, &last2, &last3,
 								true, cur1);
 						}
@@ -343,7 +347,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 						{ // NOTE: We should never actually enter here because 
 							// Regions of this type must be fully within the actor
 							findSubSearchRange(regionArray, curRegion, curInterRegion,
-								actorCommonArray, curActor, subCoorInd, &first1, &first2,
+								actorCommonArray, curActor, &first1, &first2,
 								&first3, &last1, &last2, &last3,
 								true, cur1);
 						}
@@ -505,7 +509,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 				actorCommonArray[curActor].regionID[curInterRegion];
 				
 			if(regionArray[curRegion].spec.bMicro
-				|| actorCommonArray[curActor].bRegionInside[curInterRegion])
+				|| actorCommonArray[curActor].bRegionInside[curInterRegion]
+				|| (actorCommonArray[curActor].maxDim != regionArray[curRegion].effectiveDim))
 				continue; // Following only applies if region is mesoscopic and not entirely inside actor
 						
 			actorActiveArray[curActive].cumFracActorInSub[curInterRegion] =
@@ -525,23 +530,13 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 				curSub = actorCommonArray[curActor].subID[curInterRegion][curInterSub];
 				
 				// Determine boundary of current subvolume
-				curSubBound[0] = regionArray[curRegion].spec.xAnch
-					+ regionArray[curRegion].actualSubSize*subCoorInd[curSub][0];
-				curSubBound[1] = curSubBound[0]
-					+ regionArray[curRegion].actualSubSize;
-				curSubBound[2] = regionArray[curRegion].spec.yAnch
-					+ regionArray[curRegion].actualSubSize*subCoorInd[curSub][1];
-				curSubBound[3] = curSubBound[2]
-					+ regionArray[curRegion].actualSubSize;
-				curSubBound[4] = regionArray[curRegion].spec.zAnch
-					+ regionArray[curRegion].actualSubSize*subCoorInd[curSub][2];
-				curSubBound[5] = curSubBound[4]
-					+ regionArray[curRegion].actualSubSize;
-					
+				findSubvolCoor(curSubBound, regionArray[curRegion],
+					subCoorInd[curSub]);
+				
 				// Determine intersection boundary of actor and subvolume
 				intersectBoundary(actorCommonArray[curActor].spec.shape,
 					actorCommonArray[curActor].spec.boundary,
-					RECTANGULAR_BOX, curSubBound, curInterSubBound);
+					regionArray[curRegion].subShape, curSubBound, curInterSubBound);
 					
 				if (curInterSub > 0)
 				{
@@ -552,7 +547,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 					actorActiveArray[curActive].cumFracActorInSub[curInterRegion][0] = 0.;
 				}
 				actorActiveArray[curActive].cumFracActorInSub[curInterRegion][curInterSub] +=
-					boundaryVolume(RECTANGULAR_BOX, curInterSubBound)
+					boundaryVolume(regionArray[curRegion].subShape, curInterSubBound)
 					/ actorCommonArray[curActor].regionInterArea[curInterRegion];
 			}
 		}
@@ -653,18 +648,8 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 				curSub = actorCommonArray[curActor].subID[curInterRegion][curInterSub];
 				
 				// Determine boundary of current subvolume
-				curSubBound[0] = regionArray[curRegion].spec.xAnch
-					+ regionArray[curRegion].actualSubSize*subCoorInd[curSub][0];
-				curSubBound[1] = curSubBound[0]
-					+ regionArray[curRegion].actualSubSize;
-				curSubBound[2] = regionArray[curRegion].spec.yAnch
-					+ regionArray[curRegion].actualSubSize*subCoorInd[curSub][1];
-				curSubBound[3] = curSubBound[2]
-					+ regionArray[curRegion].actualSubSize;
-				curSubBound[4] = regionArray[curRegion].spec.zAnch
-					+ regionArray[curRegion].actualSubSize*subCoorInd[curSub][2];
-				curSubBound[5] = curSubBound[4]
-					+ regionArray[curRegion].actualSubSize;
+				findSubvolCoor(curSubBound, regionArray[curRegion],
+					subCoorInd[curSub]);
 				
 				// Determine intersection boundary of actor and subvolume
 				if(actorCommonArray[curActor].bRegionInside[curInterRegion])
@@ -674,7 +659,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 				} else
 					intersectBoundary(actorCommonArray[curActor].spec.shape,
 						actorCommonArray[curActor].spec.boundary,
-						RECTANGULAR_BOX, curSubBound, curInterSubBound);
+						regionArray[curRegion].subShape, curSubBound, curInterSubBound);
 				
 				if(actorPassiveArray[curPassive].bRecordMesoAnyPos[curInterRegion])
 				{ // Need to record boundary of intersection of actor and subvolume
@@ -686,11 +671,21 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 				if(actorCommonArray[curActor].bRegionInside[curInterRegion])
 					actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] = 1.;
 				else
+				{
 					actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] =
-						boundaryVolume(RECTANGULAR_BOX, curInterSubBound)
-						/ regionArray[curRegion].actualSubSize
-						/ regionArray[curRegion].actualSubSize
-						/ regionArray[curRegion].actualSubSize;
+						boundaryVolume(regionArray[curRegion].subShape, curInterSubBound);
+					
+					switch(regionArray[curRegion].effectiveDim)
+					{ // Scale subvolume volume depending on number of dimensions
+						// breaks are deliberately omitted in this control statement
+						case DIM_3D:
+							actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] /= regionArray[curRegion].actualSubSize;
+						case DIM_2D:
+							actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] /= regionArray[curRegion].actualSubSize;
+						case DIM_1D:
+							actorPassiveArray[curPassive].fracSubInActor[curInterRegion][curInterSub] /= regionArray[curRegion].actualSubSize;
+					}
+				}
 			}
 		}
 		
@@ -794,6 +789,8 @@ void deleteActor3D(const short NUM_ACTORS,
 							
 				if(!regionArray[curRegion].spec.bMicro
 					&& !actorCommonArray[curActor].bRegionInside[curInterRegion]
+					&& actorCommonArray[curActor].maxDim ==
+					regionArray[curRegion].effectiveDim
 					&& actorActiveArray[curActive].cumFracActorInSub[curInterRegion] != NULL)
 					free(actorActiveArray[curActive].cumFracActorInSub[curInterRegion]);
 			}
@@ -1258,7 +1255,6 @@ void findSubSearchRange(const struct region regionArray[],
 	const short curInterRegion,
 	const struct actorStruct3D actorCommonArray[],
 	const short curActor,
-	uint32_t subCoorInd[][3],
 	uint32_t * first1,
 	uint32_t * first2,
 	uint32_t * first3,

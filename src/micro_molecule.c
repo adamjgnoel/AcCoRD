@@ -42,40 +42,40 @@
 
 // Local Function Prototypes
 
-static void traverse3D(const ListMol3D * p_list, void (* p_fun)(ItemMol3D item));
+static void traverse(const ListMol3D * p_list, void (* p_fun)(ItemMol3D item));
 
-static void traverseRecent3D(const ListMolRecent3D * p_list, void (* p_fun)(ItemMolRecent3D item));
+static void traverseRecent(const ListMolRecent3D * p_list, void (* p_fun)(ItemMolRecent3D item));
 
-static bool addItem3D(ItemMol3D item, ListMol3D * p_list);
+static bool addItem(ItemMol3D item, ListMol3D * p_list);
 
-static bool addItemRecent3D(ItemMolRecent3D item, ListMolRecent3D * p_list);
+static bool addItemRecent(ItemMolRecent3D item, ListMolRecent3D * p_list);
 
-static void removeItem3D(NodeMol3D * prevNode, NodeMol3D * curNode);
+static void removeItem(NodeMol3D * prevNode, NodeMol3D * curNode);
 
-static void removeItemRecent3D(NodeMolRecent3D * prevNode, NodeMolRecent3D * curNode);
+static void removeItemRecent(NodeMolRecent3D * prevNode, NodeMolRecent3D * curNode);
 
-static void copyToNode3D(ItemMol3D item, NodeMol3D * p_node);
+static void copyToNode(ItemMol3D item, NodeMol3D * p_node);
 
-static void copyToNodeRecent3D(ItemMolRecent3D item, NodeMolRecent3D * p_node);
+static void copyToNodeRecent(ItemMolRecent3D item, NodeMolRecent3D * p_node);
 
 // Specific Definitions
 
 // Create new molecule at specified coordinates
-bool addMolecule3D(ListMol3D * p_list, double x, double y, double z)
+bool addMolecule(ListMol3D * p_list, double x, double y, double z)
 {
 	ItemMol3D new_molecule = {x,y,z, true};
-	return addItem3D(new_molecule, p_list);
+	return addItem(new_molecule, p_list);
 }
 
 // Create new molecule at specified coordinates
-bool addMoleculeRecent3D(ListMolRecent3D * p_list, double x, double y, double z, double dt_partial)
+bool addMoleculeRecent(ListMolRecent3D * p_list, double x, double y, double z, double dt_partial)
 {
 	ItemMolRecent3D new_molecule = {x,y,z, dt_partial};
-	return addItemRecent3D(new_molecule, p_list);
+	return addItemRecent(new_molecule, p_list);
 }
 
 // Move one molecule to the specified coordinates
-void moveMolecule3D(ItemMol3D * molecule, double x, double y, double z)
+void moveMolecule(ItemMol3D * molecule, double x, double y, double z)
 {
 	molecule->x = x;
 	molecule->y = y;
@@ -83,7 +83,7 @@ void moveMolecule3D(ItemMol3D * molecule, double x, double y, double z)
 }
 
 // Move one molecule to the specified coordinates
-void moveMoleculeRecent3D(ItemMolRecent3D * molecule, double x, double y, double z)
+void moveMoleculeRecent(ItemMolRecent3D * molecule, double x, double y, double z)
 {
 	molecule->x = x;
 	molecule->y = y;
@@ -91,7 +91,7 @@ void moveMoleculeRecent3D(ItemMolRecent3D * molecule, double x, double y, double
 }
 
 // Move ALL molecules in the list by the same standard deviation
-void diffuseMolecules3D(const short NUM_REGIONS,
+void diffuseMolecules(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D p_listRecent[NUM_REGIONS][NUM_MOL_TYPES],
@@ -106,10 +106,13 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 	
 	double oldPoint[3];
 	double newPoint[3];
-	short curRegion, curType, newRegion, transRegion;
+	short curRegion, curType, newRegion, newType, transRegion;
 	uint32_t newSub, curBoundSub;
 	bool bInRegion;
 	int curMol = 0;
+	
+	bool bReaction;
+	unsigned short curRxn, curProd;
 	
 	// Indicate that every microscopic molecule in a "normal" list
 	// needs to be moved.
@@ -158,14 +161,15 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 					oldPoint[2] = curNode->item.z;
 					
 					// Diffuse molecule
-					diffuseOneMolecule3D(&curNode->item, sigma[curRegion][curType]);
+					diffuseOneMolecule(&curNode->item, sigma[curRegion][curType]);
 					
 					newPoint[0] = curNode->item.x;
 					newPoint[1] = curNode->item.y;
 					newPoint[2] = curNode->item.z;
-					
+								
+					bReaction = false;
 					if(validateMolecule(newPoint, oldPoint, NUM_REGIONS, curRegion,
-						&newRegion, &transRegion, regionArray))
+						&newRegion, &transRegion, regionArray, curType, &bReaction, &curRxn))
 					{
 						// Molecule is still within region and no further action is required
 						prevNode = curNode;
@@ -174,24 +178,49 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 						// newPoint tells us where to place a molecule in newRegion
 						if(newRegion == curRegion)
 						{ //just update molecule location
-							moveMolecule3D(&curNode->item, newPoint[0], newPoint[1], newPoint[2]);
+							moveMolecule(&curNode->item, newPoint[0], newPoint[1], newPoint[2]);
 							prevNode = curNode;
 						} else
 						{
 							// Molecule is now in a different region
 							if(regionArray[newRegion].spec.bMicro)
 							{ // New region is microscopic. Move to appropriate list
-								if(!addMolecule3D(&p_list[newRegion][curType],
+								
+								if(bReaction)
+								{ // We need to fire the corresponding reaction curRxn
+									if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
+									{
+										for(curProd = 0;
+											curProd < regionArray[newRegion].numRxnProducts[curRxn];
+											curProd++)
+										{
+											// Add the (curProd)th product to the corresponding molecule list
+											if(!addMolecule(
+												&p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]],
+												newPoint[0], newPoint[1], newPoint[2]))
+											{ // Creation of molecule failed
+												fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+												regionArray[newRegion].productID[curRxn][curProd], curRxn);
+												exit(EXIT_FAILURE);						
+											}
+											// Indicate that product molecule doesn't need to be
+											// moved again
+											p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
+										}
+									}									
+								} else if(!addMolecule(&p_list[newRegion][curType],
 									newPoint[0], newPoint[1], newPoint[2]))
 								{
 									fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
 									exit(EXIT_FAILURE);
+								} else
+								{
+									// Indicate that molecule doesn't need to be moved again
+									p_list[newRegion][curType]->item.bNeedUpdate = false;
 								}
-								// Indicate that molecule doesn't need to be moved again
-								p_list[newRegion][curType]->item.bNeedUpdate = false;
 							} else
 							{ // New region is mesoscopic. Find nearest subvolume to new point
-								newSub = findNearestSub3D(newRegion, regionArray,
+								newSub = findNearestSub(newRegion, regionArray,
 									transRegion, newPoint[0], newPoint[1], newPoint[2]);
 								subvolArray[newSub].num_mol[curType]++;
 								 // TODO: Keep track of subvolumes that need updated propensities
@@ -208,7 +237,7 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 							}
 							
 							// Remove molecule from current region molecule list
-							removeItem3D(prevNode,curNode);
+							removeItem(prevNode,curNode);
 							
 							if(prevNode == NULL)
 							{ // We removed first molecule in list.
@@ -245,21 +274,43 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 				oldPoint[2] = curNodeR->item.z;
 				
 				// Diffuse molecule
-				diffuseOneMoleculeRecent3D(&curNodeR->item, DIFF_COEF[curRegion][curType]);
+				diffuseOneMoleculeRecent(&curNodeR->item, DIFF_COEF[curRegion][curType]);
 				
 				newPoint[0] = curNodeR->item.x;
 				newPoint[1] = curNodeR->item.y;
 				newPoint[2] = curNodeR->item.z;
 				
 				// Once molecule is validated, we can proceed directly to transferring
-				// it to the relevant "normal" list and remove it from this list
-				
+				// it to the relevant "normal" list and remove it from this list				
+				bReaction = false;
 				validateMolecule(newPoint, oldPoint, NUM_REGIONS, curRegion,
-					&newRegion, &transRegion, regionArray);
+					&newRegion, &transRegion, regionArray, curType, &bReaction, &curRxn);
 					
 				if(regionArray[newRegion].spec.bMicro)
 				{ // Region is microscopic. Move to appropriate list
-					if(!addMolecule3D(&p_list[newRegion][curType],
+					if(bReaction)
+					{ // We need to fire the corresponding reaction curRxn
+						if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
+						{
+							for(curProd = 0;
+								curProd < regionArray[newRegion].numRxnProducts[curRxn];
+								curProd++)
+							{
+								// Add the (curProd)th product to the corresponding molecule list
+								if(!addMolecule(
+									&p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]],
+									newPoint[0], newPoint[1], newPoint[2]))
+								{ // Creation of molecule failed
+									fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+									regionArray[newRegion].productID[curRxn][curProd], curRxn);
+									exit(EXIT_FAILURE);						
+								}
+								// Indicate that product molecule doesn't need to be
+								// moved again
+								p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
+							}
+						}									
+					} else if(!addMolecule(&p_list[newRegion][curType],
 						newPoint[0], newPoint[1], newPoint[2]))
 					{
 						fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
@@ -267,7 +318,7 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 					}
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
-					newSub = findNearestSub3D(newRegion, regionArray,
+					newSub = findNearestSub(newRegion, regionArray,
 						transRegion, newPoint[0], newPoint[1], newPoint[2]);
 					subvolArray[newSub].num_mol[curType]++;
 					 // TODO: Keep track of subvolumes that need updated propensities
@@ -298,13 +349,13 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 				continue; // No need to validate an empty list of molecules
 			
 			emptyListMol3DRecent(&p_listRecent[curRegion][curType]);
-			initializeListMolRecent3D(&p_listRecent[curRegion][curType]);
+			initializeListMolRecent(&p_listRecent[curRegion][curType]);
 		}
 	}
 }
 
 // Move one molecule by some standard deviation
-void diffuseOneMolecule3D(ItemMol3D * molecule, double sigma)
+void diffuseOneMolecule(ItemMol3D * molecule, double sigma)
 {
 	molecule->x = rd_normal(molecule->x, sigma);
 	molecule->y = rd_normal(molecule->y, sigma);
@@ -312,7 +363,7 @@ void diffuseOneMolecule3D(ItemMol3D * molecule, double sigma)
 }
 
 // Move one molecule by some standard deviation
-void diffuseOneMoleculeRecent3D(ItemMolRecent3D * molecule, double DIFF_COEF)
+void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF)
 {
 	double sigma = sqrt(2*molecule->dt_partial*DIFF_COEF);
 	molecule->x = rd_normal(molecule->x, sigma);
@@ -321,7 +372,7 @@ void diffuseOneMoleculeRecent3D(ItemMolRecent3D * molecule, double DIFF_COEF)
 }
 
 // Check first order reactions for all molecules in list
-void rxnFirstOrder3D(ListMol3D * p_list,
+void rxnFirstOrder(ListMol3D * p_list,
 	const struct region regionArray,
 	unsigned short curMolType,
 	const unsigned short NUM_MOL_TYPES,
@@ -369,7 +420,7 @@ void rxnFirstOrder3D(ListMol3D * p_list,
 						curProd++)
 					{
 						// Add the (curProd)th product to the corresponding molecule list
-						if(!addMoleculeRecent3D(
+						if(!addMoleculeRecent(
 							&pRecentList[regionArray.productID[curRxn][curProd]],
 							curNode->item.x, curNode->item.y, curNode->item.z,
 							regionArray.spec.dt-curTime))
@@ -381,7 +432,7 @@ void rxnFirstOrder3D(ListMol3D * p_list,
 				}
 				
 				// Remove current molecule from list
-				removeItem3D(prevNode, curNode);
+				removeItem(prevNode, curNode);
 				bRemove = true;
 				break; // exit for loop
 			}
@@ -405,7 +456,7 @@ void rxnFirstOrder3D(ListMol3D * p_list,
 // - IF this is called with bCheckCount == true, then only the specified number
 // of molecules are checked. This is used when this function is called repeatedly
 // to deal with molecules that were created in previous calls in the same time step
-void rxnFirstOrderRecent3D(const unsigned short NUM_MOL_TYPES,
+void rxnFirstOrderRecent(const unsigned short NUM_MOL_TYPES,
 	ListMolRecent3D pRecentList[NUM_MOL_TYPES],
 	const struct region regionArray,
 	unsigned short curMolType,
@@ -478,7 +529,7 @@ void rxnFirstOrderRecent3D(const unsigned short NUM_MOL_TYPES,
 					{
 						prodID = regionArray.productID[curRxn][curProd];
 						// Add the (curProd)th product to the corresponding molecule list
-						if(!addMoleculeRecent3D(
+						if(!addMoleculeRecent(
 							&pRecentList[prodID],
 							curNode->item.x, curNode->item.y, curNode->item.z,
 							curNode->item.dt_partial-curTime))
@@ -505,7 +556,7 @@ void rxnFirstOrderRecent3D(const unsigned short NUM_MOL_TYPES,
 				}
 				
 				// Remove current molecule from list
-				removeItemRecent3D(prevNode, curNode);
+				removeItemRecent(prevNode, curNode);
 				bRemove = true;
 				break; // exit for loop
 			}
@@ -529,14 +580,14 @@ void rxnFirstOrderRecent3D(const unsigned short NUM_MOL_TYPES,
 }
 
 // Empty recent list and add corresponding molecules to "normal" list
-void transferMolecules3D(ListMolRecent3D * molListRecent, ListMol3D * molList)
+void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList)
 {
 	NodeMolRecent3D * p_node = *molListRecent;
 	
 	// Copy list of molecules to normal list
 	while(p_node != NULL)
 	{
-		if(!addMolecule3D(molList, p_node->item.x, p_node->item.y, p_node->item.z))
+		if(!addMolecule(molList, p_node->item.x, p_node->item.y, p_node->item.z))
 		{
 			// Creation of molecule failed
 			fprintf(stderr, "ERROR: Memory allocation to create molecule when transferring from recent list to regular list.\n");
@@ -547,7 +598,7 @@ void transferMolecules3D(ListMolRecent3D * molListRecent, ListMol3D * molList)
 	
 	// Empty the recent list and re-initialize
 	emptyListMol3DRecent(molListRecent);
-	initializeListMolRecent3D(molListRecent);
+	initializeListMolRecent(molListRecent);
 }
 
 bool validateMolecule(double newPoint[3],
@@ -556,7 +607,10 @@ bool validateMolecule(double newPoint[3],
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
-	const struct region regionArray[])
+	const struct region regionArray[],
+	short molType,
+	bool * bReaction,
+	unsigned short * curRxn)
 {
 	double trajLine[3];
 	double lineLength;
@@ -576,8 +630,9 @@ bool validateMolecule(double newPoint[3],
 		// Define trajectory vector
 		defineLine(oldPoint, newPoint, trajLine, &lineLength);
 		
-		return followMolecule(oldPoint, newPoint, trajLine, lineLength, curRegion,
-			newRegion, transRegion, regionArray, 0);
+		return followMolecule(oldPoint, newPoint, trajLine,
+			lineLength, curRegion,
+			newRegion, transRegion, regionArray, molType, bReaction, curRxn, 0);
 	}
 }
 
@@ -592,6 +647,9 @@ bool followMolecule(const double startPoint[3],
 	short * endRegion,
 	short * transRegion,
 	const struct region regionArray[],
+	short molType,
+	bool * bReaction,
+	unsigned short * curRxn,
 	unsigned int depth)
 {
 	short curNeigh, curRegion;
@@ -602,6 +660,12 @@ bool followMolecule(const double startPoint[3],
 	double newEndPoint[3];
 	double newLineVector[3];
 	bool bCurIntersect = false;
+	
+	double curRand;
+	int i;
+	unsigned short curProd;
+	* bReaction = false;
+	bool bContinue = false;
 	bool bReflect = false;
 	
 	double pushFrac = SUB_ADJ_RESOLUTION;
@@ -643,10 +707,15 @@ bool followMolecule(const double startPoint[3],
 				break;
 		}
 		
-		// TODO: Give higher "priority" to a surface region defined at the same
-		// distance
-		if(bCurIntersect && curDist < minDist)
-		{ // There is intersection with this face and it is closest so far
+		if(bCurIntersect && curDist < minDist+regionArray[startRegion].subResolution)
+		{ // There is intersection with this face and it is ~closest so far
+			// Check region priority
+			if(* endRegion < SHRT_MAX
+				&& regionArray[*endRegion].spec.type != REGION_NORMAL
+				&& minDist-curDist < regionArray[startRegion].subResolution)
+			{ // curRegion is not effectively any closer than a surface region, so do not override
+				continue;
+			}
 			minDist = curDist;
 			* endRegion = curRegion;
 			nearestFace = curFace;
@@ -660,51 +729,105 @@ bool followMolecule(const double startPoint[3],
 	{
 		// Molecule has entered another region
 		// Assume that transition is valid and proceed to follow point into neighbor
-		// TODO: Handle boundaries here when they are implemented
 		
-		// "Lock" location at exact boundary
-		lockPointToRegion(nearestIntersectPoint, startRegion, *endRegion, regionArray,
-			nearestFace);
-		lineLength -= minDist;
-		
-		// "Push" slightly into region to confirm which region we are really in
-		// Could be child of *endRegion
-		pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);		
-		while(!bPointInBoundary(curIntersectPoint, regionArray[*endRegion].spec.shape,
-			regionArray[*endRegion].boundary) && pushFrac > 0.)
+		if(regionArray[*endRegion].spec.type != REGION_NORMAL)
 		{
-			pushFrac *= 0.1;
-			pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);
+			curRand = mt_drand();
+			for(i = 0; i < regionArray[*endRegion].numFirstCurReactant[molType]; i++)
+			{
+				if(curRand < regionArray[*endRegion].uniCumProb[molType][i])
+				{
+					// Reaction i took place
+					*curRxn = regionArray[*endRegion].firstRxnID[molType][i];
+					*bReaction = true;
+					continue;
+				}
+			}
+			if(*bReaction)
+			{
+				switch(regionArray[*endRegion].spec.surfaceType)
+				{
+					case SURFACE_INNER:
+					case SURFACE_OUTER:
+						// Molecule needs to stick
+						bContinue = false;
+						break;
+					case SURFACE_MEMBRANE:
+						// Molecule can continue
+						bContinue = true;
+						break;
+				}
+			} else
+			{
+				// Need to reflect
+				bReflect = true;
+			}
+		} else
+		{
+			bContinue = true;
 		}
 		
-		// Determine region that we should actually be in (could be child of *endRegion)
-		if(!bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion))
-		{ // Something went wrong here because we are not actually
-			// in the endRegion region (or its children)
-			fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",
-				startRegion, regionArray[startRegion].spec.label,
-				*endRegion, regionArray[*endRegion].spec.label,
-				regionArray[startRegion].spec.label);
-			endPoint[0] = startPoint[0];
-			endPoint[1] = startPoint[1];
-			endPoint[2] = startPoint[2];
+		if(bReflect)
+		{
+			// Reflect the point back into its starting region
 			*endRegion = startRegion;
-			return false;
-		}
-			
-		if(!regionArray[*endRegion].spec.bMicro)
+		} else
 		{
-			// Molecule is entering mesoscopic region. Stop following here.
-			endPoint[0] = curIntersectPoint[0];
-			endPoint[1] = curIntersectPoint[1];
-			endPoint[2] = curIntersectPoint[2];
-			* transRegion = startRegion; // Indicate from which micro region we came from
-			return false;
-		}			
-		lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
-		return followMolecule(curIntersectPoint, endPoint, lineVector,
-			lineLength, *endRegion, endRegion, transRegion, regionArray, depth+1)
-			&& startRegion == *endRegion;
+			// "Lock" location at exact boundary
+			lockPointToRegion(nearestIntersectPoint, startRegion, *endRegion, regionArray,
+				nearestFace);
+			
+			if(bContinue)
+			{
+				lineLength -= minDist;
+			
+				// "Push" slightly into region to confirm which region we are really in
+				// Could be child of *endRegion
+				pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);		
+				while(!bPointInBoundary(curIntersectPoint, regionArray[*endRegion].spec.shape,
+					regionArray[*endRegion].boundary) && pushFrac > 0.)
+				{
+					pushFrac *= 0.1;
+					pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);
+				}
+				
+				// Determine region that we should actually be in (could be child of *endRegion)
+				if(!bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion))
+				{ // Something went wrong here because we are not actually
+					// in the endRegion region (or its children)
+					fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",
+						startRegion, regionArray[startRegion].spec.label,
+						*endRegion, regionArray[*endRegion].spec.label,
+						regionArray[startRegion].spec.label);
+					endPoint[0] = startPoint[0];
+					endPoint[1] = startPoint[1];
+					endPoint[2] = startPoint[2];
+					*endRegion = startRegion;
+					return false;
+				}
+					
+				if(!regionArray[*endRegion].spec.bMicro)
+				{
+					// Molecule is entering mesoscopic region. Stop following here.
+					endPoint[0] = curIntersectPoint[0];
+					endPoint[1] = curIntersectPoint[1];
+					endPoint[2] = curIntersectPoint[2];
+					* transRegion = startRegion; // Indicate from which micro region we came from
+					return false;
+				}			
+				lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
+				return followMolecule(curIntersectPoint, endPoint, lineVector,
+					lineLength, *endRegion, endRegion, transRegion, regionArray, molType,
+					bReaction, curRxn, depth+1)
+					&& startRegion == *endRegion;
+			} else
+			{
+				endPoint[0] = nearestIntersectPoint[0];
+				endPoint[1] = nearestIntersectPoint[1];
+				endPoint[2] = nearestIntersectPoint[2];
+				return false;
+			}
+		}
 	} else if(bPointInRegionNotChild(startRegion, regionArray, endPoint))
 	{
 		// Point is still in current region so diffusion is valid with no further modification
@@ -730,7 +853,8 @@ bool followMolecule(const double startPoint[3],
 	defineLine(nearestIntersectPoint, newEndPoint, lineVector, &lineLength);
 	
 	followMolecule(nearestIntersectPoint, newEndPoint, lineVector,
-			lineLength, startRegion, endRegion, transRegion, regionArray, depth+1);
+			lineLength, startRegion, endRegion, transRegion, regionArray,
+			molType, bReaction, curRxn, depth+1);
 	
 	endPoint[0] = newEndPoint[0];
 	endPoint[1] = newEndPoint[1];
@@ -739,7 +863,7 @@ bool followMolecule(const double startPoint[3],
 }
 
 // Count number of molecules inside observer
-uint64_t countMolecules3D(ListMol3D * p_list,
+uint64_t countMolecules(ListMol3D * p_list,
 	int obsType,
 	double boundary[])
 {
@@ -748,7 +872,7 @@ uint64_t countMolecules3D(ListMol3D * p_list,
 	
 	while(p_node != NULL)
 	{
-		if (isMoleculeObserved3D(&p_node->item, obsType, boundary))
+		if (isMoleculeObserved(&p_node->item, obsType, boundary))
 			curCount++;
 		p_node = p_node->next;
 	}
@@ -756,7 +880,7 @@ uint64_t countMolecules3D(ListMol3D * p_list,
 }
 
 // Count number of molecules inside observer
-uint64_t countMoleculesRecent3D(ListMolRecent3D * p_list,
+uint64_t countMoleculesRecent(ListMolRecent3D * p_list,
 	int obsType,
 	double boundary[])
 {
@@ -765,7 +889,7 @@ uint64_t countMoleculesRecent3D(ListMolRecent3D * p_list,
 	
 	while(p_node != NULL)
 	{
-		if (isMoleculeObservedRecent3D(&p_node->item, obsType, boundary))
+		if (isMoleculeObservedRecent(&p_node->item, obsType, boundary))
 			curCount++;
 		p_node = p_node->next;
 	}
@@ -773,7 +897,7 @@ uint64_t countMoleculesRecent3D(ListMolRecent3D * p_list,
 }
 
 // Count molecules within boundary and add 
-uint64_t recordMolecules3D(ListMol3D * p_list,
+uint64_t recordMolecules(ListMol3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
@@ -784,10 +908,10 @@ uint64_t recordMolecules3D(ListMol3D * p_list,
 	
 	while(p_node != NULL)
 	{
-		if (isMoleculeObserved3D(&p_node->item, obsType, boundary))
+		if (isMoleculeObserved(&p_node->item, obsType, boundary))
 		{
 			curCount++;
-			if(bRecordPos && !addItem3D(p_node->item, recordList))
+			if(bRecordPos && !addItem(p_node->item, recordList))
 			{
 				fprintf(stderr,"\nERROR: Memory allocation for recording molecule positions.\n");
 				exit(EXIT_FAILURE);
@@ -799,7 +923,7 @@ uint64_t recordMolecules3D(ListMol3D * p_list,
 }
 
 // Count molecules within boundary and add 
-uint64_t recordMoleculesRecent3D(ListMolRecent3D * p_list,
+uint64_t recordMoleculesRecent(ListMolRecent3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
@@ -810,10 +934,10 @@ uint64_t recordMoleculesRecent3D(ListMolRecent3D * p_list,
 	
 	while(p_node != NULL)
 	{
-		if (isMoleculeObservedRecent3D(&p_node->item, obsType, boundary))
+		if (isMoleculeObservedRecent(&p_node->item, obsType, boundary))
 		{
 			curCount++;
-			if(bRecordPos && !addMolecule3D(recordList, p_node->item.x, p_node->item.y, p_node->item.z))
+			if(bRecordPos && !addMolecule(recordList, p_node->item.x, p_node->item.y, p_node->item.z))
 			{
 				fprintf(stderr,"\nERROR: Memory allocation for recording molecule positions.\n");
 				exit(EXIT_FAILURE);
@@ -825,17 +949,14 @@ uint64_t recordMoleculesRecent3D(ListMolRecent3D * p_list,
 }
 
 // Is molecule inside the specified boundary?
-bool isMoleculeObserved3D(ItemMol3D * molecule, int obsType, double boundary[])
+bool isMoleculeObserved(ItemMol3D * molecule, int obsType, double boundary[])
 {
 	switch (obsType)
 	{
-		case RECTANGLE: // Observer is rectangular
-			// boundary has format {xMin, xMax, yMin, yMax}
-			return (molecule->x >= boundary[0] && molecule->x <= boundary[1] &&
-				molecule->y >= boundary[2] && molecule->y <= boundary[3]);
 		case CIRCLE: // Observer is circular
 			// boundary has format {r^2, x, y}
 			return false; // TODO: Complete this case
+		case RECTANGLE:
 		case RECTANGULAR_BOX: // Observer is a box
 			// boundary has format {xMin, xMax, yMin, yMax, zMin, zMax}
 			return (molecule->x >= boundary[0] && molecule->x <= boundary[1] &&
@@ -853,17 +974,14 @@ bool isMoleculeObserved3D(ItemMol3D * molecule, int obsType, double boundary[])
 }
 
 // Is molecule inside the specified boundary?
-bool isMoleculeObservedRecent3D(ItemMolRecent3D * molecule, int obsType, double boundary[])
+bool isMoleculeObservedRecent(ItemMolRecent3D * molecule, int obsType, double boundary[])
 {
 	switch (obsType)
 	{
-		case RECTANGLE: // Observer is rectangular
-			// boundary has format {xMin, xMax, yMin, yMax}
-			return (molecule->x >= boundary[0] && molecule->x <= boundary[1] &&
-				molecule->y >= boundary[2] && molecule->y <= boundary[3]);
 		case CIRCLE: // Observer is circular
 			// boundary has format {r^2, x, y}
 			return false; // TODO: Complete this case
+		case RECTANGLE:
 		case RECTANGULAR_BOX: // Observer is a box
 			// boundary has format {xMin, xMax, yMin, yMax, zMin, zMax}
 			return (molecule->x >= boundary[0] && molecule->x <= boundary[1] &&
@@ -883,13 +1001,13 @@ bool isMoleculeObservedRecent3D(ItemMolRecent3D * molecule, int obsType, double 
 // General Definitions
 
 // Initialize list
-void initializeListMol3D(ListMol3D * p_list)
+void initializeListMol(ListMol3D * p_list)
 {
 	* p_list = NULL;
 }
 
 // Initialize Recent list
-void initializeListMolRecent3D(ListMolRecent3D * p_list)
+void initializeListMolRecent(ListMolRecent3D * p_list)
 {
 	* p_list = NULL;
 }
@@ -910,7 +1028,7 @@ bool isListMol3DRecentEmpty(const ListMolRecent3D * p_list)
 
 // Visit each node and execute the function pointed to by p_fun
 // p_fun must be a void function that takes an item as input
-void traverse3D(const ListMol3D * p_list, void (* p_fun)(ItemMol3D item))
+void traverse(const ListMol3D * p_list, void (* p_fun)(ItemMol3D item))
 {
 	NodeMol3D * p_node = *p_list;
 	
@@ -923,7 +1041,7 @@ void traverse3D(const ListMol3D * p_list, void (* p_fun)(ItemMol3D item))
 
 // Visit each node and execute the function pointed to by p_fun
 // p_fun must be a void function that takes an item as input
-void traverseRecent3D(const ListMolRecent3D * p_list, void (* p_fun)(ItemMolRecent3D item))
+void traverseRecent(const ListMolRecent3D * p_list, void (* p_fun)(ItemMolRecent3D item))
 {
 	NodeMolRecent3D * p_node = *p_list;
 	
@@ -935,7 +1053,7 @@ void traverseRecent3D(const ListMolRecent3D * p_list, void (* p_fun)(ItemMolRece
 }
 
 // De-allocate memory of all nodes in the list
-void emptyListMol3D(ListMol3D * p_list)
+void emptyListMol(ListMol3D * p_list)
 {
 	NodeMol3D * p_save;
 	
@@ -961,7 +1079,7 @@ void emptyListMol3DRecent(ListMolRecent3D * p_list)
 }
 
 // Create new node to hold item and add it to the start of the list
-bool addItem3D(ItemMol3D item, ListMol3D * p_list)
+bool addItem(ItemMol3D item, ListMol3D * p_list)
 {
 	NodeMol3D * p_new;
 	
@@ -969,14 +1087,14 @@ bool addItem3D(ItemMol3D item, ListMol3D * p_list)
 	if (p_new == NULL)
 		return false;	// Quit on failure of malloc
 		
-	copyToNode3D(item, p_new);
+	copyToNode(item, p_new);
 	p_new->next = * p_list;
 	* p_list = p_new; // Point start of list to new node
 	return true;
 }
 
 // Create new node to hold item and add it to the start of the list
-bool addItemRecent3D(ItemMolRecent3D item, ListMolRecent3D * p_list)
+bool addItemRecent(ItemMolRecent3D item, ListMolRecent3D * p_list)
 {
 	NodeMolRecent3D * p_new;
 	
@@ -984,7 +1102,7 @@ bool addItemRecent3D(ItemMolRecent3D item, ListMolRecent3D * p_list)
 	if (p_new == NULL)
 		return false;	// Quit on failure of malloc
 		
-	copyToNodeRecent3D(item, p_new);
+	copyToNodeRecent(item, p_new);
 	p_new->next = * p_list;
 	* p_list = p_new; // Point start of list to new node
 	return true;
@@ -992,7 +1110,7 @@ bool addItemRecent3D(ItemMolRecent3D item, ListMolRecent3D * p_list)
 
 // Remove node from list. In order to do this efficiently, need to pass Nodes
 // and not the start of the list.
-void removeItem3D(NodeMol3D * prevNode, NodeMol3D * curNode)
+void removeItem(NodeMol3D * prevNode, NodeMol3D * curNode)
 {
 	if (curNode != NULL)
 	{
@@ -1007,7 +1125,7 @@ void removeItem3D(NodeMol3D * prevNode, NodeMol3D * curNode)
 
 // Remove node from list. In order to do this efficiently, need to pass Nodes
 // and not the start of the list.
-void removeItemRecent3D(NodeMolRecent3D * prevNode, NodeMolRecent3D * curNode)
+void removeItemRecent(NodeMolRecent3D * prevNode, NodeMolRecent3D * curNode)
 {
 	if (curNode != NULL)
 	{
@@ -1021,13 +1139,13 @@ void removeItemRecent3D(NodeMolRecent3D * prevNode, NodeMolRecent3D * curNode)
 }
 
 // Copy an item to a node
-static void copyToNode3D(ItemMol3D item, NodeMol3D * p_node)
+static void copyToNode(ItemMol3D item, NodeMol3D * p_node)
 {
 	p_node->item = item; // Structure copy
 }
 
 // Copy an item to a node
-static void copyToNodeRecent3D(ItemMolRecent3D item, NodeMolRecent3D * p_node)
+static void copyToNodeRecent(ItemMolRecent3D item, NodeMolRecent3D * p_node)
 {
 	p_node->item = item; // Structure copy
 }

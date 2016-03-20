@@ -14,6 +14,7 @@
  *
  * Revision LATEST_RELEASE
  * - corrected display of simulation end time
+ * - added display of initialization start time
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -90,6 +91,12 @@ int main(int argc, char *argv[])
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	
+	
+	time(&timer);
+	timeInfo = localtime(&timer);
+	strftime(timeBuffer, 26, "%Y-%m-%d %H:%M:%S", timeInfo);
+	printf("Starting initialization at %s.\n", timeBuffer);
+	
 	//
 	// STEP 1: Load Configuration
 	//
@@ -99,20 +106,20 @@ int main(int argc, char *argv[])
 	if (argc > 2)
 	{
 		printf("from file \"%s\" using seed offset %d\n", argv[1], atoi(argv[2]));
-		loadConfig3D(argv[1], atoi(argv[2]), &spec);
+		loadConfig(argv[1], atoi(argv[2]), &spec);
 	}
 	else if (argc > 1)
 	{
 		printf("from file \"%s\" using seed offset defined in that file\n", argv[1]);
 		printf("NOTE: To specify a different seed offset, call AcCoRD with the offset as the 2nd argument.\n");
-		loadConfig3D(argv[1], 0, &spec);
+		loadConfig(argv[1], 0, &spec);
 	}
 	else
 	{
 		printf("from default configuration file \"%s\"\n", CONFIG_NAME);
 		printf("NOTE: To specify a different configuration file, call AcCoRD from command line in format ACCORD_EXE PATH_TO_CONFIG\n");
 		printf("NOTE: To specify a different seed offset, call AcCoRD with the offset as the 2nd argument.\n");
-		loadConfig3D(CONFIG_NAME, 0, &spec);
+		loadConfig(CONFIG_NAME, 0, &spec);
 	}
 	
 	uint64_t numMolChange[spec.NUM_MOL_TYPES]; // Number of molecules changed by mesoscopic event
@@ -143,8 +150,8 @@ int main(int argc, char *argv[])
 	{
 		for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 		{
-			initializeListMol3D(&microMolList[i][j]);
-			initializeListMolRecent3D(&microMolListRecent[i][j]);
+			initializeListMol(&microMolList[i][j]);
+			initializeListMolRecent(&microMolListRecent[i][j]);
 		}
 	}
 	double micro_sigma[spec.NUM_REGIONS][spec.NUM_MOL_TYPES];
@@ -212,6 +219,10 @@ int main(int argc, char *argv[])
 	uint32_t (** subIDSize)[2]; // Reader array for subID
 	allocateSubvolHelper(numSub, &subCoorInd, &subID, &subIDSize, spec.NUM_REGIONS, regionArray);
 	
+	// Delete temporary arrays for managing subvolume validity and placement
+	//deleteSubvolHelper(subCoorInd, subID, subIDSize, spec.NUM_REGIONS, regionArray);
+	//allocateSubvolHelper(numSub, &subCoorInd, &subID, &subIDSize, spec.NUM_REGIONS, regionArray);
+	
 	// Build subvolume array from subvolume specifications
 	buildSubvolArray(numSub, &numMesoSub, subvolArray,
 		spec.subvol_spec, regionArray,
@@ -230,15 +241,15 @@ int main(int argc, char *argv[])
 	printf("Number of mesoscopic subvolumes: %" PRIu32 "\n", numMesoSub);
 	printf("Initializing mesoscopic subvolumes and meso reaction heap...\n");
 	struct mesoSubvolume3D * mesoSubArray;
-	allocateMesoSubArray3D(numMesoSub,&mesoSubArray);
-	initializeMesoSubArray3D(numMesoSub, numSub, mesoSubArray, subvolArray,
+	allocateMesoSubArray(numMesoSub,&mesoSubArray);
+	initializeMesoSubArray(numMesoSub, numSub, mesoSubArray, subvolArray,
 		spec.NUM_MOL_TYPES, spec.MAX_RXNS, regionArray);
 	
 	// Build heap for mesoscopic subvolumes and associated arrays
 	uint32_t * heap_subvolID;
 	uint32_t (*heap_childID)[2];
 	bool (*b_heap_childValid)[2];
-	allocateMesoHeapArray3D(numMesoSub, &heap_subvolID, &heap_childID, &b_heap_childValid);
+	allocateMesoHeapArray(numMesoSub, &heap_subvolID, &heap_childID, &b_heap_childValid);
 	
 	heapMesoFindChildren(numMesoSub, heap_childID, b_heap_childValid);
 	unsigned int num_heap_levels = (unsigned int) ceil(log2(numMesoSub+1));
@@ -249,15 +260,15 @@ int main(int argc, char *argv[])
 	struct actorStruct3D * actorCommonArray;
 	struct actorActiveStruct3D * actorActiveArray = NULL;
 	struct actorPassiveStruct3D * actorPassiveArray = NULL;
-	allocateActorCommonArray3D(spec.NUM_ACTORS, &actorCommonArray);
-	initializeActorCommon3D(spec.NUM_ACTORS, actorCommonArray,
+	allocateActorCommonArray(spec.NUM_ACTORS, &actorCommonArray);
+	initializeActorCommon(spec.NUM_ACTORS, actorCommonArray,
 		spec.actorSpec,
 		regionArray, spec.NUM_REGIONS, &NUM_ACTORS_ACTIVE,
 		&NUM_ACTORS_PASSIVE, &numActorRecord, &actorRecordID,
 		subID, subCoorInd, spec.SUBVOL_BASE_SIZE);
-	allocateActorActivePassiveArray3D(NUM_ACTORS_ACTIVE, &actorActiveArray,
+	allocateActorActivePassiveArray(NUM_ACTORS_ACTIVE, &actorActiveArray,
 		NUM_ACTORS_PASSIVE, &actorPassiveArray);
-	initializeActorActivePassive3D(spec.NUM_ACTORS, actorCommonArray,
+	initializeActorActivePassive(spec.NUM_ACTORS, actorCommonArray,
 		spec.NUM_MOL_TYPES,
 		regionArray, spec.NUM_REGIONS, NUM_ACTORS_ACTIVE, actorActiveArray,
 		NUM_ACTORS_PASSIVE, actorPassiveArray, subCoorInd);
@@ -270,7 +281,7 @@ int main(int argc, char *argv[])
 	ListMol3D molListPassive3D[spec.NUM_MOL_TYPES];
 	for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 	{
-		initializeListMol3D(&molListPassive3D[j]);
+		initializeListMol(&molListPassive3D[j]);
 	}
 	
 	// Create arrays to store the maximum number of bits of each
@@ -284,7 +295,7 @@ int main(int argc, char *argv[])
 	for(curActor = 0; curActor < numActorRecord; curActor++)
 	{
 		maxPassiveObs[curActor] = 0;
-		initializeListObs3D(&observationArray[curActor],
+		initializeListObs(&observationArray[curActor],
 			actorPassiveArray[actorCommonArray[actorRecordID[curActor]].passiveID].numMolRecordID);
 	}
 	for(curActor = 0; curActor < NUM_ACTORS_ACTIVE; curActor++)
@@ -315,9 +326,9 @@ int main(int argc, char *argv[])
 	FILE * out, * outSummary;
 
 	if (argc > 1)
-		initializeOutput3D(&out, &outSummary, argv[1], spec);
+		initializeOutput(&out, &outSummary, argv[1], spec);
 	else
-		initializeOutput3D(&out, &outSummary, CONFIG_NAME, spec);
+		initializeOutput(&out, &outSummary, CONFIG_NAME, spec);
 	
 	//
 	// 3-B Initialize Microscopic Environment
@@ -369,10 +380,10 @@ int main(int argc, char *argv[])
 		}
 		
 		// Determine Reaction propensities based on subvolArray[].num_mol
-		resetMesoSubArray3D(numMesoSub, mesoSubArray, subvolArray,
+		resetMesoSubArray(numMesoSub, mesoSubArray, subvolArray,
 			spec.NUM_MOL_TYPES, spec.MAX_RXNS, spec.NUM_REGIONS, regionArray);
 		// Initialize heap for next subvolume method
-		heapMesoBuild3D(numMesoSub, mesoSubArray, heap_subvolID, num_heap_levels,
+		heapMesoBuild(numMesoSub, mesoSubArray, heap_subvolID, num_heap_levels,
 			heap_childID, b_heap_childValid);
 		
 		//
@@ -385,14 +396,14 @@ int main(int argc, char *argv[])
 				if(!isListMol3DEmpty(&microMolList[i][j]))
 				{ // Molecule list is not empty
 					// Free memory and re-allocate empty list
-					emptyListMol3D(&microMolList[i][j]);
-					initializeListMol3D(&microMolList[i][j]);
+					emptyListMol(&microMolList[i][j]);
+					initializeListMol(&microMolList[i][j]);
 				}
 				if(!isListMol3DRecentEmpty(&microMolListRecent[i][j]))
 				{ // Molecule list is not empty
 					// Free memory and re-allocate empty list
 					emptyListMol3DRecent(&microMolListRecent[i][j]);
-					initializeListMolRecent3D(&microMolListRecent[i][j]);
+					initializeListMolRecent(&microMolListRecent[i][j]);
 				}
 			}
 		}
@@ -412,7 +423,7 @@ int main(int argc, char *argv[])
 		//
 		
 		// Reset actor simulation parameters
-		resetActors3D(spec.NUM_ACTORS, actorCommonArray,
+		resetActors(spec.NUM_ACTORS, actorCommonArray,
 			spec.NUM_MOL_TYPES, regionArray,
 			spec.NUM_REGIONS, NUM_ACTORS_ACTIVE, actorActiveArray, NUM_ACTORS_PASSIVE,
 			actorPassiveArray);
@@ -422,7 +433,7 @@ int main(int argc, char *argv[])
 			tMeso = mesoSubArray[heap_subvolID[0]].t_rxn; // Time of next event in MESO regime
 		else
 			tMeso = INFINITY;
-		resetTimerArray3D(NUM_TIMERS, timerArray, spec.NUM_ACTORS, actorCommonArray,
+		resetTimerArray(NUM_TIMERS, timerArray, spec.NUM_ACTORS, actorCommonArray,
 			MESO_TIMER_ID, tMeso, MICRO_TIMER_ID, spec.DT_MICRO);
 		// Initialize heap for timers
 		heapTimerBuild(NUM_TIMERS, timerArray, heapTimer, numHeapTimerLevels,
@@ -431,10 +442,10 @@ int main(int argc, char *argv[])
 		// Reset observation lists
 		for(curActor = 0; curActor < numActorRecord; curActor++)
 		{
-			if(!isListEmptyObs3D(&observationArray[curActor]))
+			if(!isListEmptyObs(&observationArray[curActor]))
 			{
-				emptyListObs3D(&observationArray[curActor]);
-				initializeListObs3D(&observationArray[curActor],
+				emptyListObs(&observationArray[curActor]);
+				initializeListObs(&observationArray[curActor],
 					actorPassiveArray[actorCommonArray[actorRecordID[curActor]].passiveID].numMolRecordID);				
 			}
 		}
@@ -471,7 +482,7 @@ int main(int argc, char *argv[])
 					{ // Determine the parameters of the new release
 						actorCommonArray[heapTimer[0]].curAction++;
 						
-						newRelease3D(&actorCommonArray[heapTimer[0]],
+						newRelease(&actorCommonArray[heapTimer[0]],
 							&actorActiveArray[curActive], timerArray[heapTimer[0]].nextTime);
 						if (actorCommonArray[heapTimer[0]].spec.bIndependent)
 						{
@@ -487,7 +498,7 @@ int main(int argc, char *argv[])
 						}
 					} else
 					{ // Next action is the release of molecules from a current release
-						fireEmission3D(&actorCommonArray[heapTimer[0]],
+						fireEmission(&actorCommonArray[heapTimer[0]],
 							&actorActiveArray[curActive], regionArray,
 							spec.NUM_REGIONS, subvolArray, mesoSubArray,
 							numMesoSub, spec.NUM_MOL_TYPES, 
@@ -525,7 +536,7 @@ int main(int argc, char *argv[])
 					// Initialize molecule list for coordinates
 					for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 					{
-						initializeListMol3D(&molListPassive3D[j]);
+						initializeListMol(&molListPassive3D[j]);
 					}
 					
 					curPassive = actorCommonArray[heapTimer[0]].passiveID;
@@ -551,8 +562,8 @@ int main(int argc, char *argv[])
 							if(regionArray[curRegion].spec.bMicro)
 							{	// Search through region's molecule list
 								actorPassiveArray[curPassive].curMolObs[curMolPassive] +=
-									recordMolecules3D(&microMolList[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos) +
-									recordMoleculesRecent3D(&microMolListRecent[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos);
+									recordMolecules(&microMolList[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos) +
+									recordMoleculesRecent(&microMolListRecent[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos);
 							} else
 							{	// Search through subvolumes inside actor
 								for(curSubID = 0;
@@ -575,9 +586,9 @@ int main(int argc, char *argv[])
 												// Add molecule position
 												if(bRecordPos)
 												{
-													uniformPointVolume(point, RECTANGULAR_BOX,
-													actorPassiveArray[curPassive].subInterBound[curRegionID][curSubID]);
-													if(!addMolecule3D(&molListPassive3D[curMolPassive],
+													uniformPointVolume(point, regionArray[curRegion].subShape,
+													actorPassiveArray[curPassive].subInterBound[curRegionID][curSubID], false, 0);
+													if(!addMolecule(&molListPassive3D[curMolPassive],
 														point[0], point[1], point[2]))
 													{ // Creation of molecule failed
 														fprintf(stderr,"ERROR: Memory allocation to create molecule %"
@@ -599,9 +610,9 @@ int main(int argc, char *argv[])
 												curMol < numMol;
 												curMol++)
 											{
-												uniformPointVolume(point, RECTANGULAR_BOX,
-													actorPassiveArray[curPassive].subInterBound[curRegionID][curSubID]);
-												if(!addMolecule3D(&molListPassive3D[curMolPassive],
+												uniformPointVolume(point, regionArray[curRegion].subShape,
+													actorPassiveArray[curPassive].subInterBound[curRegionID][curSubID], false, 0);
+												if(!addMolecule(&molListPassive3D[curMolPassive],
 													point[0], point[1], point[2]))
 												{ // Creation of molecule failed
 													fprintf(stderr,"ERROR: Memory allocation to create molecule %"
@@ -621,7 +632,7 @@ int main(int argc, char *argv[])
 					
 					if(curActorRecord < SHRT_MAX)
 					{ // Add observation data to the observation list
-						addObservation3D(&observationArray[curActorRecord],
+						addObservation(&observationArray[curActorRecord],
 							((actorCommonArray[heapTimer[0]].spec.bRecordTime)? 1 : 0),
 							actorPassiveArray[curPassive].numMolRecordID,
 							&actorCommonArray[heapTimer[0]].nextTime,
@@ -631,7 +642,7 @@ int main(int argc, char *argv[])
 					// Empty molecule list for coordinates
 					for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 					{
-						emptyListMol3D(&molListPassive3D[j]);
+						emptyListMol(&molListPassive3D[j]);
 					}
 					
 					// Update timer structure array
@@ -649,7 +660,7 @@ int main(int argc, char *argv[])
 				}
 						
 			} else if (heapTimer[0] > spec.NUM_ACTORS)
-			{	// Next step is in Micro regime
+			{ 	// Next step is in Micro regime
 				
 				// Update Overall Time
 				tCur = tMicro;
@@ -678,7 +689,7 @@ int main(int argc, char *argv[])
 								for(k = 0; k < regionArray[i].numMolChange[curRxn][j]; k++)
 								{
 									generatePointInRegion(i, regionArray, point);
-									if(!addMoleculeRecent3D(&microMolListRecent[i][j], point[0],
+									if(!addMoleculeRecent(&microMolListRecent[i][j], point[0],
 										point[1], point[2],
 										tMicro - regionArray[i].tZeroth[curZerothRxn]))
 									{ // Creation of molecule failed
@@ -708,7 +719,7 @@ int main(int argc, char *argv[])
 						if(!isListMol3DEmpty(&microMolList[i][j])
 							&& regionArray[i].numFirstCurReactant[j] > 0)
 						{ // Check 1st order reactions of "old" molecules
-							rxnFirstOrder3D(&microMolList[i][j], regionArray[i], j,
+							rxnFirstOrder(&microMolList[i][j], regionArray[i], j,
 								spec.NUM_MOL_TYPES, microMolListRecent[i]);
 						}
 						numMicroMolCheck[j] = 0;
@@ -724,7 +735,7 @@ int main(int argc, char *argv[])
 							if(!isListMol3DRecentEmpty(&microMolListRecent[i][j])
 								&& regionArray[i].numFirstCurReactant[j] > 0)
 							{ // Check 1st order reactions of "old" molecules
-								rxnFirstOrderRecent3D(spec.NUM_MOL_TYPES,
+								rxnFirstOrderRecent(spec.NUM_MOL_TYPES,
 									microMolListRecent[i],
 									regionArray[i], j, bCheckCount, numMicroMolCheck);
 							}
@@ -753,7 +764,7 @@ int main(int argc, char *argv[])
 				
 				// Diffuse all microscopic molecules to valid locations and merge
 				// 2 sets of molecule lists into 1
-				diffuseMolecules3D(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
+				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
 					microMolListRecent, regionArray, mesoSubArray, subvolArray,
 					micro_sigma, DIFF_COEF);
 				
@@ -762,7 +773,7 @@ int main(int argc, char *argv[])
 				{
 					// Check whether any subvolumes must be updated due to added molecules
 					// from microscopic regime
-					updateMesoSubBoundary3D(numSub, numMesoSub, mesoSubArray,
+					updateMesoSubBoundary(numSub, numMesoSub, mesoSubArray,
 						subvolArray, regionArray, bTrue, tCur, spec.NUM_REGIONS,
 						spec.NUM_MOL_TYPES, heap_subvolID, heap_childID, b_heap_childValid);
 					
@@ -819,12 +830,12 @@ int main(int argc, char *argv[])
 					numMolChange[0] = 1ULL;
 					
 					// Update next reaction time and heap structure location
-					updateMesoSub3D(curSub, false, numMolChange,
+					updateMesoSub(curSub, false, numMolChange,
 						bFalse, curMolType, false, numMesoSub,
 						mesoSubArray, subvolArray, tCur,
 						spec.NUM_REGIONS, spec.NUM_MOL_TYPES,
 						regionArray);
-					heapMesoUpdate3D(numMesoSub, mesoSubArray, heap_subvolID, 0UL,
+					heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID, 0UL,
 						heap_childID, b_heap_childValid); // ALWAYS head node
 					
 					// Add molecule to destination
@@ -837,7 +848,7 @@ int main(int argc, char *argv[])
 						
 						// Find ID of current subvolume in region boundary list
 						destRegion = subvolArray[destSub].regionID;
-						curBoundSub = findSubInBoundaryList3D(curRegion, destRegion, regionArray,
+						curBoundSub = findSubInBoundaryList(curRegion, destRegion, regionArray,
 							curSub);
 						
 						if(curBoundSub < UINT32_MAX)
@@ -850,7 +861,7 @@ int main(int argc, char *argv[])
 									regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub]);
 							} else
 								faceDir = 0;
-							if(!addMoleculeRecent3D(&microMolListRecent[destRegion][curMolType],
+							if(!addMoleculeRecent(&microMolListRecent[destRegion][curMolType],
 								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
 								+regionArray[curRegion].actualSubSize*mt_drand(),
 								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
@@ -875,10 +886,10 @@ int main(int argc, char *argv[])
 						
 						// Update propensities of destination subvolume
 						// and its location in the heap
-						updateMesoSub3D(destSub, false, numMolChange, bTrue, curMolType, true,
+						updateMesoSub(destSub, false, numMolChange, bTrue, curMolType, true,
 							numMesoSub,	mesoSubArray, subvolArray, tCur, spec.NUM_REGIONS,
 							spec.NUM_MOL_TYPES, regionArray);
-						heapMesoUpdate3D(numMesoSub, mesoSubArray, heap_subvolID,
+						heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID,
 							mesoSubArray[subvolArray[destSub].mesoID].heapID, heap_childID, b_heap_childValid);
 							
 					}
@@ -903,11 +914,11 @@ int main(int argc, char *argv[])
 					}
 										
 					// Update next reaction time and heap structure location
-					updateMesoSub3D(curSub, true, regionArray[curRegion].numMolChange[curRxn],
+					updateMesoSub(curSub, true, regionArray[curRegion].numMolChange[curRxn],
 						regionArray[curRegion].bMolAdd[curRxn], 0, false, numMesoSub,
 						mesoSubArray, subvolArray, tCur, spec.NUM_REGIONS,
 						spec.NUM_MOL_TYPES, regionArray);
-					heapMesoUpdate3D(numMesoSub, mesoSubArray, heap_subvolID, 0UL,
+					heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID, 0UL,
 						heap_childID, b_heap_childValid); // ALWAYS head node
 						
 				} else
@@ -928,7 +939,7 @@ int main(int argc, char *argv[])
 		}
 		
 		// Write realization observations to output file
-		printOneTextRealization3D(out, spec, curRepeat, observationArray,
+		printOneTextRealization(out, spec, curRepeat, observationArray,
 			numActorRecord, actorRecordID, NUM_ACTORS_ACTIVE,
 			actorCommonArray, actorActiveArray, actorPassiveArray,
 			maxActiveBits, maxPassiveObs);
@@ -955,7 +966,7 @@ int main(int argc, char *argv[])
 	printf("Writing simulation summary file ...\n");
 	
 	// Print end time and info used to help Matlab importing
-	printTextEnd3D(outSummary, NUM_ACTORS_ACTIVE, numActorRecord, actorCommonArray,
+	printTextEnd(outSummary, NUM_ACTORS_ACTIVE, numActorRecord, actorCommonArray,
 		actorActiveArray, actorPassiveArray,
 		actorRecordID, maxActiveBits, maxPassiveObs);
 		
@@ -971,31 +982,31 @@ int main(int argc, char *argv[])
 	
 	for(curActor = 0; curActor < numActorRecord; curActor++)
 	{
-		if(!isListEmptyObs3D(&observationArray[curActor]))
+		if(!isListEmptyObs(&observationArray[curActor]))
 		{
-			emptyListObs3D(&observationArray[curActor]);			
+			emptyListObs(&observationArray[curActor]);			
 		}
 	}
 	for(i = 0; i < spec.NUM_REGIONS; i++)
 	{
 		for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 		{
-			emptyListMol3D(&microMolList[i][j]);
+			emptyListMol(&microMolList[i][j]);
 			emptyListMol3DRecent(&microMolListRecent[i][j]);
 		}
 	}
-	deleteActor3D(spec.NUM_ACTORS, actorCommonArray, regionArray,
+	deleteActor(spec.NUM_ACTORS, actorCommonArray, regionArray,
 		NUM_ACTORS_ACTIVE, actorActiveArray, NUM_ACTORS_PASSIVE, actorPassiveArray,
 		actorRecordID);
 	heapMesoDelete(numSub, heap_subvolID, heap_childID, b_heap_childValid);
 	heapTimerDelete(heapTimer, heapTimerChildID, b_heapTimerChildValid);
 	deleteTimerHeapArray(timerArray);
 	deleteSubvolArray(numSub, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS, regionArray);
-	deleteMesoSubArray3D(numMesoSub, mesoSubArray);
-	delete_boundary_region_3D(spec.NUM_REGIONS,
+	deleteMesoSubArray(numMesoSub, mesoSubArray);
+	delete_boundary_region_(spec.NUM_REGIONS,
 		spec.NUM_MOL_TYPES, regionArray);
 	
-	deleteConfig3D(spec);
+	deleteConfig(spec);
 	
 	printf("Done!");
 	return 0;

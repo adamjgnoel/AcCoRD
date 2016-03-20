@@ -59,7 +59,7 @@ typedef struct list_Obs3D{
 
 // observations specific Prototypes
 
-bool addObservation3D(ListObs3D * list,
+bool addObservation(ListObs3D * list,
 	const unsigned short numDouble,
 	const unsigned short numUllong,
 	double paramDouble[],
@@ -68,12 +68,12 @@ bool addObservation3D(ListObs3D * list,
 
 // General Prototypes
 
-void initializeListObs3D(ListObs3D * list,
+void initializeListObs(ListObs3D * list,
 	unsigned short numMolTypeObs);
 
-bool isListEmptyObs3D(const ListObs3D * list);
+bool isListEmptyObs(const ListObs3D * list);
 
-void emptyListObs3D(ListObs3D * list);
+void emptyListObs(ListObs3D * list);
 
 
 #endif // OBSERVATIONS_H

@@ -144,14 +144,13 @@ void initializeRegionArray(struct region regionArray[],
 		{
 			case REGION_NORMAL:
 				regionArray[i].subShape = regionArray[i].spec.shape;
+				regionArray[i].effectiveDim = regionArray[i].dimension;
 				if(regionArray[i].plane == PLANE_3D)
 				{
-					regionArray[i].effectiveDim = DIM_3D;
 					regionArray[i].numFace = 0;
 				}
 				else
 				{
-					regionArray[i].effectiveDim = DIM_2D;
 					regionArray[i].numFace = 1;
 				}
 				break;
@@ -456,7 +455,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 }
 
 // Free memory of region parameters
-void delete_boundary_region_3D(const short NUM_REGIONS,
+void delete_boundary_region_(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[])
 {
@@ -859,7 +858,7 @@ void findRegionTouch(const short NUM_REGIONS,
 }
 
 // Find index of desired subvolume in list defining region's boundary with another region
-uint32_t findSubInBoundaryList3D(const short curRegion,
+uint32_t findSubInBoundaryList(const short curRegion,
 	const short destRegion,
 	const struct region regionArray[],
 	uint32_t curSub)
@@ -923,7 +922,7 @@ unsigned short findNearestValidRegion(const double point[],
 
 // Find the closest subvolume in current region that is along boundary
 // of specified neighbor region
-uint32_t findNearestSub3D(const short curRegion,
+uint32_t findNearestSub(const short curRegion,
 	const struct region regionArray[],
 	const short neighRegion,
 	double x,
@@ -1101,6 +1100,10 @@ bool bLineHitRegion(const double p1[3],
 	
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			return bLineHitInfinitePlane(p1, L, length, RECTANGLE,
+				regionArray[startRegion].boundRegionFaceCoor[endRegion][0],
+				regionArray[endRegion].plane, false, d, intersectPoint);
 		case RECTANGULAR_BOX:
 			for(curPlane = 0;
 				curPlane < regionArray[startRegion].numRegionNeighFace[endRegion];
@@ -1247,6 +1250,12 @@ void lockPointToRegion(double point[3],
 	
 	switch(regionArray[boundRegion].spec.shape)
 	{
+		case RECTANGLE:
+			switch(faceID)
+			{
+				
+			}
+			break;
 		case RECTANGULAR_BOX:
 			if(faceID < 2)
 				point[0] = regionArray[boundRegion].boundary[faceID];
@@ -1291,7 +1300,8 @@ void generatePointInRegion(const short curRegion,
 	while(bNeedPoint)
 	{
 		uniformPointVolume(point, regionArray[curRegion].spec.shape,
-			regionArray[curRegion].boundary);
+			regionArray[curRegion].boundary, regionArray[curRegion].dimension ==
+			regionArray[curRegion].effectiveDim, regionArray[curRegion].plane);
 		if(bPointInRegionNotChild(curRegion, regionArray, point))
 			bNeedPoint = false;
 	}

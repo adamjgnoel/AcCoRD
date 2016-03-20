@@ -48,7 +48,7 @@
 #include "file_io.h"
 
 // Load configuration file
-void loadConfig3D(const char * CONFIG_NAME,
+void loadConfig(const char * CONFIG_NAME,
 	uint32_t customSEED,
 	struct simSpec3D * curSpec)
 {
@@ -1234,7 +1234,7 @@ void loadConfig3D(const char * CONFIG_NAME,
 }
 
 // Release memory allocated to configuration settings
-void deleteConfig3D(struct simSpec3D curSpec)
+void deleteConfig(struct simSpec3D curSpec)
 {
 	unsigned short curRegion;
 	unsigned short curRxn;
@@ -1264,7 +1264,7 @@ void deleteConfig3D(struct simSpec3D curSpec)
 }
 
 // Initialize the simulation output file
-void initializeOutput3D(FILE ** out,
+void initializeOutput(FILE ** out,
 	FILE ** outSummary,
 	const char * CONFIG_NAME,
 	const struct simSpec3D curSpec)
@@ -1398,7 +1398,7 @@ char * stringAllocate(long stringLength)
 }
 
 // Print simulation output from one realization
-void printOneTextRealization3D(FILE * out,
+void printOneTextRealization(FILE * out,
 	const struct simSpec3D curSpec,
 	unsigned int curRepeat,
 	ListObs3D observationArray[],
@@ -1524,7 +1524,7 @@ void printOneTextRealization3D(FILE * out,
 }
 
 // Print end of simulation data
-void printTextEnd3D(FILE * out,	
+void printTextEnd(FILE * out,	
 	short NUM_ACTORS_ACTIVE,
 	short numActorRecord,
 	const struct actorStruct3D actorCommonArray[],

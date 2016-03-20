@@ -88,7 +88,7 @@ void allocateSubvolHelper(const uint32_t numSub,
 	{
 		if(regionArray[i].numFace > 0)
 		{
-			(*subIDSize)[i] = malloc(regionArray[i].numFace*sizeof((*subIDSize)[i]));
+			(*subIDSize)[i] = malloc(regionArray[i].numFace*sizeof(uint32_t [2]));
 			if((*subIDSize)[i] == NULL){
 				fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
 				exit(EXIT_FAILURE);

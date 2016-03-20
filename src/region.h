@@ -412,7 +412,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 	uint32_t subCoorInd[][3]);
 
 // Free memory of region parameters
-void delete_boundary_region_3D(const short NUM_REGIONS,
+void delete_boundary_region_(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[]);
 
@@ -432,7 +432,7 @@ void findRegionTouch(const short NUM_REGIONS,
 	const double SUBVOL_BASE_SIZE);
 
 // Find index of desired subvolume in list defining region's boundary with another region
-uint32_t findSubInBoundaryList3D(const short curRegion,
+uint32_t findSubInBoundaryList(const short curRegion,
 	const short destRegion,
 	const struct region regionArray[],
 	uint32_t curSub);
@@ -446,7 +446,7 @@ unsigned short findNearestValidRegion(const double point[],
 
 // Find the closest subvolume in current region that is along boundary
 // of specified neighbor region
-uint32_t findNearestSub3D(const short curRegion,
+uint32_t findNearestSub(const short curRegion,
 	const struct region regionArray[],
 	const short neighRegion,
 	double x,

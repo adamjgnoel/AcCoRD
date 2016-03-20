@@ -90,13 +90,13 @@ struct simSpec3D {
 // Function Declarations
 //
 
-void loadConfig3D(const char * CONFIG_NAME,
+void loadConfig(const char * CONFIG_NAME,
 	uint32_t customSEED,
 	struct simSpec3D * curSpec);
 
-void deleteConfig3D(struct simSpec3D curSpec);
+void deleteConfig(struct simSpec3D curSpec);
 
-void initializeOutput3D(FILE ** out,
+void initializeOutput(FILE ** out,
 	FILE ** outSummary,
 	const char * CONFIG_NAME,
 	const struct simSpec3D curSpec);
@@ -107,7 +107,7 @@ char * stringWrite(char * src);
 // Allocate memory for a string
 char * stringAllocate(long stringLength);
 
-void printOneTextRealization3D(FILE * out,
+void printOneTextRealization(FILE * out,
 	const struct simSpec3D curSpec,
 	unsigned int curRepeat,
 	ListObs3D observationArray[],
@@ -120,7 +120,7 @@ void printOneTextRealization3D(FILE * out,
 	uint32_t maxActiveBits[],
 	uint32_t maxPassiveObs[]);
 	
-void printTextEnd3D(FILE * out,	
+void printTextEnd(FILE * out,	
 	short NUM_ACTORS_ACTIVE,
 	short numActorRecord,
 	const struct actorStruct3D actorCommonArray[],

@@ -78,7 +78,7 @@ bool bPointInBoundary(const double point[3],
 				&& point[2] >= boundary1[4]
 				&& point[2] <= boundary1[5]);
 		case SPHERE:
-			return (pointDistance3D(point, boundary1) < boundary1[3]);
+			return (pointDistance(point, boundary1) < boundary1[3]);
 		default:
 			fprintf(stderr,"ERROR: Cannot find point in shape type %s.\n", boundaryString(boundary1Type));
 			return false;
@@ -136,7 +136,7 @@ bool bBoundaryIntersect(const int boundary1Type,
 			switch (boundary2Type)
 			{
 				case SPHERE:
-					d = pointDistance3D(boundary1, boundary2);
+					d = pointDistance(boundary1, boundary2);
 					return (d < boundary1[3] + boundary2[3] + clearance
 						&& d > fabs(boundary1[3] - boundary2[3]));
 				case RECTANGLE:
@@ -353,42 +353,42 @@ bool bBoundarySurround(const int boundary1Type,
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					// All fail cases have been tried
 					return true;
@@ -412,7 +412,7 @@ bool bBoundarySurround(const int boundary1Type,
 						boundary1[3] <= (boundary2[5] - boundary1[2] - clearance));
 				case SPHERE:
 					return(boundary2[3] >= (boundary1[3] +
-						pointDistance3D(boundary1, boundary2) + clearance));
+						pointDistance(boundary1, boundary2) + clearance));
 				default:
 					fprintf(stderr,
 						"ERROR: Cannot determine whether a %s is inside of a %s.\n",
@@ -1083,7 +1083,7 @@ double distanceToBoundary(const double point[3],
 			}
 			return 0.;
 		case SPHERE:
-			dist = pointDistance3D(point, boundary1) - boundary1[3];
+			dist = pointDistance(point, boundary1) - boundary1[3];
 			if(dist < 0)
 				dist = -dist;
 			return dist;
@@ -1273,22 +1273,133 @@ double uniformPoint(double rangeMin,
 // Find a random coordinate within the specified boundary
 void uniformPointVolume(double point[3],
 	const int boundaryType,
-	const double boundary1[])
+	const double boundary1[],
+	bool bSurface,
+	const short planeID)
 {
 	bool bNeedPoint;
+	short curFace;
+	double r, rSq;
 	
 	switch (boundaryType)
 	{
 		case RECTANGLE:
-			return;
+			if(bSurface)
+			{
+				curFace = (short) floor(4*mt_drand());
+				switch(planeID)
+				{
+					case PLANE_XY:
+						point[2] = boundary1[4];
+						switch(curFace)
+						{
+							case 0:
+							case 1:
+								point[0] = boundary1[curFace];
+								point[1] = uniformPoint(boundary1[2], boundary1[3]);
+								break;
+							case 2:
+							case 3:
+								point[0] = uniformPoint(boundary1[0], boundary1[1]);
+								point[1] = boundary1[curFace];
+								break;
+						}
+						break;
+					case PLANE_XZ:
+						point[1] = boundary1[2];
+						switch(curFace)
+						{
+							case 0:
+							case 1:
+								point[0] = boundary1[curFace];
+								point[2] = uniformPoint(boundary1[4], boundary1[5]);
+								break;
+							case 2:
+							case 3:
+								point[0] = uniformPoint(boundary1[0], boundary1[1]);
+								point[1] = boundary1[curFace+2];
+								break;
+						}
+						break;
+					case PLANE_YZ:
+						point[0] = boundary1[0];
+						switch(curFace)
+						{
+							case 0:
+							case 1:
+								point[2] = boundary1[curFace+4];
+								point[1] = uniformPoint(boundary1[2], boundary1[3]);
+								break;
+							case 2:
+							case 3:
+								point[2] = uniformPoint(boundary1[4], boundary1[5]);
+								point[1] = boundary1[curFace];
+								break;
+						}
+						break;
+					default:
+						// Something went wrong
+						fprintf(stderr,"ERROR: Cannot generate a uniform random point on plane %u of a rectangle.\n", planeID);
+						return;
+				}
+				return;
+			}
+			switch(planeID)
+			{
+				case PLANE_XY:
+					point[0] = uniformPoint(boundary1[0], boundary1[1]);
+					point[1] = uniformPoint(boundary1[2], boundary1[3]);
+					point[2] = boundary1[4];
+					break;
+				case PLANE_XZ:
+					point[0] = uniformPoint(boundary1[0], boundary1[1]);
+					point[1] = boundary1[2];	
+					point[2] = uniformPoint(boundary1[4], boundary1[5]);
+					break;
+				case PLANE_YZ:
+					point[0] = boundary1[0];
+					point[1] = uniformPoint(boundary1[2], boundary1[3]);
+					point[2] = uniformPoint(boundary1[4], boundary1[5]);
+					break;
+				default:
+					// Something went wrong
+					fprintf(stderr,"ERROR: Cannot generate a uniform random point on plane %u of a rectangle.\n", planeID);
+					return;
+			}
 		case RECTANGULAR_BOX:
+			if(bSurface)
+			{
+				curFace = (short) floor(6*mt_drand());
+				switch(curFace)
+				{
+					case 0:
+					case 1:
+						point[0] = boundary1[curFace];
+						point[1] = uniformPoint(boundary1[2], boundary1[3]);
+						point[2] = uniformPoint(boundary1[4], boundary1[5]);
+						break;
+					case 2:
+					case 3:
+						point[0] = uniformPoint(boundary1[0], boundary1[1]);
+						point[1] = boundary1[curFace];
+						point[2] = uniformPoint(boundary1[4], boundary1[5]);
+						break;
+					case 4:
+					case 5:
+						point[0] = uniformPoint(boundary1[0], boundary1[1]);
+						point[1] = uniformPoint(boundary1[2], boundary1[3]);
+						point[2] = boundary1[curFace];
+						break;
+				}
+				return;
+			}
 			point[0] = uniformPoint(boundary1[0], boundary1[1]);
 			point[1] = uniformPoint(boundary1[2], boundary1[3]);
 			point[2] = uniformPoint(boundary1[4], boundary1[5]);
 			return;
 		case CIRCLE:
 			return;
-		case SPHERE:
+		case SPHERE:			
 			// Use rejection method to create point in sphere
 			bNeedPoint = true;
 			while(bNeedPoint)
@@ -1296,19 +1407,31 @@ void uniformPointVolume(double point[3],
 				point[0] = mt_drand();
 				point[1] = mt_drand();
 				point[2] = mt_drand();
-				if (squareDBL(point[0]) + squareDBL(point[1])
-					+ squareDBL(point[2]) < 1.)
+				
+				rSq = squareDBL(point[0]) + squareDBL(point[1])
+					+ squareDBL(point[2]);
+				
+				if (rSq < 1.)
 				{
 					// Found valid point. Scale as needed and randomize sign
 					if(mt_drand() > 0.5)
 						point[0] = -point[0];
-					point[0] = boundary1[0] + point[0]*boundary1[3];
 					if(mt_drand() > 0.5)
 						point[1] = -point[1];
-					point[1] = boundary1[1] + point[1]*boundary1[3];
 					if(mt_drand() > 0.5)
 						point[2] = -point[2];
+					
+					if(bSurface)
+					{
+						r = sqrt(rSq);
+						point[0] /= r;
+						point[1] /= r;
+						point[2] /= r;
+					}					
+					point[0] = boundary1[0] + point[0]*boundary1[3];
+					point[1] = boundary1[1] + point[1]*boundary1[3];
 					point[2] = boundary1[2] + point[2]*boundary1[3];
+					
 					bNeedPoint = false;
 				}
 			}
@@ -1320,7 +1443,7 @@ void uniformPointVolume(double point[3],
 }
 
 // Find distance between 2 3D points
-double pointDistance3D(const double point1[3],
+double pointDistance(const double point1[3],
 	const double point2[3])
 {
 	return sqrt(squareDBL(point2[0] - point1[0]) +

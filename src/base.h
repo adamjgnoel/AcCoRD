@@ -197,11 +197,13 @@ double uniformPoint(double rangeMin,
 // Find a random coordinate within the specified boundary
 void uniformPointVolume(double point[3],
 	const int boundaryType,
-	const double boundary1[]);
+	const double boundary1[],
+	bool bSurface,
+	const short planeID);
 
 // Find distance between 2 3D points
 //
-double pointDistance3D(const double point1[3],
+double pointDistance(const double point1[3],
 	const double point2[3]);
 
 // Square a double value

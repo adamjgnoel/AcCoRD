@@ -46,7 +46,7 @@
 /* Initialize array of structures for common actor parameters
 * A call to this function should have a corresponding call to deleteActor2D,
 * usually AFTER initializeActorCommon2D has been called */
-void allocateActorCommonArray3D(const short NUM_ACTORS,
+void allocateActorCommonArray(const short NUM_ACTORS,
 	struct actorStruct3D ** actorCommonArray)
 {
 	if(NUM_ACTORS > 0)
@@ -64,7 +64,7 @@ void allocateActorCommonArray3D(const short NUM_ACTORS,
 	
 }
 
-void initializeActorCommon3D(const short NUM_ACTORS,
+void initializeActorCommon(const short NUM_ACTORS,
 	struct actorStruct3D actorCommonArray[],
 	const struct actorStructSpec3D actorCommonSpecArray[],
 	const struct region regionArray[],
@@ -108,6 +108,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 				actorCommonArray[curActor].spec.boundary);
 		
 		actorCommonArray[curActor].numRegion = 0;
+		actorCommonArray[curActor].numRegionDim = 0;
 		actorCommonArray[curActor].maxDim = 1;
 		
 		if(actorCommonArray[curActor].spec.bActive)
@@ -253,6 +254,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 					actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] +=
 						actorCommonArray[curActor].regionInterArea[curInterRegion] /
 						actorCommonArray[curActor].volume;
+					actorCommonArray[curActor].numRegionDim++;
 				}
 				
 				if(regionArray[curRegion].spec.bMicro)
@@ -383,10 +385,16 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 			}
 		}
 		
-		/*
-		* Allocate simulation parameters
-		* These parameters must be reset for each repeat
-		*/
+		// Check whether an active actor fully covers regions
+		if(actorCommonArray[curActor].spec.bActive
+			&& actorCommonArray[curActor].cumFracActorInRegion[actorCommonArray[curActor].numRegion-1]
+			< 0.9999)
+		{ // There is non-negligible actor space in an active actor that is not
+			// covering a region.
+			fprintf(stderr, "ERROR: Actor %u is active and only %.3f%% of its volume covers regions.\n",
+				curActor, 100*actorCommonArray[curActor].cumFracActorInRegion[actorCommonArray[curActor].numRegion-1]);
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	// Allocate memory for list of actors that record observations
@@ -406,7 +414,7 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 	}
 }
 
-void allocateActorActivePassiveArray3D(const short NUM_ACTORS_ACTIVE,
+void allocateActorActivePassiveArray(const short NUM_ACTORS_ACTIVE,
 	struct actorActiveStruct3D ** actorActiveArray,
 	const short NUM_ACTORS_PASSIVE,
 	struct actorPassiveStruct3D ** actorPassiveArray)
@@ -440,7 +448,7 @@ void allocateActorActivePassiveArray3D(const short NUM_ACTORS_ACTIVE,
 	}	
 }
 
-void initializeActorActivePassive3D(const short NUM_ACTORS,
+void initializeActorActivePassive(const short NUM_ACTORS,
 	const struct actorStruct3D actorCommonArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
@@ -714,7 +722,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 /* Reset actor members that vary with each simulation realization
 *
 */
-void resetActors3D(const short NUM_ACTORS,
+void resetActors(const short NUM_ACTORS,
 	struct actorStruct3D actorCommonArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
@@ -761,7 +769,7 @@ void resetActors3D(const short NUM_ACTORS,
 * allocated to the structure array itself. It should be called after BOTH
 * allocateActorCommonArray3D AND initializeActorCommon3D, but is written to avoid
 * any attempts to free memory that was not previously allocated */
-void deleteActor3D(const short NUM_ACTORS,
+void deleteActor(const short NUM_ACTORS,
 	struct actorStruct3D actorCommonArray[],
 	const struct region regionArray[],
 	const short NUM_ACTORS_ACTIVE,
@@ -875,7 +883,7 @@ void deleteActor3D(const short NUM_ACTORS,
 }
 
 // Generate a new release and, if necessary, add it to the list
-void newRelease3D(const struct actorStruct3D * actorCommon,
+void newRelease(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
 	double curTime)
 {
@@ -955,7 +963,7 @@ void newRelease3D(const struct actorStruct3D * actorCommon,
 		}
 		
 		// Update time of next emission event
-		findNextEmission3D(actorCommon, actorActive);
+		findNextEmission(actorCommon, actorActive);
 	}
 	
 	// Free memory of new data
@@ -963,7 +971,7 @@ void newRelease3D(const struct actorStruct3D * actorCommon,
 }
 
 // Find time and index of next release to have an emission
-void findNextEmission3D(const struct actorStruct3D * actorCommon,
+void findNextEmission(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive)
 {
 	unsigned int i = 0; // Counter
@@ -982,7 +990,8 @@ void findNextEmission3D(const struct actorStruct3D * actorCommon,
 	}
 }
 
-void fireEmission3D(const struct actorStruct3D * actorCommon,
+// Release molecules for current release at this instant
+void fireEmission(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
 	struct region region[],
 	const short NUM_REGIONS,
@@ -1013,8 +1022,8 @@ void fireEmission3D(const struct actorStruct3D * actorCommon,
 	if(actorCommon->spec.bTimeReleaseRand)
 	{
 		// We only release one molecule right now
-		placeMolecules3D(actorCommon, actorActive, region, NUM_REGIONS,
-			subvolArray, mesoSubArray, numMesoSub, 1ULL,
+		placeMolecules(actorCommon, actorActive, region, NUM_REGIONS,
+			subvolArray, mesoSubArray, numMesoSub, (uint64_t) 1,
 			curRelease->item.molType, NUM_MOL_TYPES, microMolListRecent,
 			curRelease->item.nextTime, tMicro,
 			heap_subvolID, heap_childID, b_heap_childValid);
@@ -1033,7 +1042,7 @@ void fireEmission3D(const struct actorStruct3D * actorCommon,
 			numNewMol = (uint64_t) curRelease->item.strength;
 		}
 		// We must place curRelease->item.strength molecules
-		placeMolecules3D(actorCommon, actorActive, region, NUM_REGIONS,
+		placeMolecules(actorCommon, actorActive, region, NUM_REGIONS,
 			subvolArray, mesoSubArray, numMesoSub, numNewMol,
 			curRelease->item.molType, NUM_MOL_TYPES, microMolListRecent,
 			curRelease->item.nextTime, tMicro,
@@ -1057,11 +1066,11 @@ void fireEmission3D(const struct actorStruct3D * actorCommon,
 	}
 	
 	// Find time and release of next emission event
-	findNextEmission3D(actorCommon, actorActive);
+	findNextEmission(actorCommon, actorActive);
 }
 
 // Place molecules for current emission
-void placeMolecules3D(const struct actorStruct3D * actorCommon,
+void placeMolecules(const struct actorStruct3D * actorCommon,
 	const struct actorActiveStruct3D * actorActive,
 	struct region region[],
 	const short NUM_REGIONS,
@@ -1078,12 +1087,12 @@ void placeMolecules3D(const struct actorStruct3D * actorCommon,
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2])
 {
-	short curRegion, curRegionInter;
+	short curRegion, curRegionInter, curRegionDim;
 	double uniRV;
 	uint64_t curMolecule;
 	//double tCur = curRelease->item.nextTime;
 	
-	if(actorCommon->numRegion > 1)
+	if(actorCommon->numRegionDim > 1)
 	{ // Molecules can end up in different regions. Place one at a time
 		for(curMolecule = 0;
 			curMolecule < numNewMol;
@@ -1104,9 +1113,9 @@ void placeMolecules3D(const struct actorStruct3D * actorCommon,
 			if(curRegionInter < actorCommon->numRegion)
 			{
 				curRegion = actorCommon->regionID[curRegionInter];
-				placeMoleculesInRegion3D(actorCommon, actorActive, region,
+				placeMoleculesInRegion(actorCommon, actorActive, region,
 					curRegion, curRegionInter, NUM_REGIONS, subvolArray,
-					mesoSubArray, numMesoSub, 1ULL, curMolType, NUM_MOL_TYPES,
+					mesoSubArray, numMesoSub, (uint64_t) 1, curMolType, NUM_MOL_TYPES,
 					&microMolListRecent[curRegion][curMolType], tCur, tMicro,
 					heap_subvolID, heap_childID, b_heap_childValid);
 			}
@@ -1114,9 +1123,15 @@ void placeMolecules3D(const struct actorStruct3D * actorCommon,
 		
 	} else
 	{ // All molecules are going in the same region.
-		curRegion = actorCommon->regionID[0];
-		placeMoleculesInRegion3D(actorCommon, actorActive, region, curRegion,
-			0, NUM_REGIONS, subvolArray,
+		// Find region of same dimension as actor
+		for(curRegionInter = 0; curRegionInter < actorCommon->numRegion; curRegionInter++)
+		{
+			curRegion = actorCommon->regionID[curRegionInter];
+			if(region[curRegion].effectiveDim == actorCommon->maxDim)
+				break;
+		}
+		placeMoleculesInRegion(actorCommon, actorActive, region, curRegion,
+			curRegionInter, NUM_REGIONS, subvolArray,
 			mesoSubArray, numMesoSub, numNewMol, curMolType, NUM_MOL_TYPES,
 			&microMolListRecent[curRegion][curMolType], tCur, tMicro,
 			heap_subvolID, heap_childID, b_heap_childValid);
@@ -1124,9 +1139,9 @@ void placeMolecules3D(const struct actorStruct3D * actorCommon,
 }
 
 // Place molecules for current actor emission in specific region
-void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
+void placeMoleculesInRegion(const struct actorStruct3D * actorCommon,
 	const struct actorActiveStruct3D * actorActive,
-	struct region region[],
+	struct region regionArray[],
 	const short curRegion,
 	const short curRegionInter,
 	const short NUM_REGIONS,
@@ -1148,8 +1163,10 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 	uint32_t curSub, curSubInter;
 	bool bNeedPoint;
 	double point[3];
+	bool bSurface = regionArray[curRegion].effectiveDim
+		!= regionArray[curRegion].dimension;
 		
-	if(region[curRegion].spec.bMicro)
+	if(regionArray[curRegion].spec.bMicro)
 	{
 		// Add molecules uniformly within micro intersect region
 		for(curMolecule = 0;
@@ -1162,12 +1179,13 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 				// Intersection region is defined by actorCommon->regionInterBound
 				// Shape of intersection is defined by actorCommon->regionInterType
 				uniformPointVolume(point, actorCommon->regionInterType[curRegionInter],
-					actorCommon->regionInterBound[curRegionInter]);
+					actorCommon->regionInterBound[curRegionInter], bSurface,
+					regionArray[curRegion].plane);
 				
-				if(bPointInRegionNotChild(curRegion, region, point))
+				if(bPointInRegionNotChild(curRegion, regionArray, point))
 				{
 					bNeedPoint = false;
-					if(!addMoleculeRecent3D(microMolListRecent, point[0], point[1],
+					if(!addMoleculeRecent(microMolListRecent, point[0], point[1],
 						point[2], tMicro - tCur))
 					{ // Creation of molecule failed
 						fprintf(stderr, "ERROR: Memory allocation for new molecule to be placed in region %u.\n", curRegion);
@@ -1204,14 +1222,14 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 				}
 				curSub = actorCommon->subID[curRegionInter][curSubInter];
 				// Molecule will be placed in curSubInter
-				placeMoleculesInSub3D(region, subvolArray, mesoSubArray,
-					numMesoSub, 1ULL, curMolType, curSub, NUM_MOL_TYPES,
+				placeMoleculesInSub(regionArray, subvolArray, mesoSubArray,
+					numMesoSub, (uint64_t) 1, curMolType, curSub, NUM_MOL_TYPES,
 					tCur, NUM_REGIONS, heap_subvolID, heap_childID, b_heap_childValid);
 			}
 		} else
 		{ // All molecules are going in the same subvolume
 			curSub = actorCommon->subID[curRegionInter][0];
-			placeMoleculesInSub3D(region, subvolArray, mesoSubArray,
+			placeMoleculesInSub(regionArray, subvolArray, mesoSubArray,
 				numMesoSub, numNewMol, curMolType, curSub, NUM_MOL_TYPES,
 				tCur, NUM_REGIONS, heap_subvolID,
 				heap_childID, b_heap_childValid);
@@ -1220,7 +1238,7 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 }
 
 // Add one type of molecule in specific subvolume
-void placeMoleculesInSub3D(struct region region[],
+void placeMoleculesInSub(struct region regionArray[],
 	struct subvolume3D subvolArray[],
 	struct mesoSubvolume3D * mesoSubArray,
 	const uint32_t numMesoSub,
@@ -1241,11 +1259,11 @@ void placeMoleculesInSub3D(struct region region[],
 	curMeso = subvolArray[curSub].mesoID;
 	
 	// Place molecule(s) and update heap for subvolumes
-	updateMesoSub3D(curSub, false, (uint64_t []){numNewMol},
+	updateMesoSub(curSub, false, (uint64_t []){numNewMol},
 		(bool []){true}, curMolType,
 		true, numMesoSub, mesoSubArray, subvolArray, tCur,
-		NUM_REGIONS, NUM_MOL_TYPES, region);
-	heapMesoUpdate3D(numMesoSub, mesoSubArray, heap_subvolID,
+		NUM_REGIONS, NUM_MOL_TYPES, regionArray);
+	heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID,
 		mesoSubArray[curMeso].heapID, heap_childID, b_heap_childValid);
 }
 

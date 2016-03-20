@@ -26,18 +26,18 @@
 
 // Local Function Prototypes
 
-static bool addItem3D(ItemObs3D item, ListObs3D * list);
+static bool addItem(ItemObs3D item, ListObs3D * list);
 
-static void removeItem3D(NodeObs3D * prevNode, NodeObs3D * curNode);
+static void removeItem(NodeObs3D * prevNode, NodeObs3D * curNode);
 
-static void traverse3D(const ListObs3D * list, void (* p_fun)(ItemObs3D item));
+static void traverse(const ListObs3D * list, void (* p_fun)(ItemObs3D item));
 
-static void copyToNode3D(ItemObs3D item, NodeObs3D * p_node);
+static void copyToNode(ItemObs3D item, NodeObs3D * p_node);
 
 // Specific Definitions
 
 // Create new observation with the corresponding information
-bool addObservation3D(ListObs3D * list,
+bool addObservation(ListObs3D * list,
 	const unsigned short numDouble,
 	const unsigned short numUllong,
 	double * paramDouble,
@@ -61,7 +61,7 @@ bool addObservation3D(ListObs3D * list,
 		molPosListNew[curMolInd] = malloc(sizeof(ListMol3D));
 		if(molPosListNew[curMolInd] == NULL)
 			return false;
-		initializeListMol3D(molPosListNew[curMolInd]);
+		initializeListMol(molPosListNew[curMolInd]);
 	}
 	
 	
@@ -83,7 +83,7 @@ bool addObservation3D(ListObs3D * list,
 		{
 			while(molPosList != NULL)
 			{
-				if(!addMolecule3D(molPosListNew[curMolInd],
+				if(!addMolecule(molPosListNew[curMolInd],
 					molPosList->item.x, molPosList->item.y, molPosList->item.z))
 				{
 					// Creation of molecule failed
@@ -99,13 +99,13 @@ bool addObservation3D(ListObs3D * list,
 	}
 	
 	ItemObs3D newObs3D = {numDouble,numUllong,paramDoubleNew,paramUllongNew,molPosListNew};
-	return addItem3D(newObs3D, list);
+	return addItem(newObs3D, list);
 }
 
 // General Definitions
 
 // Initialize list
-void initializeListObs3D(ListObs3D * list,
+void initializeListObs(ListObs3D * list,
 	unsigned short numMolTypeObs)
 {
 	list->numMolTypeObs = numMolTypeObs;
@@ -114,14 +114,14 @@ void initializeListObs3D(ListObs3D * list,
 }
 
 // Is the list empty?
-bool isListEmptyObs3D(const ListObs3D * list)
+bool isListEmptyObs(const ListObs3D * list)
 {
 	if(list->head == NULL) return true;
 	return false;
 }
 
 // Create new node to hold item and add it to the end of the list
-bool addItem3D(ItemObs3D item, ListObs3D * list)
+bool addItem(ItemObs3D item, ListObs3D * list)
 {
 	NodeObs3D * p_new;
 	
@@ -129,7 +129,7 @@ bool addItem3D(ItemObs3D item, ListObs3D * list)
 	if (p_new == NULL)
 		return false;	// Quit on failure of malloc
 		
-	copyToNode3D(item, p_new);
+	copyToNode(item, p_new);
 	p_new->next = NULL;
 	if(list->tail == NULL)
 	{ // List was empty. This item is first in list
@@ -147,7 +147,7 @@ bool addItem3D(ItemObs3D item, ListObs3D * list)
 // and not the start of the list.
 // TODO: Update this function for current list type (it does not currently have the
 // correct free calls but the function is not called so it is not a problem)
-void removeItem3D(NodeObs3D * prevNode, NodeObs3D * curNode)
+void removeItem(NodeObs3D * prevNode, NodeObs3D * curNode)
 {
 	if (curNode != NULL)
 	{
@@ -162,7 +162,7 @@ void removeItem3D(NodeObs3D * prevNode, NodeObs3D * curNode)
 
 // Visit each node and execute the function pointed to by p_fun
 // p_fun must be a void function that takes an item as input
-void traverse3D(const ListObs3D * list, void (* p_fun)(ItemObs3D item))
+void traverse(const ListObs3D * list, void (* p_fun)(ItemObs3D item))
 {
 	NodeObs3D * p_node = list->head;
 	
@@ -174,7 +174,7 @@ void traverse3D(const ListObs3D * list, void (* p_fun)(ItemObs3D item))
 }
 
 // De-allocate memory of all nodes in the list
-void emptyListObs3D(ListObs3D * list)
+void emptyListObs(ListObs3D * list)
 {
 	NodeObs3D * p_save;
 	NodeObs3D * p_cur;
@@ -188,7 +188,7 @@ void emptyListObs3D(ListObs3D * list)
 		for(curMolInd = 0; curMolInd < list->numMolTypeObs; curMolInd++)
 		{
 			if(!isListMol3DEmpty(list->head->item.molPos[curMolInd]))
-				emptyListMol3D(list->head->item.molPos[curMolInd]);
+				emptyListMol(list->head->item.molPos[curMolInd]);
 			free(list->head->item.molPos[curMolInd]);
 		}
 		free(list->head->item.molPos);
@@ -198,7 +198,7 @@ void emptyListObs3D(ListObs3D * list)
 }
 
 // Copy an item to a node
-static void copyToNode3D(ItemObs3D item, NodeObs3D * p_node)
+static void copyToNode(ItemObs3D item, NodeObs3D * p_node)
 {
 	p_node->item = item; // Structure copy
 }

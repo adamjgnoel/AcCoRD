@@ -153,13 +153,15 @@ uint64_t recordMolecules(ListMol3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
-	bool bRecordPos);
+	bool bRecordPos,
+	bool bRecordAll);
 
 uint64_t recordMoleculesRecent(ListMolRecent3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
-	bool bRecordPos);
+	bool bRecordPos,
+	bool bRecordAll);
 
 bool isMoleculeObserved(ItemMol3D * molecule,
 	int obsType,

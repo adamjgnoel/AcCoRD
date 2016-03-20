@@ -562,8 +562,10 @@ int main(int argc, char *argv[])
 							if(regionArray[curRegion].spec.bMicro)
 							{	// Search through region's molecule list
 								actorPassiveArray[curPassive].curMolObs[curMolPassive] +=
-									recordMolecules(&microMolList[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos) +
-									recordMoleculesRecent(&microMolListRecent[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos);
+									recordMolecules(&microMolList[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos,
+									actorCommonArray[heapTimer[0]].bRegionInside[curRegionID]) +
+									recordMoleculesRecent(&microMolListRecent[curRegion][curMolType], &molListPassive3D[curMolPassive], actorCommonArray[heapTimer[0]].regionInterType[curRegionID], actorCommonArray[heapTimer[0]].regionInterBound[curRegionID], bRecordPos,
+									actorCommonArray[heapTimer[0]].bRegionInside[curRegionID]);
 							} else
 							{	// Search through subvolumes inside actor
 								for(curSubID = 0;

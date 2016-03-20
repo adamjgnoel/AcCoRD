@@ -64,12 +64,6 @@ bool bPointInBoundary(const double point[3],
 	switch (boundary1Type)
 	{
 		case RECTANGLE:
-			return (point[0] >= boundary1[0]
-				&& point[0] <= boundary1[1]
-				&& point[1] >= boundary1[2]
-				&& point[1] <= boundary1[3]
-				&& point[2] >= boundary1[4]
-				&& point[2] <= boundary1[5]);
 		case RECTANGULAR_BOX:
 			return (point[0] >= boundary1[0]
 				&& point[0] <= boundary1[1]
@@ -78,7 +72,7 @@ bool bPointInBoundary(const double point[3],
 				&& point[2] >= boundary1[4]
 				&& point[2] <= boundary1[5]);
 		case SPHERE:
-			return (pointDistance(point, boundary1) < boundary1[3]);
+			return (pointDistance(point, boundary1) <= boundary1[3]);
 		default:
 			fprintf(stderr,"ERROR: Cannot find point in shape type %s.\n", boundaryString(boundary1Type));
 			return false;

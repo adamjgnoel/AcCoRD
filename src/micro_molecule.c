@@ -16,6 +16,8 @@
  *
  * Revision LATEST_RELEASE
  * - added surface reactions, including membrane transitions
+ * - added switch to record all molecules in a region instead of just those
+ * within some specified boundary
  * - corrected distance to end point when a molecule is "pushed" into a neighboring
  * region
  * - added fail check to while loop when a molecule is "pushed" into a 
@@ -741,7 +743,8 @@ bool followMolecule(const double startPoint[3],
 		if(regionArray[*endRegion].spec.type != REGION_NORMAL)
 		{ // Closest region is some kind of surface
 			// Check whether we are actually in child of surface
-			if(!bPointInRegionOrChild(*endRegion, regionArray, nearestIntersectPoint, endRegion))
+			if(!bPointInRegionOrChild(*endRegion, regionArray, nearestIntersectPoint, endRegion)
+				&& regionArray[*endRegion].spec.shape != SPHERE)
 			{ // Something went wrong here because we are not actually
 				// in the endRegion region (or its children)
 				fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",
@@ -926,14 +929,15 @@ uint64_t recordMolecules(ListMol3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
-	bool bRecordPos)
+	bool bRecordPos,
+	bool bRecordAll)
 {
 	NodeMol3D * p_node = *p_list;
 	uint64_t curCount = 0ULL;
 	
 	while(p_node != NULL)
 	{
-		if (isMoleculeObserved(&p_node->item, obsType, boundary))
+		if (bRecordAll || isMoleculeObserved(&p_node->item, obsType, boundary))
 		{
 			curCount++;
 			if(bRecordPos && !addItem(p_node->item, recordList))
@@ -952,14 +956,15 @@ uint64_t recordMoleculesRecent(ListMolRecent3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
-	bool bRecordPos)
+	bool bRecordPos,
+	bool bRecordAll)
 {
 	NodeMolRecent3D * p_node = *p_list;
 	uint64_t curCount = 0ULL;
 	
 	while(p_node != NULL)
 	{
-		if (isMoleculeObservedRecent(&p_node->item, obsType, boundary))
+		if (bRecordAll || isMoleculeObservedRecent(&p_node->item, obsType, boundary))
 		{
 			curCount++;
 			if(bRecordPos && !addMolecule(recordList, p_node->item.x, p_node->item.y, p_node->item.z))

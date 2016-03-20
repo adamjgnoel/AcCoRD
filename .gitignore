@@ -11,3 +11,4 @@ config/test.txt
 bin/results/
 results/
 config/accord_ppp_passive1.txt
+config/test2.txt

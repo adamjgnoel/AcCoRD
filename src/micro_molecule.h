@@ -77,15 +77,15 @@ typedef NodeMolRecent3D * ListMolRecent3D;
 
 // micro_molecule specific Prototypes
 
-bool addMolecule3D(ListMol3D * p_list, double x, double y, double z);
+bool addMolecule(ListMol3D * p_list, double x, double y, double z);
 
-bool addMoleculeRecent3D(ListMolRecent3D * p_list, double x, double y, double z, double dt_partial);
+bool addMoleculeRecent(ListMolRecent3D * p_list, double x, double y, double z, double dt_partial);
 
-void moveMolecule3D(ItemMol3D * molecule, double x, double y, double z);
+void moveMolecule(ItemMol3D * molecule, double x, double y, double z);
 
-void moveMoleculeRecent3D(ItemMolRecent3D * molecule, double x, double y, double z);
+void moveMoleculeRecent(ItemMolRecent3D * molecule, double x, double y, double z);
 
-void diffuseMolecules3D(const short NUM_REGIONS,
+void diffuseMolecules(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D p_listRecent[NUM_REGIONS][NUM_MOL_TYPES],
@@ -95,24 +95,24 @@ void diffuseMolecules3D(const short NUM_REGIONS,
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
-void diffuseOneMolecule3D(ItemMol3D * molecule, double sigma);
+void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
 
-void diffuseOneMoleculeRecent3D(ItemMolRecent3D * molecule, double DIFF_COEF);
+void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF);
 
-void rxnFirstOrder3D(ListMol3D * p_list,
+void rxnFirstOrder(ListMol3D * p_list,
 	const struct region regionArray,
 	unsigned short curMolType,
 	const unsigned short NUM_MOL_TYPES,
 	ListMolRecent3D pRecentList[NUM_MOL_TYPES]);
 
-void rxnFirstOrderRecent3D(const unsigned short NUM_MOL_TYPES,
+void rxnFirstOrderRecent(const unsigned short NUM_MOL_TYPES,
 	ListMolRecent3D pRecentList[NUM_MOL_TYPES],
 	const struct region regionArray,
 	unsigned short curMolType,
 	bool bCheckCount,
 	uint32_t numMolCheck[NUM_MOL_TYPES]);
 
-void transferMolecules3D(ListMolRecent3D * molListRecent, ListMol3D * molList);
+void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList);
 
 bool validateMolecule(double newPoint[3],
 	double oldPoint[3],
@@ -120,7 +120,10 @@ bool validateMolecule(double newPoint[3],
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
-	const struct region regionArray[]);
+	const struct region regionArray[],
+	short molType,
+	bool * bReaction,
+	unsigned short * curRxn);
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
 // start and end points
@@ -133,47 +136,52 @@ bool followMolecule(const double startPoint[3],
 	short * endRegion,
 	short * transRegion,
 	const struct region regionArray[],
+	short molType,
+	bool * bReaction,
+	unsigned short * curRxn,
 	unsigned int depth);
 
-uint64_t countMolecules3D(ListMol3D * p_list,
+uint64_t countMolecules(ListMol3D * p_list,
 	int obsType,
 	double boundary[]);
 
-uint64_t countMoleculesRecent3D(ListMolRecent3D * p_list,
+uint64_t countMoleculesRecent(ListMolRecent3D * p_list,
 	int obsType,
 	double boundary[]);
 
-uint64_t recordMolecules3D(ListMol3D * p_list,
+uint64_t recordMolecules(ListMol3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
-	bool bRecordPos);
+	bool bRecordPos,
+	bool bRecordAll);
 
-uint64_t recordMoleculesRecent3D(ListMolRecent3D * p_list,
+uint64_t recordMoleculesRecent(ListMolRecent3D * p_list,
 	ListMol3D * recordList,
 	int obsType,
 	double boundary[],
-	bool bRecordPos);
+	bool bRecordPos,
+	bool bRecordAll);
 
-bool isMoleculeObserved3D(ItemMol3D * molecule,
+bool isMoleculeObserved(ItemMol3D * molecule,
 	int obsType,
 	double boundary[]);
 
-bool isMoleculeObservedRecent3D(ItemMolRecent3D * molecule,
+bool isMoleculeObservedRecent(ItemMolRecent3D * molecule,
 	int obsType,
 	double boundary[]);
 
 // General Prototypes
 
-void initializeListMol3D(ListMol3D * p_list);
+void initializeListMol(ListMol3D * p_list);
 
-void initializeListMolRecent3D(ListMolRecent3D * p_list);
+void initializeListMolRecent(ListMolRecent3D * p_list);
 
 bool isListMol3DEmpty(const ListMol3D * p_list);
 
 bool isListMol3DRecentEmpty(const ListMolRecent3D * p_list);
 
-void emptyListMol3D(ListMol3D * p_list);
+void emptyListMol(ListMol3D * p_list);
 
 void emptyListMol3DRecent(ListMolRecent3D * p_list);
 

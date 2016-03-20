@@ -164,6 +164,15 @@ struct actorStruct3D { // Common actor parameters
 	// The number of regions that are (at least partially) within actor space
 	unsigned short numRegion;
 	
+	// What is the largest effective dimension of any region within actor space?
+	// If 3, then only normal 3D regions count towards actor volume
+	// If 2, then only 3D surface regions and normal 2D regions count towards actor volume
+	unsigned short maxDim;
+	
+	// The number of regions are (at least partially) within actor space AND
+	// have the same effective dimension as the actor itself
+	unsigned short numRegionDim;
+	
 	// Array of IDs of regions that are (at least partially) within actor space
 	// Length is numRegion
 	unsigned short * regionID;
@@ -330,10 +339,10 @@ struct actorPassiveStruct3D { // Passive actor parameters
 * Function Declarations
 */
 
-void allocateActorCommonArray3D(const short NUM_ACTORS,
+void allocateActorCommonArray(const short NUM_ACTORS,
 	struct actorStruct3D ** actorCommonArray);
 
-void initializeActorCommon3D(const short NUM_ACTORS,
+void initializeActorCommon(const short NUM_ACTORS,
 	struct actorStruct3D actorCommonArray[],
 	const struct actorStructSpec3D actorCommonSpecArray[],
 	const struct region regionArray[],
@@ -343,14 +352,15 @@ void initializeActorCommon3D(const short NUM_ACTORS,
 	short * numActorRecord,
 	short ** actorRecordID,
 	uint32_t **** subID,
+	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE);
 
-void allocateActorActivePassiveArray3D(const short NUM_ACTORS_ACTIVE,
+void allocateActorActivePassiveArray(const short NUM_ACTORS_ACTIVE,
 	struct actorActiveStruct3D ** actorActiveArray,
 	const short NUM_ACTORS_PASSIVE,
 	struct actorPassiveStruct3D ** actorPassiveArray);
 
-void initializeActorActivePassive3D(const short NUM_ACTORS,
+void initializeActorActivePassive(const short NUM_ACTORS,
 	const struct actorStruct3D actorCommonArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
@@ -361,7 +371,7 @@ void initializeActorActivePassive3D(const short NUM_ACTORS,
 	struct actorPassiveStruct3D actorPassiveArray[],
 	uint32_t subCoorInd[][3]);
 
-void resetActors3D(const short NUM_ACTORS,
+void resetActors(const short NUM_ACTORS,
 	struct actorStruct3D actorCommonArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
@@ -371,7 +381,7 @@ void resetActors3D(const short NUM_ACTORS,
 	const short NUM_ACTORS_PASSIVE,
 	struct actorPassiveStruct3D actorPassiveArray[]);
 
-void deleteActor3D(const short NUM_ACTORS,
+void deleteActor(const short NUM_ACTORS,
 	struct actorStruct3D actorCommonArray[],
 	const struct region regionArray[],
 	const short NUM_ACTORS_ACTIVE,
@@ -382,16 +392,16 @@ void deleteActor3D(const short NUM_ACTORS,
 
 // TODO: Move these release functions into a "higher" level file
 	
-void newRelease3D(const struct actorStruct3D * actorCommon,
+void newRelease(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
 	double curTime);
 
-void findNextEmission3D(const struct actorStruct3D * actorCommon,
+void findNextEmission(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive);
 
-void fireEmission3D(const struct actorStruct3D * actorCommon,
+void fireEmission(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
-	struct region region[],
+	struct region regionArray[],
 	const short NUM_REGIONS,
 	struct subvolume3D subvolArray[],
 	struct mesoSubvolume3D * mesoSubArray,
@@ -403,9 +413,9 @@ void fireEmission3D(const struct actorStruct3D * actorCommon,
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2]);
 	
-void placeMolecules3D(const struct actorStruct3D * actorCommon,
+void placeMolecules(const struct actorStruct3D * actorCommon,
 	const struct actorActiveStruct3D * actorActive,
-	struct region region[],
+	struct region regionArray[],
 	const short NUM_REGIONS,
 	struct subvolume3D subvolArray[],
 	struct mesoSubvolume3D * mesoSubArray,
@@ -420,9 +430,9 @@ void placeMolecules3D(const struct actorStruct3D * actorCommon,
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2]);
 
-void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
+void placeMoleculesInRegion(const struct actorStruct3D * actorCommon,
 	const struct actorActiveStruct3D * actorActive,
-	struct region region[],
+	struct region regionArray[],
 	const short curRegion,
 	const short curRegionInter,
 	const short NUM_REGIONS,
@@ -439,7 +449,7 @@ void placeMoleculesInRegion3D(const struct actorStruct3D * actorCommon,
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2]);
 	
-void placeMoleculesInSub3D(struct region region[],
+void placeMoleculesInSub(struct region regionArray[],
 	struct subvolume3D subvolArray[],
 	struct mesoSubvolume3D * mesoSubArray,
 	const uint32_t numMesoSub,
@@ -452,5 +462,20 @@ void placeMoleculesInSub3D(struct region region[],
 	uint32_t * heap_subvolID,
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2]);
+
+// Find range of subvolumes to search over for intersection with an actor
+void findSubSearchRange(const struct region regionArray[],
+	const short curRegion,
+	const short curInterRegion,
+	const struct actorStruct3D actorCommonArray[],
+	const short curActor,
+	uint32_t * first1,
+	uint32_t * first2,
+	uint32_t * first3,
+	uint32_t * last1,
+	uint32_t * last2,
+	uint32_t * last3,
+	bool bHaveCur1,
+	uint32_t cur1);
 
 #endif // ACTOR_H

@@ -1,5 +1,5 @@
 This license files lists multiple licenses.
-Unless otherwise noted in the individual source files, all AcCoRD source code is copyrighted by Adam Noel under the "BSD Simplified" license.
+Unless otherwise noted in the individual source files, all AcCoRD source code is copyrighted by Adam Noel under the "New BSD" license.
 
 The exceptions (and their corresonding header files) are as follows:
 - mtwist.c and randistrs.c are licensed by Geoff Kuenning under LGPL (see gpl.txt and lgpl-3.0.txt for complete LGPL). Minor modifications were made to randistrs.c by Adam Noel and there are corresponding comments tagged with "AcCoRD"

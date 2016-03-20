@@ -10,9 +10,16 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - filling in cases for 2D Rectangles
+ * - added function to calculate boundary surface area. Renamed boundaryArea
+ * function to boundaryVolume to avoid name confusion
+ * - added function to return string of boundary name and integrated with error
+ * messages
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -57,12 +64,6 @@ bool bPointInBoundary(const double point[3],
 	switch (boundary1Type)
 	{
 		case RECTANGLE:
-			return (point[0] >= boundary1[0]
-				&& point[0] <= boundary1[1]
-				&& point[1] >= boundary1[2]
-				&& point[1] <= boundary1[3]
-				&& point[2] >= boundary1[4]
-				&& point[2] <= boundary1[5]);
 		case RECTANGULAR_BOX:
 			return (point[0] >= boundary1[0]
 				&& point[0] <= boundary1[1]
@@ -71,18 +72,14 @@ bool bPointInBoundary(const double point[3],
 				&& point[2] >= boundary1[4]
 				&& point[2] <= boundary1[5]);
 		case SPHERE:
-			return (pointDistance3D(point, boundary1) < boundary1[3]);
+			return (pointDistance(point, boundary1) <= boundary1[3]);
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot find point in shape type %s.\n", boundaryString(boundary1Type));
 			return false;
 	}
 }
 
-//Do two sets of boundaries overlap?
-//  Boundary Formats:
-//  RECTANGLE 	-> [x_lower,x_upper,y_lower,y_upper]
-//  CIRCLE    	-> [x_center,y_center,radius,radius^2]
-//
+// Do two sets of boundaries overlap?
 bool bBoundaryIntersect(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
@@ -93,19 +90,6 @@ bool bBoundaryIntersect(const int boundary1Type,
 	switch (boundary1Type)
 	{
 		case RECTANGLE:
-			switch (boundary2Type)
-			{
-				case RECTANGLE:
-					return (boundary1[2] < boundary2[3]
-						&& boundary1[3] > boundary2[2]
-						&& boundary1[0] < boundary2[1]
-						&& boundary1[1] > boundary2[0]);
-				default:
-					fprintf(stderr,
-						"ERROR: Boundary type combination %d and %d invalid.\n",
-						boundary1Type, boundary2Type);
-					return false;
-			}
 		case RECTANGULAR_BOX:
 			switch (boundary2Type)
 			{
@@ -138,17 +122,18 @@ bool bBoundaryIntersect(const int boundary1Type,
 						RECTANGULAR_BOX, boundary1, 0.) );
 				default:
 					fprintf(stderr,
-						"ERROR: Boundary type combination %d and %d invalid.\n",
-						boundary1Type, boundary2Type);
+						"ERROR: Cannot determine the intersection of a %s and a %s.\n",
+						boundaryString(boundary2Type), boundaryString(boundary1Type));
 					return false;
 			}
 		case SPHERE:
 			switch (boundary2Type)
 			{
 				case SPHERE:
-					d = pointDistance3D(boundary1, boundary2);
+					d = pointDistance(boundary1, boundary2);
 					return (d < boundary1[3] + boundary2[3] + clearance
 						&& d > fabs(boundary1[3] - boundary2[3]));
+				case RECTANGLE:
 				case RECTANGULAR_BOX:
 					d = 0;
 					if(boundary1[0] < boundary2[0])
@@ -171,18 +156,18 @@ bool bBoundaryIntersect(const int boundary1Type,
 						RECTANGULAR_BOX, boundary2, 0.) );
 				default:
 					fprintf(stderr,
-						"ERROR: Boundary type combination %d and %d invalid.\n",
-						boundary1Type, boundary2Type);
+						"ERROR: Cannot determine the intersection of a %s and a %s.\n",
+						boundaryString(boundary2Type), boundaryString(boundary1Type));
 					return false;
 			}
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot find intersection with shape %s.\n", boundaryString(boundary1Type));
 			return false;
 	}
 }
 
-// Are two sets of boundaries adjacent?
-//  Both boundaries must be rectangular (either 2D or 3D)
+// Are two sets of boundaries adjacent? Intersections will not be detected.
+// Both boundaries must be rectangular (either 2D or 3D)
 bool bBoundaryAdjacent(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
@@ -190,11 +175,30 @@ bool bBoundaryAdjacent(const int boundary1Type,
 	const double distError,
 	unsigned short * direction)
 {	
-	if(boundary1Type == RECTANGLE && boundary2Type == RECTANGLE)
+
+	if((boundary1Type == RECTANGULAR_BOX
+		&& boundary2Type == RECTANGULAR_BOX) || 
+		(boundary1Type == RECTANGLE
+		&& boundary2Type == RECTANGULAR_BOX) || 
+		(boundary1Type == RECTANGULAR_BOX
+		&& boundary2Type == RECTANGLE))
 	{
-		if( // Do rectangles share face along y-axis?
+		if( // Do boxes share face along xy-plane?
+			(boundary1[1] > boundary2[0] + distError) && (boundary2[1] > boundary1[0] + distError)
+				&& (boundary1[3] > boundary2[2] + distError) && (boundary2[3] > boundary1[2] + distError))
+		{
+			if(fabs(boundary1[4] - boundary2[5]) < distError)
+			{ // Boundary 2 is adjacent to boundary 1 along 1's lower z
+				*direction = IN;
+				return true;
+			} else if (fabs(boundary2[4] - boundary1[5]) < distError)
+			{ // Boundary 2 is adjacent to boundary 1 along 1's upper z
+				*direction = OUT;
+				return true;
+			}
+		} else if( // Do boxes share face along zy-plane?
 			(boundary1[3] > boundary2[2] + distError) && (boundary2[3] > boundary1[2] + distError)
-		)
+				&& (boundary1[5] > boundary2[4] + distError) && (boundary2[5] > boundary1[4] + distError))
 		{
 			if(fabs(boundary1[0] - boundary2[1]) < distError)
 			{ // Boundary 2 is adjacent to boundary 1 along 1's lower x
@@ -205,9 +209,9 @@ bool bBoundaryAdjacent(const int boundary1Type,
 				*direction = RIGHT;
 				return true;
 			}
-		} else if( // Do rectangles share face along x-axis?
+		} else if( // Do boxes share face along zx-plane?
 			(boundary1[1] > boundary2[0] + distError) && (boundary2[1] > boundary1[0] + distError)
-		)
+				&& (boundary1[5] > boundary2[4] + distError) && (boundary2[5] > boundary1[4] + distError))
 		{
 			if(fabs(boundary1[2] - boundary2[3]) < distError)
 			{ // Boundary 2 is adjacent to boundary 1 along 1's lower y
@@ -219,49 +223,95 @@ bool bBoundaryAdjacent(const int boundary1Type,
 				return true;
 			}
 		}
-	} else if(boundary1Type == RECTANGULAR_BOX && boundary2Type == RECTANGULAR_BOX)
-	{
-		if( // Do rectangles share face along xy-plane?
-			(boundary1[1] > boundary2[0] + distError) && (boundary2[1] > boundary1[0] + distError
-				&& boundary1[3] > boundary2[2] + distError) && (boundary2[3] > boundary1[2] + distError)
-		)
-		{
-			if(fabs(boundary1[4] - boundary2[5]) < distError)
-			{ // Boundary 2 is adjacent to boundary 1 along 1's lower z
-				*direction = IN;
-				return true;
-			} else if (fabs(boundary2[4] - boundary1[5]) < distError)
-			{ // Boundary 2 is adjacent to boundary 1 along 1's upper z
-				*direction = OUT;
-				return true;
+	} else if(boundary1Type == RECTANGLE
+		&& boundary2Type == RECTANGLE)
+	{ // Boundaries are both rectangles. They must lie in same plane to have adjacency
+		if(boundary1[0] == boundary1[1]
+			&& fabs(boundary1[0] - boundary2[0]) < distError
+			&& fabs(boundary1[0] - boundary2[1]) < distError)
+		{ // boundaries are both in YZ plane
+			if ((boundary1[3] > boundary2[2] + distError)
+				&& (boundary2[3] > boundary1[2] + distError))
+			{ // There is overlap along Y
+				if(fabs(boundary1[4] - boundary2[5]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's lower z
+					*direction = IN;
+					return true;
+				} else if (fabs(boundary2[4] - boundary1[5]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's upper z
+					*direction = OUT;
+					return true;
+				}
+			} else if((boundary1[5] > boundary2[4] + distError)
+				&& (boundary2[5] > boundary1[4] + distError))
+			{ // There is overlap along Z
+				if(fabs(boundary1[2] - boundary2[3]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's lower y
+					*direction = DOWN;
+					return true;
+				} else if (fabs(boundary2[2] - boundary1[3]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's upper y
+					*direction = UP;
+					return true;
+				}
 			}
-		} else if( // Do rectangles share face along zy-plane?
-			(boundary1[3] > boundary2[2] + distError) && (boundary2[3] > boundary1[2] + distError
-				&& boundary1[5] > boundary2[4] + distError) && (boundary2[5] > boundary1[4] + distError)
-		)
-		{
-			if(fabs(boundary1[0] - boundary2[1]) < distError)
-			{ // Boundary 2 is adjacent to boundary 1 along 1's lower x
-				*direction = LEFT;
-				return true;
-			} else if (fabs(boundary2[0] - boundary1[1]) < distError)
-			{ // Boundary 2 is adjacent to boundary 1 along 1's upper x
-				*direction = RIGHT;
-				return true;
+		} else if(boundary1[2] == boundary1[3]
+			&& fabs(boundary1[2] - boundary2[2]) < distError
+			&& fabs(boundary1[2] - boundary2[3]) < distError)
+		{ // boundaries are both in XZ plane
+			if((boundary1[1] > boundary2[0] + distError)
+				&& (boundary2[1] > boundary1[0] + distError))
+			{ // There is overlap along X
+				if(fabs(boundary1[4] - boundary2[5]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's lower z
+					*direction = IN;
+					return true;
+				} else if (fabs(boundary2[4] - boundary1[5]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's upper z
+					*direction = OUT;
+					return true;
+				}
+			} else if((boundary1[5] > boundary2[4] + distError)
+				&& (boundary2[5] > boundary1[4] + distError))
+			{ // There is overlap along Z
+				if(fabs(boundary1[0] - boundary2[1]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's lower x
+					*direction = LEFT;
+					return true;
+				} else if (fabs(boundary2[0] - boundary1[1]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's upper x
+					*direction = RIGHT;
+					return true;
+				}
 			}
-		} else if( // Do rectangles share face along zx-plane?
-			(boundary1[1] > boundary2[0] + distError) && (boundary2[1] > boundary1[0] + distError
-				&& boundary1[5] > boundary2[4] + distError) && (boundary2[5] > boundary1[4] + distError)
-		)
-		{
-			if(fabs(boundary1[2] - boundary2[3]) < distError)
-			{ // Boundary 2 is adjacent to boundary 1 along 1's lower y
-				*direction = DOWN;
-				return true;
-			} else if (fabs(boundary2[2] - boundary1[3]) < distError)
-			{ // Boundary 2 is adjacent to boundary 1 along 1's upper y
-				*direction = UP;
-				return true;
+		} else if(boundary1[4] == boundary1[5]
+			&& fabs(boundary1[4] - boundary2[4]) < distError
+			&& fabs(boundary1[4] - boundary2[5]) < distError)
+		{ // boundaries are both in XY plane
+			if((boundary1[1] > boundary2[0] + distError)
+				&& (boundary2[1] > boundary1[0] + distError))
+			{ // There is overlap along X
+				if(fabs(boundary1[2] - boundary2[3]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's lower y
+					*direction = DOWN;
+					return true;
+				} else if (fabs(boundary2[2] - boundary1[3]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's upper y
+					*direction = UP;
+					return true;
+				}
+			} else if ((boundary1[3] > boundary2[2] + distError)
+				&& (boundary2[3] > boundary1[2] + distError))
+			{ // There is overlap along Y
+				if(fabs(boundary1[0] - boundary2[1]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's lower x
+					*direction = LEFT;
+					return true;
+				} else if (fabs(boundary2[0] - boundary1[1]) < distError)
+				{ // Boundary 2 is adjacent to boundary 1 along 1's upper x
+					*direction = RIGHT;
+					return true;
+				}
 			}
 		}
 	}
@@ -282,25 +332,10 @@ bool bBoundarySurround(const int boundary1Type,
 	switch (boundary1Type)
 	{ // Is boundary1 inside of boundary2?
 		case RECTANGLE:
-			switch (boundary2Type)
-			{
-				case RECTANGLE:
-					// TODO: Clearance doesn't apply to 1 dimension of 2D shapes
-					return (boundary1[0] >= boundary2[0] + clearance
-						&& boundary1[1] <= boundary2[1] - clearance
-						&& boundary1[2] >= boundary2[2] + clearance
-						&& boundary1[3] <= boundary2[3] - clearance
-						&& boundary1[4] >= boundary2[4] + clearance
-						&& boundary1[5] <= boundary2[5] - clearance);
-				default:
-					fprintf(stderr,
-						"ERROR: Boundary type combination %d and %d invalid.\n",
-						boundary1Type, boundary2Type);
-					return false;
-			}
 		case RECTANGULAR_BOX:
 			switch (boundary2Type)
 			{
+				case RECTANGLE:
 				case RECTANGULAR_BOX:
 					return (boundary1[0] >= boundary2[0] + clearance
 						&& boundary1[1] <= boundary2[1] - clearance
@@ -308,58 +343,60 @@ bool bBoundarySurround(const int boundary1Type,
 						&& boundary1[3] <= boundary2[3] - clearance
 						&& boundary1[4] >= boundary2[4] + clearance
 						&& boundary1[5] <= boundary2[5] - clearance);
-				case SPHERE:
+				case SPHERE:				
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[0];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[2];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[4];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					p1[0] = boundary1[1];
 					p1[1] = boundary1[3];
 					p1[2] = boundary1[5];
-					if(boundary2[3] < pointDistance3D(p1, boundary2) + clearance)
+					if(boundary2[3] < pointDistance(p1, boundary2) + clearance)
 						return false;
 					// All fail cases have been tried
 					return true;
 				default:
 					fprintf(stderr,
-						"ERROR: Boundary type combination %d and %d invalid.\n",
-						boundary1Type, boundary2Type);
+						"ERROR: Cannot determine whether a %s is inside of a %s.\n",
+						boundaryString(boundary2Type), boundaryString(boundary1Type));
 					return false;
 			}
 		case SPHERE:
 			switch (boundary2Type)
 			{
+				case RECTANGLE:
+					return false; // A 3D object cannot be inside of a 2D object
 				case RECTANGULAR_BOX:
 					return(boundary1[3] <= (boundary1[0] - boundary2[0] - clearance) &&
 						boundary1[3] <= (boundary2[1] - boundary1[0] - clearance) &&
@@ -369,15 +406,15 @@ bool bBoundarySurround(const int boundary1Type,
 						boundary1[3] <= (boundary2[5] - boundary1[2] - clearance));
 				case SPHERE:
 					return(boundary2[3] >= (boundary1[3] +
-						pointDistance3D(boundary1, boundary2) + clearance));
+						pointDistance(boundary1, boundary2) + clearance));
 				default:
 					fprintf(stderr,
-						"ERROR: Boundary type combination %d and %d invalid.\n",
-						boundary1Type, boundary2Type);
+						"ERROR: Cannot determine whether a %s is inside of a %s.\n",
+						boundaryString(boundary2Type), boundaryString(boundary1Type));
 					return false;
 			}
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot determine whether shape %s is inside another boundary.\n", boundaryString(boundary1Type));
 			return false;
 	}
 }
@@ -413,6 +450,7 @@ bool bLineHitBoundary(const double p1[3],
 	const int boundary1Type,
 	const double boundary1[],
 	short * planeID,
+	const short planeIDConst,
 	const bool bInside,
 	double * d,
 	double intersectPoint[3])
@@ -424,6 +462,15 @@ bool bLineHitBoundary(const double p1[3],
 	
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			if(bLineHitInfinitePlane(p1, L, length, RECTANGLE, boundary1,
+				planeIDConst, false, d, intersectPoint)
+				&& bPointOnFace(intersectPoint, RECTANGLE, boundary1, planeIDConst)
+				&& *d < minDist)
+			{
+				return true;
+			}
+			return false;
 		case RECTANGULAR_BOX:
 			for(curPlane = 0; curPlane < 6; curPlane++)
 			{
@@ -453,7 +500,7 @@ bool bLineHitBoundary(const double p1[3],
 			return bLineHitInfinitePlane(p1, L, length, SPHERE, boundary1,
 					curPlane, bInside, d, intersectPoint);
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid for boundary intersection.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot determine whether shape %s intersects another shape.\n", boundaryString(boundary1Type));
 			return false;		
 	}
 }
@@ -474,6 +521,23 @@ bool bLineHitInfinitePlane(const double p1[3],
 	
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			switch(planeID)
+			{
+				case PLANE_XY:
+					*d = (boundary1[4]-p1[2])/L[2];
+					break;
+				case PLANE_XZ:
+					*d = (boundary1[2]-p1[1])/L[1];
+					break;
+				case PLANE_YZ:
+					*d = (boundary1[0]-p1[0])/L[0];
+					break;
+			}
+			intersectPoint[0] = (*d)*L[0] + p1[0];
+			intersectPoint[1] = (*d)*L[1] + p1[1];
+			intersectPoint[2] = (*d)*L[2] + p1[2];
+			break;
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{
@@ -523,7 +587,7 @@ bool bLineHitInfinitePlane(const double p1[3],
 			intersectPoint[2] = p1[2] + L[2]*(*d);
 			break;		
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid for single plane intersection.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot determine whether a line hits the plane of a %s.\n", boundaryString(boundary1Type));
 			*d = 0;
 			return false;	
 	}
@@ -540,6 +604,25 @@ bool bPointOnFace(const double p1[3],
 {
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
+			switch(planeID)
+			{
+				case PLANE_XY:
+					return (p1[1] >= boundary1[2]
+						&& p1[1] <= boundary1[3]
+						&& p1[0] >= boundary1[0]
+						&& p1[0] <= boundary1[1]);
+				case PLANE_XZ:
+					return (p1[0] >= boundary1[0]
+						&& p1[0] <= boundary1[1]
+						&& p1[2] >= boundary1[4]
+						&& p1[2] <= boundary1[5]);
+				case PLANE_YZ:
+					return (p1[1] >= boundary1[2]
+						&& p1[1] <= boundary1[3]
+						&& p1[2] >= boundary1[4]
+						&& p1[2] <= boundary1[5]);					
+			}
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{
@@ -566,8 +649,185 @@ bool bPointOnFace(const double p1[3],
 			// Trivially true
 			return true;
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot determine whether point is on the face of a %s.\n", boundaryString(boundary1Type));
 			return false;	
+	}
+}
+
+// Do 2 boundaries share the same given surface?
+// If so, faceShared specifies where they overlap
+// This function is distinct from bBoundaryAdjacent because the shared
+// face must be the same on both boundaries (e.g., lower x)
+bool bSharedSurface(const int boundary1Type,
+	const double boundary1[],
+	const int boundary2Type,
+	const double boundary2[],
+	const short faceID,
+	double faceShared[],
+	const double error)
+{
+	short i;
+	short dim[2];
+	switch (boundary1Type)
+	{
+		case RECTANGLE:
+			switch (boundary2Type)
+			{
+				case RECTANGLE:
+					// dim[0] will define the plane that the rectangles are on
+					// dim[1] will define the shared varying coordinate
+					
+					// What plane are we on?
+					if(boundary1[0] == boundary1[1])
+						dim[0] = 0;
+					else if(boundary1[2] == boundary1[3])
+						dim[0] = 2;
+					else if(boundary1[4] == boundary1[5])
+						dim[0] = 4;
+				
+					// Is specified face normal to rectangle perimeter?
+					// Are rectangles defined on the same plane?
+					if(faceID == dim[0] || faceID == (dim[0] + 1) 
+						|| boundary2[dim[0]] != boundary2[dim[0]+1])
+						return false; // Shared face not possible
+						
+					switch(faceID)
+					{
+						case 0:
+						case 1:
+							if(dim[0] == 2) dim[1] = 4;
+							if(dim[0] == 4) dim[1] = 2;
+							break;
+						case 2:
+						case 3:
+							if(dim[0] == 0) dim[1] = 4;
+							if(dim[0] == 4) dim[1] = 0;
+							break;
+						case 4:
+						case 5:
+							if(dim[0] == 0) dim[1] = 2;
+							if(dim[0] == 2) dim[1] = 0;
+							break;
+						default:
+							fprintf(stderr,
+								"ERROR: Specified face %d invalid for 2 Rectangles.\n", faceID);
+							return false;							
+					}
+					
+					// Is the line actually shared?
+					if(fabs(boundary1[faceID] - boundary2[faceID]) > error)
+						return false; // Lines are different
+					
+					if(boundary1[dim[1]] >= boundary2[dim[1]+1]
+						|| boundary1[dim[1]+1] <= boundary2[dim[1]])
+						return false; // The segments do not overlap
+					
+					// We have overlap. Determine shared segment
+					for(i = 0; i < 6; i++)
+						faceShared[i] = boundary1[i];
+					
+					if(boundary1[dim[1]] < boundary2[dim[1]])
+						faceShared[dim[1]] = boundary2[dim[1]];
+					else
+						faceShared[dim[1]] = boundary1[dim[1]];
+					
+					if(boundary1[dim[1]+1] < boundary2[dim[1]+1])
+						faceShared[dim[1]+1] = boundary1[dim[1]+1];
+					else
+						faceShared[dim[1]+1] = boundary2[dim[1]+1];
+					
+					return true;
+				default:
+					fprintf(stderr,
+						"ERROR: Boundary types %s and %s are not allowed to share a surface.\n",
+						boundaryString(boundary1Type), boundaryString(boundary2Type));
+					return false;
+			}
+		case RECTANGULAR_BOX:
+			switch (boundary2Type)
+			{
+				case RECTANGULAR_BOX:
+					// dim[0] and dim[1] will define the plane that the shared surface
+					// would be on (if it exists)
+					switch(faceID)
+					{
+						case 0:
+						case 1:
+							dim[0] = 2;
+							dim[1] = 4;
+							break;
+						case 2:
+						case 3:
+							dim[0] = 0;
+							dim[1] = 4;
+							break;
+						case 4:
+						case 5:
+							dim[0] = 0;
+							dim[1] = 2;
+							break;
+						default:
+							fprintf(stderr,
+								"ERROR: Specified face %d invalid for 2 Rectanglular Boxes.\n", faceID);
+							return false;							
+					}
+					
+					// Are the 2 faces on the same plane?
+					if(fabs(boundary1[faceID] - boundary2[faceID]) > error)
+						return false; // Planes are different
+					
+					// Do the 2 faces overlap?
+					if(boundary1[dim[0]] >= boundary2[dim[0]+1]
+						|| boundary1[dim[0]+1] <= boundary2[dim[0]]
+						|| boundary1[dim[1]] >= boundary2[dim[1]+1]
+						|| boundary1[dim[1]+1] <= boundary2[dim[1]])
+						return false; // The faces do not overlap
+					
+					// We have overlap. Determine shared rectangle
+					for(i = 0; i < 6; i++)
+						faceShared[i] = boundary1[i];
+					
+					for(i = 0; i < 2; i++)
+					{
+						if(boundary1[dim[i]] < boundary2[dim[i]])
+							faceShared[dim[i]] = boundary2[dim[i]];
+						else
+							faceShared[dim[i]] = boundary1[dim[i]];
+						
+						if(boundary1[dim[i]+1] < boundary2[dim[i]+1])
+							faceShared[dim[i]+1] = boundary1[dim[i]+1];
+						else
+							faceShared[dim[i]+1] = boundary2[dim[i]+1];
+					}
+					
+					return true;
+				default:
+					fprintf(stderr,
+						"ERROR: Boundary types %s and %s are not allowed to share a surface.\n",
+						boundaryString(boundary1Type), boundaryString(boundary2Type));
+					return false;
+			}
+		case SPHERE: // Only one face on a sphere; no need to check faceID
+			switch (boundary2Type)
+			{
+				case SPHERE:
+					for(short i = 0; i < 3; i++)
+					{
+						if(boundary1[i] == boundary2[i])
+							faceShared[i] = boundary1[i];
+						else
+							return false;
+					}
+					return true;
+				default:
+					fprintf(stderr,
+						"ERROR: Boundary types %s and %s are not allowed to share a surface.\n",
+						boundaryString(boundary1Type), boundaryString(boundary2Type));
+					return false;
+			}
+		default:
+			fprintf(stderr,"ERROR: Boundary type %s invalid to share a surface.\n", boundaryString(boundary1Type));
+			return false;
 	}
 }
 
@@ -581,6 +841,7 @@ void recordFace(const int boundary1Type,
 	switch(boundary1Type)
 	{
 		case RECTANGULAR_BOX:
+		case RECTANGLE:
 			switch(faceID)
 			{
 				case 0: // lower yz plane
@@ -632,7 +893,7 @@ void recordFace(const int boundary1Type,
 					boundaryFace[5] = boundary1[5];
 					return;
 				default:
-					fprintf(stderr,"ERROR: Face ID %d invalid.\n", faceID);
+					fprintf(stderr,"ERROR: Face ID %d invalid for a %s.\n", faceID, boundaryString(boundary1Type));
 					return;
 			}
 			return;
@@ -643,7 +904,7 @@ void recordFace(const int boundary1Type,
 			boundaryFace[3] = boundary1[3];
 			return;
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot record the face boundary of shape %s.\n", boundaryString(boundary1Type));
 			return;	
 	}
 }
@@ -681,11 +942,11 @@ bool reflectPoint(const double oldPoint[3],
 	newPoint[2] = curPoint[2];
 	
 	if(!bLineHitBoundary(oldPoint, L, length, boundary1Type, boundary1,
-		planeID, bReflectInside, &dist, intersectPoint))
+		planeID, *planeID, bReflectInside, &dist, intersectPoint))
 	{ // Line did not hit the boundary that it needs to reflect off of
 		// We should just lock boundary closest to endPoint
 		if(!bLineHitBoundary(oldPoint, L, INFINITY, boundary1Type, boundary1,
-			planeID, bReflectInside, &dist, intersectPoint))
+			planeID, *planeID, bReflectInside, &dist, intersectPoint))
 		{ // Assume that point is already at boundary we want to reflect off of
 		  // Just keep point at start
 			intersectPoint[0] = oldPoint[0];
@@ -729,7 +990,7 @@ bool reflectPoint(const double oldPoint[3],
 					newPoint[2] = boundary1[5] + boundary1[5] - curPoint[2];
 					return true;
 				default:
-					fprintf(stderr,"WARNING: Plane intersection ID %d invalid.\n", *planeID);
+					fprintf(stderr,"WARNING: Plane intersection ID %d invalid for a %s.\n", *planeID, boundaryString(boundary1Type));
 					return false;					
 			}
 		case SPHERE:
@@ -751,7 +1012,7 @@ bool reflectPoint(const double oldPoint[3],
 			
 			return true;
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot reflect a point off of a %s.\n", boundaryString(boundary1Type));
 			return false;
 	}
 }
@@ -816,21 +1077,18 @@ double distanceToBoundary(const double point[3],
 			}
 			return 0.;
 		case SPHERE:
-			dist = pointDistance3D(point, boundary1) - boundary1[3];
+			dist = pointDistance(point, boundary1) - boundary1[3];
 			if(dist < 0)
 				dist = -dist;
 			return dist;
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot determine the distance from a point to a %s.\n", boundaryString(boundary1Type));
 			return 0.;
 	}
 }
 
 // Determine boundary of intersection of two boundaries
 //  Only valid for rectangular boundaries (rectangles or boxes) or spherical intersections.
-//  Boundary Formats:
-//  RECTANGLE 	-> [x_lower,x_upper,y_lower,y_upper]
-//
 int intersectBoundary(const int boundary1Type,
 	const double boundary1[],
 	const int boundary2Type,
@@ -838,16 +1096,8 @@ int intersectBoundary(const int boundary1Type,
 	double intersection[6])
 {
 	
-	if(boundary1Type == RECTANGLE && boundary2Type == RECTANGLE)
-	{
-		intersection[0] = (boundary1[0] > boundary2[0])? boundary1[0] : boundary2[0];
-		intersection[1] = (boundary1[1] < boundary2[1])? boundary1[1] : boundary2[1];
-		intersection[2] = (boundary1[2] > boundary2[2])? boundary1[2] : boundary2[2];
-		intersection[3] = (boundary1[3] < boundary2[3])? boundary1[3] : boundary2[3];
-		intersection[4] = 0.;
-		intersection[5] = 0.;
-		return RECTANGLE;
-	} else if(boundary1Type == RECTANGULAR_BOX && boundary2Type == RECTANGULAR_BOX)
+	if((boundary1Type == RECTANGULAR_BOX || boundary1Type == RECTANGLE)
+		&&	(boundary2Type == RECTANGULAR_BOX || boundary2Type == RECTANGLE))
 	{
 		intersection[0] = (boundary1[0] > boundary2[0])? boundary1[0] : boundary2[0];
 		intersection[1] = (boundary1[1] < boundary2[1])? boundary1[1] : boundary2[1];
@@ -855,7 +1105,10 @@ int intersectBoundary(const int boundary1Type,
 		intersection[3] = (boundary1[3] < boundary2[3])? boundary1[3] : boundary2[3];
 		intersection[4] = (boundary1[4] > boundary2[4])? boundary1[4] : boundary2[4];
 		intersection[5] = (boundary1[5] < boundary2[5])? boundary1[5] : boundary2[5];
-		return RECTANGULAR_BOX;
+		if(boundary1Type == RECTANGLE && boundary2Type == RECTANGLE)
+			return RECTANGLE;
+		else
+			return RECTANGULAR_BOX;
 	} else if(boundary1Type == SPHERE || boundary2Type == SPHERE)
 	{
 		// At least one of the boundaries is a sphere. One boundary must be
@@ -893,12 +1146,12 @@ int intersectBoundary(const int boundary1Type,
 		} else
 		{
 			// Intersection is invalid
-			fprintf(stderr,"ERROR: Error: Intersection of two boundaries is invalid. At least one boundary is spherical and hits the other boundary.\n");
+			fprintf(stderr,"ERROR: Intersection of two boundaries is invalid. At least one boundary is spherical and hits the other boundary.\n");
 			return UNDEFINED_SHAPE;
 		}
 	} else
 	{	// Intersection for combination of boundary types is unknown
-		fprintf(stderr,"ERROR: Error: Intersection between Boundary type %d and %d unknown.\n", boundary1Type, boundary2Type);
+		fprintf(stderr,"ERROR: Cannot determine the intersection of a %s and a %s.\n", boundaryString(boundary2Type), boundaryString(boundary1Type));
 		return UNDEFINED_SHAPE;
 	}
 	
@@ -926,17 +1179,23 @@ void defineLine(const double p1[3],
 	}
 }
 
-// Determine area of boundary
-double boundaryArea(const int boundary1Type,
+// Determine volume of boundary
+double boundaryVolume(const int boundary1Type,
 	const double boundary1[])
 {
 	switch (boundary1Type)
 	{
 		case RECTANGLE:
-			if(boundary1[1] < boundary1[0] || boundary1[3] < boundary1[2])
+			if(boundary1[1] < boundary1[0] || boundary1[3] < boundary1[2]
+				 || boundary1[5] < boundary1[4])
 				return 0.;
 			else
-				return (boundary1[1]-boundary1[0])*(boundary1[3]-boundary1[2]);
+				if(boundary1[0] == boundary1[1])
+					return (boundary1[5]-boundary1[4])*(boundary1[3]-boundary1[2]);
+				if(boundary1[2] == boundary1[3])
+					return (boundary1[1]-boundary1[0])*(boundary1[5]-boundary1[4]);
+				if(boundary1[4] == boundary1[5])
+					return (boundary1[1]-boundary1[0])*(boundary1[3]-boundary1[2]);
 		case RECTANGULAR_BOX:
 			if(boundary1[1] < boundary1[0]
 				|| boundary1[3] < boundary1[2]
@@ -949,8 +1208,51 @@ double boundaryArea(const int boundary1Type,
 			return PI*squareDBL(boundary1[3]);
 		case SPHERE:
 			return 4/3*PI*boundary1[3]*boundary1[3]*boundary1[3];
+		case LINE:
+			return sqrt(squareDBL(boundary1[1]-boundary1[0])
+				+ squareDBL(boundary1[3]-boundary1[2])
+				+ squareDBL(boundary1[5]-boundary1[4]));
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundary1Type);
+			fprintf(stderr,"ERROR: Cannot determine the volume of a %s.\n", boundaryString(boundary1Type));
+			return 0;
+	}
+}
+
+// Determine boundary surface Area
+double boundarySurfaceArea(const int boundary1Type,
+	const double boundary1[])
+{
+	double area = 0.;
+	
+	switch (boundary1Type)
+	{
+		case RECTANGLE:
+			if(boundary1[1] < boundary1[0] || boundary1[3] < boundary1[2]
+				 || boundary1[5] < boundary1[4])
+				return 0.;
+			
+			area += 2*(boundary1[1]-boundary1[0]);
+			area += 2*(boundary1[3]-boundary1[2]);
+			area += 2*(boundary1[5]-boundary1[4]);
+			return area;
+			
+		case RECTANGULAR_BOX:
+			if(boundary1[1] < boundary1[0]
+				|| boundary1[3] < boundary1[2]
+				|| boundary1[5] < boundary1[4])
+				return 0.;
+			
+			area += 2* (boundary1[1]-boundary1[0]) * (boundary1[3]-boundary1[2]);
+			area += 2* (boundary1[1]-boundary1[0]) * (boundary1[5]-boundary1[4]);
+			area += 2* (boundary1[5]-boundary1[4]) * (boundary1[3]-boundary1[2]);
+			return area;
+			
+		case CIRCLE:
+			return 2*PI*boundary1[3];
+		case SPHERE:
+			return 4*PI*boundary1[3]*boundary1[3];
+		default:
+			fprintf(stderr,"ERROR: Boundary type %s invalid.\n", boundaryString(boundary1Type));
 			return 0;
 	}
 }
@@ -965,22 +1267,133 @@ double uniformPoint(double rangeMin,
 // Find a random coordinate within the specified boundary
 void uniformPointVolume(double point[3],
 	const int boundaryType,
-	const double boundary1[])
+	const double boundary1[],
+	bool bSurface,
+	const short planeID)
 {
 	bool bNeedPoint;
+	short curFace;
+	double r, rSq;
 	
 	switch (boundaryType)
 	{
 		case RECTANGLE:
-			return;
+			if(bSurface)
+			{
+				curFace = (short) floor(4*mt_drand());
+				switch(planeID)
+				{
+					case PLANE_XY:
+						point[2] = boundary1[4];
+						switch(curFace)
+						{
+							case 0:
+							case 1:
+								point[0] = boundary1[curFace];
+								point[1] = uniformPoint(boundary1[2], boundary1[3]);
+								break;
+							case 2:
+							case 3:
+								point[0] = uniformPoint(boundary1[0], boundary1[1]);
+								point[1] = boundary1[curFace];
+								break;
+						}
+						break;
+					case PLANE_XZ:
+						point[1] = boundary1[2];
+						switch(curFace)
+						{
+							case 0:
+							case 1:
+								point[0] = boundary1[curFace];
+								point[2] = uniformPoint(boundary1[4], boundary1[5]);
+								break;
+							case 2:
+							case 3:
+								point[0] = uniformPoint(boundary1[0], boundary1[1]);
+								point[1] = boundary1[curFace+2];
+								break;
+						}
+						break;
+					case PLANE_YZ:
+						point[0] = boundary1[0];
+						switch(curFace)
+						{
+							case 0:
+							case 1:
+								point[2] = boundary1[curFace+4];
+								point[1] = uniformPoint(boundary1[2], boundary1[3]);
+								break;
+							case 2:
+							case 3:
+								point[2] = uniformPoint(boundary1[4], boundary1[5]);
+								point[1] = boundary1[curFace];
+								break;
+						}
+						break;
+					default:
+						// Something went wrong
+						fprintf(stderr,"ERROR: Cannot generate a uniform random point on plane %u of a rectangle.\n", planeID);
+						return;
+				}
+				return;
+			}
+			switch(planeID)
+			{
+				case PLANE_XY:
+					point[0] = uniformPoint(boundary1[0], boundary1[1]);
+					point[1] = uniformPoint(boundary1[2], boundary1[3]);
+					point[2] = boundary1[4];
+					break;
+				case PLANE_XZ:
+					point[0] = uniformPoint(boundary1[0], boundary1[1]);
+					point[1] = boundary1[2];	
+					point[2] = uniformPoint(boundary1[4], boundary1[5]);
+					break;
+				case PLANE_YZ:
+					point[0] = boundary1[0];
+					point[1] = uniformPoint(boundary1[2], boundary1[3]);
+					point[2] = uniformPoint(boundary1[4], boundary1[5]);
+					break;
+				default:
+					// Something went wrong
+					fprintf(stderr,"ERROR: Cannot generate a uniform random point on plane %u of a rectangle.\n", planeID);
+					return;
+			}
 		case RECTANGULAR_BOX:
+			if(bSurface)
+			{
+				curFace = (short) floor(6*mt_drand());
+				switch(curFace)
+				{
+					case 0:
+					case 1:
+						point[0] = boundary1[curFace];
+						point[1] = uniformPoint(boundary1[2], boundary1[3]);
+						point[2] = uniformPoint(boundary1[4], boundary1[5]);
+						break;
+					case 2:
+					case 3:
+						point[0] = uniformPoint(boundary1[0], boundary1[1]);
+						point[1] = boundary1[curFace];
+						point[2] = uniformPoint(boundary1[4], boundary1[5]);
+						break;
+					case 4:
+					case 5:
+						point[0] = uniformPoint(boundary1[0], boundary1[1]);
+						point[1] = uniformPoint(boundary1[2], boundary1[3]);
+						point[2] = boundary1[curFace];
+						break;
+				}
+				return;
+			}
 			point[0] = uniformPoint(boundary1[0], boundary1[1]);
 			point[1] = uniformPoint(boundary1[2], boundary1[3]);
 			point[2] = uniformPoint(boundary1[4], boundary1[5]);
 			return;
 		case CIRCLE:
 			return;
-		case SPHERE:
+		case SPHERE:			
 			// Use rejection method to create point in sphere
 			bNeedPoint = true;
 			while(bNeedPoint)
@@ -988,31 +1401,43 @@ void uniformPointVolume(double point[3],
 				point[0] = mt_drand();
 				point[1] = mt_drand();
 				point[2] = mt_drand();
-				if (squareDBL(point[0]) + squareDBL(point[1])
-					+ squareDBL(point[2]) < 1.)
+				
+				rSq = squareDBL(point[0]) + squareDBL(point[1])
+					+ squareDBL(point[2]);
+				
+				if (rSq < 1.)
 				{
 					// Found valid point. Scale as needed and randomize sign
 					if(mt_drand() > 0.5)
 						point[0] = -point[0];
-					point[0] = boundary1[0] + point[0]*boundary1[3];
 					if(mt_drand() > 0.5)
 						point[1] = -point[1];
-					point[1] = boundary1[1] + point[1]*boundary1[3];
 					if(mt_drand() > 0.5)
 						point[2] = -point[2];
+					
+					if(bSurface)
+					{
+						r = sqrt(rSq);
+						point[0] /= r;
+						point[1] /= r;
+						point[2] /= r;
+					}					
+					point[0] = boundary1[0] + point[0]*boundary1[3];
+					point[1] = boundary1[1] + point[1]*boundary1[3];
 					point[2] = boundary1[2] + point[2]*boundary1[3];
+					
 					bNeedPoint = false;
 				}
 			}
 			return;
 		default:
-			fprintf(stderr,"ERROR: Boundary type %d invalid.\n", boundaryType);
+			fprintf(stderr,"ERROR: Cannot generate a uniform random point in a %s.\n", boundaryString(boundaryType));
 			return;
 	}
 }
 
 // Find distance between 2 3D points
-double pointDistance3D(const double point1[3],
+double pointDistance(const double point1[3],
 	const double point2[3])
 {
 	return sqrt(squareDBL(point2[0] - point1[0]) +
@@ -1024,4 +1449,31 @@ double pointDistance3D(const double point1[3],
 double squareDBL(double v)
 {
 	return v*v;
+}
+
+// Return string with name of boundary
+// Uses static memory strings in case output is not assigned
+// to allocated memory
+const char * boundaryString(const int boundaryType)
+{
+	static char rectString[] = "Rectangle";
+	static char boxString[] = "Rectangular Box";
+	static char circleString[] = "Circle";
+	static char sphereString[] = "Sphere";
+	static char emptyString[] = "";
+	
+	switch (boundaryType)
+	{
+		case RECTANGLE:
+			return rectString;
+		case RECTANGULAR_BOX:
+			return boxString;
+		case CIRCLE:
+			return circleString;
+		case SPHERE:
+			return sphereString;
+		default:
+			fprintf(stderr,"ERROR: Shape type %d does not have an associated name.\n", boundaryType);
+			return emptyString;
+	}
 }

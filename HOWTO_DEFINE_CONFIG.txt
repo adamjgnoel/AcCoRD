@@ -8,9 +8,12 @@
 // For user documentation, read README.txt in the root AcCoRD directory
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
-// Last revised for AcCoRD v0.4.1
+// Last revised for AcCoRD LATEST_RELEASE
 //
 // Revision history:
+//
+// Revision LATEST_RELEASE
+// - noted important of passive actor time step shifts from microscopic time steps
 //
 // Revision v0.4.1
 // - made placement of config file and output more flexible
@@ -324,9 +327,10 @@
 				"Start Time": 0,
 				// Time of actor's first action.
 				// There should be a slight "offset" for passive actors that are synched
-				// to the actions of active actors. If molecules are being both added and
-				// counted at the same instant, no guarantee is made about which order the
-				// actions will occur
+				// to the actions of active actors OR to microscopic time steps.
+				// If molecules are being both added and
+				// counted at the same instant, and/or a microscopic step is executed,
+				// no guarantee is made about which order the actions will occur
 				// Units are seconds.
 															
 				"Is There Max Number of Actions?": false,

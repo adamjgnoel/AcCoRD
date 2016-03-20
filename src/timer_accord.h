@@ -82,7 +82,7 @@ void initializeTimerArray(const short NUM_TIMERS,
 	struct timerStruct timerArray[]);
 	
 // Reset initial times for all timers
-void resetTimerArray3D(const short NUM_TIMERS,
+void resetTimerArray(const short NUM_TIMERS,
 	struct timerStruct timerArray[],
 	const short NUM_ACTORS,
 	const struct actorStruct3D actorCommonArray[],

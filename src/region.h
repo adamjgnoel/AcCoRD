@@ -10,9 +10,24 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - re-structured region array initialization to nest more code in functions
+ * - added more checks on region parameters (including label uniqueness) to verify placement
+ * - pushed error exit to end of region initialization so that all errors will be displayed
+ * before exiting.
+ * - added 2D regions
+ * - added type member to spec and plane, dimension, and effectiveDim members to main
+ * struct in order to accommodate surface and other 2D regions
+ * - added region label when giving errors about region initialization
+ * - adjusted clearance between spherical and rectangular regions such that the clearance
+ * between them (when one is nested inside the other) is scaled by the subvolume adjacency
+ * error
+ * - corrected "locking" to spherical region so that the coordinate that is "locked" is
+ * the one that is the furthest from the center of the sphere
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -75,6 +90,16 @@ struct spec_region3D { // Used to define a region of subvolumes
 	// restricted to microscopic regions that do not have mesoscopic parents
 	int shape;
 	
+	// Region type. Default is REGION_NORMAL, which means that the region
+	// occupies the entire volume defined and does not impede diffusion across
+	// its boundary.
+	// REGION_SURFACE means that the region is "hollow" and impedes (though
+	// may not necessarily prevent) diffusion across its boundary
+	int type;
+	
+	// Surface type. Default is NO_SURFACE, which corresponds to REGION_NORMAL
+	int surfaceType;
+	
 	// The simulation configuration has a defined base subvolume size,
 	// SUBVOL_BASE_SIZE. Square/cube subvolumes have a length that is a multiple
 	// of SUBVOL_BASE_SIZE.
@@ -109,6 +134,24 @@ struct spec_region3D { // Used to define a region of subvolumes
 struct region { // Region boundary parameters
 	// The user-defined region parameters
 	struct spec_region3D spec;
+	
+	// What plane is the region in?
+	// Applies particularly to 2D regions.
+	// Values are defined in global_param.h
+	short plane;
+	
+	// Number of faces. 0 if region is not a surface
+	short numFace;
+	
+	// What shape do the region's subvolumes have?
+	// May not match region shape if region is a surface
+	short subShape;
+	
+	// Dimension and effective dimension of shape
+	// Dimension depends only on the shape
+	// The effective dimension depends on the shape and the type
+	short dimension;
+	short effectiveDim;
 	
 	// Is this region nested inside another region
 	bool bParent;
@@ -270,11 +313,11 @@ struct region { // Region boundary parameters
 	bool ** bMolAdd;
 	
 	// Number of products associated with each chemical reaction
-	// Size is numChemRxn; maximum value is MAX_RXN_PRODUCTS (defined in global_param.h)
+	// Size is numChemRxn
 	uint32_t * numRxnProducts;
 	
 	// Molecule ID of each product associated with each chemical reaction
-	// Size is numChemRxn x MAX_RXN_PRODUCTS (defined in global_param.h)
+	// Size is numChemRxn x numRxnProducts
 	unsigned short ** productID;
 	
 	// Indicator of what molecule number changes mean that a reaction propensity
@@ -361,7 +404,6 @@ void initializeRegionArray(struct region regionArray[],
 // Initialize region knowledge of the subvolumes that are adjacent to it
 void initializeRegionSubNeighbor(struct region regionArray[],
 	const struct spec_region3D subvol_spec[],
-	const double subHalfSize[],
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const double SUBVOL_BASE_SIZE,
@@ -370,7 +412,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 	uint32_t subCoorInd[][3]);
 
 // Free memory of region parameters
-void delete_boundary_region_3D(const short NUM_REGIONS,
+void delete_boundary_region_(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[]);
 
@@ -380,17 +422,17 @@ double findRegionVolume(const struct region regionArray[],
 	bool bOuter);
 	
 // Count the cumulative number of subvolumes defined by subvol_spec
-uint32_t count_subvol3D(const struct region regionArray[],
+uint32_t countAllSubvolumes(const struct region regionArray[],
 	const short NUM_REGIONS);
 
 // Determine which regions of subvolumes are adjacent
-void findRegionTouch3D(const short NUM_REGIONS,
+void findRegionTouch(const short NUM_REGIONS,
 	const struct spec_region3D subvol_spec[],
 	struct region regionArray[],
 	const double SUBVOL_BASE_SIZE);
 
 // Find index of desired subvolume in list defining region's boundary with another region
-uint32_t find_sub_in_bound_list3D(const short curRegion,
+uint32_t findSubInBoundaryList(const short curRegion,
 	const short destRegion,
 	const struct region regionArray[],
 	uint32_t curSub);
@@ -404,12 +446,19 @@ unsigned short findNearestValidRegion(const double point[],
 
 // Find the closest subvolume in current region that is along boundary
 // of specified neighbor region
-uint32_t findNearestSub3D(const short curRegion,
+uint32_t findNearestSub(const short curRegion,
 	const struct region regionArray[],
 	const short neighRegion,
 	double x,
 	double y,
 	double z);
+
+// Determine coordinates of child region as subvolumes of parent
+// Applies to Rectangular regions only.
+void findChildCoordinates(const short parentRegion,
+	const short childRegion,
+	const short curChild,
+	const struct region regionArray[]);
 
 // Volume of intersection within specified region
 // Value returned here excludes children
@@ -441,13 +490,21 @@ bool bPointInRegionNotChild(const short curRegion,
 bool bPointInRegionOrChild(const short curRegion,
 	const struct region regionArray[],
 	const double point[3],
-	short * actualRegion);
+	short * actualRegion,
+	bool bSurfaceOnly);
 
 // Is a specific face shared between two regions?
 bool bSharedBoundary(const short startRegion,
 	const short endRegion,
 	const struct region regionArray[],
 	const short faceID);
+
+// Is the outer boundary of a child region flush with the subvolumes of its
+// parent? Applies to rectangular regions (2D or 3D)
+bool bChildRegionNotFlush(const short parentRegion,
+	const short childRegion,
+	const struct region regionArray[],
+	const double boundAdjError);
 
 // Lock point coordinate to chosen region face
 void lockPointToRegion(double point[3],
@@ -470,13 +527,56 @@ short findRegionNotChild(const short NUM_REGIONS,
 // Assert that current subvolume is mesoscopic, along its own region boundary, and that
 // neighbor region is microscopic
 bool bSubFaceRegion(struct region regionArray[],
-	const short curRegion,
 	const short neighRegion,
 	const double curSubBound[6],
-	const double subHalfSize,
-	const uint32_t subCoorInd[3],
 	double boundAdjError,
 	unsigned short * numFace,
 	unsigned short dirArray[6]);
+
+// Initialize the region nesting (i.e., determine each region's parent and
+// children regions, if applicable)
+void initializeRegionNesting(const short NUM_REGIONS,
+	struct region regionArray[],
+	bool * bFail);
+
+// Determine number of subvolumes in each region
+void findNumRegionSubvolumes(const short NUM_REGIONS,
+	struct region regionArray[]);
+
+// Allocate memory for each region's neighbors
+void allocateRegionNeighbors(const short NUM_REGIONS,
+	struct region regionArray[]);
+
+// Final check of region overlap and correct adjacency
+void validateRegions(const short NUM_REGIONS,
+	const struct region regionArray[],
+	bool * bFail);
+
+// Check whether the children of a surface region cover all of the
+// region's outer boundary
+void checkSurfaceRegionChildren(const short curRegion,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	bool * bFail);
+
+// Does a one-sided surface exist between 2 rectangular boundaries?
+// Such a surface would prevent the boundaries from being neighbors
+bool bSurfaceBetweenBoundaries(const struct region regionArray[],
+	const short NUM_REGIONS,
+	const short region1,
+	const short region2,
+	const double boundary1[6],
+	const double boundary2[6],
+	unsigned short * surfaceRegion);
+
+// Does a boundary intersect a specified region?
+// Determined by measuring volume of intersection.
+// Intersection should be rectangular. Region can be spherical if it
+// fully contains or is contained by the other boundary
+// Round children must be entirely inside or outside intersection
+bool bIntersectRegion(const short curRegion,
+	const struct region regionArray[],
+	const int boundary2Type,
+	const double boundary2[]);
 
 #endif // REGION_H

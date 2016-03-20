@@ -103,11 +103,12 @@ void allocateSubvolArray(const uint32_t numSub,
 void allocateSubvolHelper(const uint32_t numSub,
 	uint32_t (** subCoorInd)[3],
 	uint32_t ***** subID,
+	uint32_t (*** subIDSize)[2],
 	const short NUM_REGIONS,
 	struct region regionArray[]);
 
 // Free memory of subvolume structure
-void delete_subvol_array3D(const uint32_t numSub,
+void deleteSubvolArray(const uint32_t numSub,
 	struct subvolume3D subvolArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const short NUM_REGIONS,
@@ -115,13 +116,14 @@ void delete_subvol_array3D(const uint32_t numSub,
 	
 void deleteSubvolHelper(uint32_t subCoorInd[][3],
 	uint32_t **** subID,
+	uint32_t (** subIDSize)[2],
 	const short NUM_REGIONS,
 	struct region regionArray[]);
 
 // Construct the array of structures with details of each subvolume
 /* Each structure in the array subvol_spec defines a square/cube region of
 * subvolumes with common properties */
-void buildSubvolArray3D(const uint32_t numSub,
+void buildSubvolArray(const uint32_t numSub,
 	uint32_t * numMesoSub,
 	struct subvolume3D subvolArray[],
 	const struct spec_region3D subvol_spec[],
@@ -132,18 +134,19 @@ void buildSubvolArray3D(const uint32_t numSub,
 	const double SUBVOL_BASE_SIZE,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	uint32_t subCoorInd[numSub][3],
-	uint32_t **** subID);
+	uint32_t **** subID,
+	uint32_t (** subIDSize)[2]);
 
 // Determine whether two subvolumes in neighboring regions are neighbors themselves
 // Assert that each subvolume is along its own region's boundary
 // If subvolumes are neighbors, then the direction from curID towards neighID
 // is written to adjDirection
 bool checkSubvolNeigh(struct region regionArray[],
+	const short NUM_REGIONS,
 	short int curRegion,
 	short int neighRegion,
 	short int * sphRegion,
 	short int * rectRegion,
-	struct subvolume3D subvolArray[],
 	uint32_t curID,
 	uint32_t curNeighID,
 	uint32_t * sphSub,
@@ -152,14 +155,13 @@ bool checkSubvolNeigh(struct region regionArray[],
 	uint32_t subCoorInd[numSub][3],
 	double boundAdjError,
 	unsigned short * adjDirection,
-	double subHalfSize[],
 	double curSubBound[6],
 	double curNeighBound[6],
 	unsigned short * numFaceSph);
 
 // Calculate cartesian coordinates of rectangular subvolume
 void findSubvolCoor(double subBound[6],
-	struct region regionSingle,
+	const struct region regionSingle,
 	uint32_t subCoorInd[3]);
 	
 #endif // SUBVOLUME_H

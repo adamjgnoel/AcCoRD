@@ -71,21 +71,21 @@ struct mesoSubvolume3D {
 //
 
 // Allocate Array of pointers to Mesoscopic subvolume structures
-void allocateMesoSubArray3D(const uint32_t numMesoSub,
+void allocateMesoSubArray(const uint32_t numMesoSub,
 	struct mesoSubvolume3D ** mesoSubArray);
 	
 // Allocate Heap (sorted mesoscopic subvolume IDs) and associated arrays
-void allocateMesoHeapArray3D(const uint32_t numMesoSub,
+void allocateMesoHeapArray(const uint32_t numMesoSub,
 	uint32_t ** heap_subvolID,
 	uint32_t (**heap_childID)[2],
 	bool (**b_heap_childValid)[2]);
 
 // Free memory allocated to array of Mesoscopic subvolume structures
-void deleteMesoSubArray3D(const uint32_t numMesoSub,
+void deleteMesoSubArray(const uint32_t numMesoSub,
 	struct mesoSubvolume3D mesoSubArray[]);
 
 // Initialize Array of pointers to Mesoscopic subvolume structures
-void initializeMesoSubArray3D(const uint32_t numMesoSub,
+void initializeMesoSubArray(const uint32_t numMesoSub,
 	const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	const struct subvolume3D subvolArray[],
@@ -94,7 +94,7 @@ void initializeMesoSubArray3D(const uint32_t numMesoSub,
 	struct region regionArray[]);
 	
 // Reset propensities and reaction times for all subvolumes
-void resetMesoSubArray3D(const uint32_t numMesoSub,
+void resetMesoSubArray(const uint32_t numMesoSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	const struct subvolume3D subvolArray[],
 	const unsigned short NUM_MOL_TYPES,
@@ -103,7 +103,7 @@ void resetMesoSubArray3D(const uint32_t numMesoSub,
 	struct region regionArray[]);
 
 // Update propensities and next reaction time of subvolume
-void updateMesoSub3D(const uint32_t curSub,
+void updateMesoSub(const uint32_t curSub,
 	bool bChemRxn,
 	uint64_t numMolChange[],
 	bool bMolAdd[],
@@ -122,7 +122,7 @@ void updateMesoSub3D(const uint32_t curSub,
 // This function is meant to be called AFTER validateMolecules() in
 // micro_molecule.c, which populates the bNeedUpdate and numMolFromMicro
 // members of the array of region2D structures
-void updateMesoSubBoundary3D(const uint32_t numSub,
+void updateMesoSubBoundary(const uint32_t numSub,
 	const uint32_t numMesoSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
@@ -140,7 +140,7 @@ double updateTotalProp(const double rxnProp[],
 	const unsigned short numChemRxn);
 
 // Determine next relative subvolume reaction time
-double mesoSubCalcTime3D(struct mesoSubvolume3D mesoSubArray[],
+double mesoSubCalcTime(struct mesoSubvolume3D mesoSubArray[],
 	const uint32_t ID);
 
 // Heap Operations
@@ -153,33 +153,33 @@ void heapMesoDelete(const uint32_t numElements,
 	uint32_t heap_childID[][2],
 	bool heap_childValid[][2]);
 	
-void heapMesoBuild3D(const uint32_t numSub,
+void heapMesoBuild(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const unsigned int num_heap_levels,
 	uint32_t heap_childID[][2],
 	bool heap_childValid[][2]);
 	
-uint32_t heapMesoUpdate3D(const uint32_t numSub,
+uint32_t heapMesoUpdate(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const uint32_t heapID,
 	uint32_t heap_childID[][2],
 	bool heap_childValid[][2]);
 	
-uint32_t heapMesoCompareDown3D(const uint32_t numSub,
+uint32_t heapMesoCompareDown(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const uint32_t parent,
 	uint32_t heap_childID[][2],
 	bool heap_childValid[][2]);
 	
-uint32_t heapMesoCompareUp3D(const uint32_t numSub,
+uint32_t heapMesoCompareUp(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const uint32_t child);
 	
-void heapMesoSwap3D(struct mesoSubvolume3D mesoSubArray[],
+void heapMesoSwap(struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	uint32_t index1, uint32_t index2);
 	

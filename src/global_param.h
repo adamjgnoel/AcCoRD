@@ -2,16 +2,21 @@
  * The AcCoRD Simulator
  * (Actor-based Communication via Reaction-Diffusion)
  *
- * Copyright 2015 Adam Noel. All rights reserved.
+ * Copyright 2016 Adam Noel. All rights reserved.
  * 
  * For license details, read LICENSE.txt in the root AcCoRD directory
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
- * Last revised for AcCoRD v0.3.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - removed use of MAX_MOL_TYPES
+ * - removed use of MAX_RXN_PRODUCTS
+ * - added types of regions and surfaces
  *
  * Revision v0.3.1
  * - header added
@@ -31,13 +36,46 @@
 // Maximum number of products that a single chemical reaction can have
 #define MAX_RXN_PRODUCTS 4
 
+// Dimensions
+#define DIM_X 0
+#define DIM_Y 1
+#define DIM_Z 2
+
 // Shape Indicators
-// NOTE: Changes to names must be reflected in file_io.c
+// NOTE: Changes to list of names must be reflected in file_io.c
+// if regions or actors can have the updated shapes
 #define RECTANGLE 0
 #define CIRCLE 1
 #define RECTANGULAR_BOX 2
 #define SPHERE 3
-#define UNDEFINED_SHAPE 4
+#define LINE 4
+#define UNDEFINED_SHAPE 5
+
+// Types of regions
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define REGION_NORMAL 0
+#define REGION_SURFACE_3D 1
+#define REGION_SURFACE_2D 2
+
+// Types of surfaces
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define NO_SURFACE 0
+#define SURFACE_INNER 1
+#define SURFACE_OUTER 2
+#define SURFACE_MEMBRANE 3
+
+// Planes for 2d shapes
+// NOTE: Changes to list of names must be reflected in region.c
+#define PLANE_3D 0
+#define PLANE_XY 1
+#define PLANE_XZ 2
+#define PLANE_YZ 3
+
+// Effective dimension for volume/area
+// Depends on shape and type
+#define DIM_1D 1
+#define DIM_2D 2
+#define DIM_3D 3
 
 // Resolution of adjacency
 // (i.e., what fraction of base subvolume size do the edges of shapes need to be
@@ -56,7 +94,7 @@
 #define UNDEFINED 8
 
 // Modulation schemes
-// NOTE: Changes to names must be reflected in file_io.c
+// NOTE: Changes to list of names must be reflected in file_io.c
 #define CSK 0
 
 #endif // GLOBAL_PARAM_H

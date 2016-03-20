@@ -8,9 +8,14 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * chem_rxn.c - structure for storing chemical reaction properties
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - removed limit on number of molecule types
+ * - removed limit on number of products in a reaction
+ * - added region label when giving errors about region initialization
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -48,7 +53,7 @@
  * reactions and initialize their values based on the chem_rxn
  * array of chem_rxn_struct
 */
-void initialize_region_chem_rxn3D(const short NUM_REGIONS,
+void initializeRegionChemRxn(const short NUM_REGIONS,
 	struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
@@ -61,6 +66,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 	unsigned short curProd; // Index of current product (if a reaction has multiple
 							// products of the same molecule type)
 	uint32_t num_reactants; // Number of reactants in a reaction
+	uint32_t numTotalProd; // Total number of products in a reaction
 	
 	bool bFoundReactant; // Have we found the first reactant yet?
 	
@@ -177,18 +183,28 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			|| regionArray[i].minRxnTimeRV == NULL
 			|| regionArray[i].biReactants == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u.\n", i);
+			fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 			exit(EXIT_FAILURE);
 		}
 		
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
 		{
+			numTotalProd = 0;
+			curRxn = rxnInRegionID[j][i];
+			
+			// Determine total number of products for this reaction
+			// Then we know how much memory to assign to productID
+			for(k = 0; k < NUM_MOL_TYPES; k++)
+			{
+				numTotalProd += chem_rxn[curRxn].products[k];
+			}
+			
 			regionArray[i].numMolChange[j] =
 				malloc(NUM_MOL_TYPES * sizeof(uint64_t));
 			regionArray[i].bMolAdd[j] =
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			regionArray[i].productID[j] =
-				malloc(MAX_RXN_PRODUCTS * sizeof(unsigned short));
+				malloc(numTotalProd * sizeof(unsigned short));
 			regionArray[i].bUpdateProp[j] =
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			if(regionArray[i].numMolChange[j] == NULL
@@ -196,10 +212,10 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				|| regionArray[i].productID[j] == NULL
 				|| regionArray[i].bUpdateProp[j] == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u.\n", j, i);
+				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u (label: \"%s\").\n", j, i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
-		}
+		}		
 		
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
@@ -213,7 +229,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 				|| regionArray[i].uniCumProb[j] == NULL
 				|| regionArray[i].uniRelativeRate[j] == NULL)
 			{
-				fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u.\n", i);
+				fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -289,9 +305,18 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 			switch(num_reactants)
 			{
 				case 0:
-					// rxnRate must be calculated for one subvolume
-					regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-						*regionArray[i].actualSubSize * regionArray[i].actualSubSize * regionArray[i].actualSubSize;
+					// meso rxnRate must be calculated for one subvolume
+					if (regionArray[i].plane == PLANE_3D
+						&& regionArray[i].spec.type == REGION_NORMAL)
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							*regionArray[i].actualSubSize * regionArray[i].actualSubSize * regionArray[i].actualSubSize;
+					else if (regionArray[i].spec.type == REGION_NORMAL
+						|| regionArray[i].spec.type == REGION_SURFACE_3D) // Region is 2D so need area and not volume
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							*regionArray[i].actualSubSize * regionArray[i].actualSubSize;
+					else
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							*regionArray[i].actualSubSize; // Region is 1D so need length
 					// microscopic 0th order rate depends on total region volume
 					regionArray[i].rxnRateZerothMicro[regionArray[i].numZerothRxn] =
 						chem_rxn[curRxn].k * regionArray[i].volume;
@@ -302,8 +327,17 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
-					regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-						/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+					if (regionArray[i].plane == PLANE_3D
+						&& regionArray[i].spec.type == REGION_NORMAL)
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+					else if (regionArray[i].spec.type == REGION_NORMAL
+						|| regionArray[i].spec.type == REGION_SURFACE_3D) // Region is 2D so need area and not volume
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							/regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+					else
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+							/regionArray[i].actualSubSize; // Region is 1D so need length
 					regionArray[i].secondRxn[regionArray[i].numSecondRxn++] = j;
 					break;
 				default:
@@ -373,7 +407,7 @@ void initialize_region_chem_rxn3D(const short NUM_REGIONS,
 }
 
 // Free memory of region parameters
-void delete_region_chem_rxn3D(const short NUM_REGIONS,
+void deleteRegionChemRxn(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[])
 {

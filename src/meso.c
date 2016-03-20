@@ -44,7 +44,7 @@
 /* Allocate space for an array of mesoscopic subvolume
 * structures.
 */
-void allocateMesoSubArray3D(const uint32_t numMesoSub,
+void allocateMesoSubArray(const uint32_t numMesoSub,
 	struct mesoSubvolume3D ** mesoSubArray)
 {
 	
@@ -60,7 +60,7 @@ void allocateMesoSubArray3D(const uint32_t numMesoSub,
  * subvolume structures, a 2D array listing the child IDs of each heap element,
  * and a 2D array of bools indicating whether each child is valid
 */
-void allocateMesoHeapArray3D(const uint32_t numMesoSub,
+void allocateMesoHeapArray(const uint32_t numMesoSub,
 	uint32_t ** heap_subvolID,
 	uint32_t (**heap_childID)[2],
 	bool (**b_heap_childValid)[2])
@@ -77,7 +77,7 @@ void allocateMesoHeapArray3D(const uint32_t numMesoSub,
 	}
 }
 
-void deleteMesoSubArray3D(const uint32_t numMesoSub,
+void deleteMesoSubArray(const uint32_t numMesoSub,
 	struct mesoSubvolume3D mesoSubArray[])
 {
 	uint32_t curMesoSub;
@@ -95,7 +95,7 @@ void deleteMesoSubArray3D(const uint32_t numMesoSub,
 }
 
 // Initialize Array of pointers to Mesoscopic subvolume structures
-void initializeMesoSubArray3D(const uint32_t numMesoSub,
+void initializeMesoSubArray(const uint32_t numMesoSub,
 	const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	const struct subvolume3D subvolArray[],
@@ -137,7 +137,7 @@ void initializeMesoSubArray3D(const uint32_t numMesoSub,
 }
 
 // Reset propensities and reaction times for all subvolumes
-void resetMesoSubArray3D(const uint32_t numMesoSub,
+void resetMesoSubArray(const uint32_t numMesoSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	const struct subvolume3D subvolArray[],
 	const unsigned short NUM_MOL_TYPES,
@@ -221,14 +221,14 @@ void resetMesoSubArray3D(const uint32_t numMesoSub,
 		}
 		
 		// Generate first-reaction time from propensity
-		mesoSubArray[curMeso].t_rxn = mesoSubCalcTime3D(mesoSubArray, curMeso);
+		mesoSubArray[curMeso].t_rxn = mesoSubCalcTime(mesoSubArray, curMeso);
 	}
 }
 
 // Update propensities and next reaction time of subvolume
 // NOTE: heapMesoUpdate3D should be called IMMEDIATELY after (i.e., before another
 // call to this function), otherwise the heap won't be properly sorted
-void updateMesoSub3D(const uint32_t curSub,
+void updateMesoSub(const uint32_t curSub,
 	bool bChemRxn,
 	uint64_t numMolChange[],
 	bool bMolAdd[],
@@ -379,7 +379,7 @@ void updateMesoSub3D(const uint32_t curSub,
 	} else
 	{
 		mesoSubArray[curMeso].t_rxn = tCur +
-			mesoSubCalcTime3D(mesoSubArray, curMeso);
+			mesoSubCalcTime(mesoSubArray, curMeso);
 	}
 }
 
@@ -388,7 +388,7 @@ void updateMesoSub3D(const uint32_t curSub,
 // This function is meant to be called AFTER validateMolecules() in
 // micro_molecule.c, which populates the bNeedUpdate and numMolFromMicro
 // members of the array of regionArray structures
-void updateMesoSubBoundary3D(const uint32_t numSub,
+void updateMesoSubBoundary(const uint32_t numSub,
 	const uint32_t numMesoSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
@@ -426,7 +426,7 @@ void updateMesoSubBoundary3D(const uint32_t numSub,
 						// Reset signals for new molecules from micro regime
 						for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
 						{
-							updateMesoSub3D(regionArray[curRegion].neighID[neighRegion][curSub], false, 
+							updateMesoSub(regionArray[curRegion].neighID[neighRegion][curSub], false, 
 								(uint64_t []){regionArray[curRegion].numMolFromMicro[neighRegion][curSub][curMolType]},
 								bTrue, curMolType,
 								true, numMesoSub, mesoSubArray, subvolArray,
@@ -434,7 +434,7 @@ void updateMesoSubBoundary3D(const uint32_t numSub,
 							regionArray[curRegion].numMolFromMicro[neighRegion][curSub][curMolType] = 0;
 						}
 						regionArray[curRegion].bNeedUpdate[neighRegion][curSub] = false;
-						heapMesoUpdate3D(numMesoSub, mesoSubArray, heap_subvolID,
+						heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID,
 							mesoSubArray[subvolArray[regionArray[curRegion].neighID[neighRegion][curSub]].mesoID].heapID, heap_childID, heap_childValid);
 							
 						regionArray[curRegion].bNeedUpdate[neighRegion][curSub] = false;
@@ -458,7 +458,7 @@ double updateTotalProp(const double rxnProp[],
 }
 
 // Determine next relative subvolume reaction time
-double mesoSubCalcTime3D(struct mesoSubvolume3D mesoSubArray[],
+double mesoSubCalcTime(struct mesoSubvolume3D mesoSubArray[],
 	const uint32_t ID)
 {
 	return -log(mt_drand()) / mesoSubArray[ID].totalProp;
@@ -502,7 +502,7 @@ void heapMesoDelete(const uint32_t numElements,
 }
 
 // Build Heap of Next Subvolume Reaction Times
-void heapMesoBuild3D(const uint32_t numSub,
+void heapMesoBuild(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const unsigned int num_heap_levels,
@@ -528,12 +528,12 @@ void heapMesoBuild3D(const uint32_t numSub,
 		for(parent = levelFirst; parent <= levelLast; parent++){
 			// Compare element with its two children
 			parentOld = parent;
-			parentNew = heapMesoCompareDown3D(numSub, mesoSubArray, heap_subvolID,
+			parentNew = heapMesoCompareDown(numSub, mesoSubArray, heap_subvolID,
 				parent, heap_childID, heap_childValid);
 			while(parentNew != parentOld){
 				// Keep comparing with children until this parent is the min
 				parentOld = parentNew;
-				parentNew = heapMesoCompareDown3D(numSub, mesoSubArray, heap_subvolID,
+				parentNew = heapMesoCompareDown(numSub, mesoSubArray, heap_subvolID,
 					parentOld, heap_childID, heap_childValid);
 			}
 		}
@@ -541,7 +541,7 @@ void heapMesoBuild3D(const uint32_t numSub,
 }
 
 // Update Placement of Single Heap Element Based on Updated Value
-uint32_t heapMesoUpdate3D(const uint32_t numSub,
+uint32_t heapMesoUpdate(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const uint32_t heapID,
@@ -552,20 +552,20 @@ uint32_t heapMesoUpdate3D(const uint32_t numSub,
 	
 	// See if element needs to move "down" (i.e., lower priority)
 	oldID = heapID;
-	newID = heapMesoCompareDown3D(numSub, mesoSubArray, heap_subvolID, heapID,
+	newID = heapMesoCompareDown(numSub, mesoSubArray, heap_subvolID, heapID,
 		heap_childID, heap_childValid);
 	while(newID != oldID){
 		oldID = newID;
-		newID = heapMesoCompareDown3D(numSub, mesoSubArray, heap_subvolID, oldID,
+		newID = heapMesoCompareDown(numSub, mesoSubArray, heap_subvolID, oldID,
 			heap_childID, heap_childValid);
 	}
 	if (newID == heapID && heapID > 0){
 		// Element did not move down and it is not already at the top of the heap.
 		// See if it needs to move "up" (i.e., higher priority)
-		newID = heapMesoCompareUp3D(numSub, mesoSubArray, heap_subvolID, heapID);
+		newID = heapMesoCompareUp(numSub, mesoSubArray, heap_subvolID, heapID);
 		while(newID != oldID){
 			oldID = newID;
-			newID = heapMesoCompareUp3D(numSub, mesoSubArray, heap_subvolID, oldID);
+			newID = heapMesoCompareUp(numSub, mesoSubArray, heap_subvolID, oldID);
 		}
 	}
 	return newID;
@@ -573,7 +573,7 @@ uint32_t heapMesoUpdate3D(const uint32_t numSub,
 
 // Compare parent node with its children. Swap if parent does not have smallest value
 // Return (possibly new) location of parent node
-uint32_t heapMesoCompareDown3D(const uint32_t numSub,
+uint32_t heapMesoCompareDown(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const uint32_t parent,
@@ -590,23 +590,23 @@ uint32_t heapMesoCompareDown3D(const uint32_t numSub,
 			if (mesoSubArray[heap_subvolID[parent]].t_rxn >
 				mesoSubArray[heap_subvolID[child2]].t_rxn){
 				// child2 is smallest
-				heapMesoSwap3D(mesoSubArray,heap_subvolID,parent,child2);
+				heapMesoSwap(mesoSubArray,heap_subvolID,parent,child2);
 				return child2;
 			} // else parent is smallest (do nothing)
 		} else if (mesoSubArray[heap_subvolID[child2]].t_rxn <
 			mesoSubArray[heap_subvolID[child1]].t_rxn){
 			// child2 is smallest
-			heapMesoSwap3D(mesoSubArray,heap_subvolID,parent,child2);
+			heapMesoSwap(mesoSubArray,heap_subvolID,parent,child2);
 			return child2;
 		} else {
 			// child1 is smallest
-			heapMesoSwap3D(mesoSubArray,heap_subvolID,parent,child1);
+			heapMesoSwap(mesoSubArray,heap_subvolID,parent,child1);
 			return child1;
 		}
 	} else if (heap_childValid[parent][0] && mesoSubArray[heap_subvolID[parent]].t_rxn >
 		mesoSubArray[heap_subvolID[child1]].t_rxn) {
 		// child1 is smallest
-		heapMesoSwap3D(mesoSubArray,heap_subvolID,parent,child1);
+		heapMesoSwap(mesoSubArray,heap_subvolID,parent,child1);
 		return child1;
 	}
 	return parent;
@@ -614,7 +614,7 @@ uint32_t heapMesoCompareDown3D(const uint32_t numSub,
 
 // Compare node with its parent. Swap if parent has a larger value
 // Return (possibly new) location of node
-uint32_t heapMesoCompareUp3D(const uint32_t numSub,
+uint32_t heapMesoCompareUp(const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	const uint32_t child){
@@ -629,14 +629,14 @@ uint32_t heapMesoCompareUp3D(const uint32_t numSub,
 	if (mesoSubArray[heap_subvolID[parent]].t_rxn >
 		mesoSubArray[heap_subvolID[child]].t_rxn){
 		// Child is smaller. Swap
-		heapMesoSwap3D(mesoSubArray,heap_subvolID,parent,child);
+		heapMesoSwap(mesoSubArray,heap_subvolID,parent,child);
 		return parent;
 	} else // Parent is smaller. Do not swap
 		return child;
 }
 
 // Swap the positions of two elements in the heap
-void heapMesoSwap3D(struct mesoSubvolume3D mesoSubArray[],
+void heapMesoSwap(struct mesoSubvolume3D mesoSubArray[],
 	uint32_t heap_subvolID[],
 	uint32_t index1,
 	uint32_t index2){

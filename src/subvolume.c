@@ -331,7 +331,7 @@ void buildSubvolArray(const uint32_t numSub,
 	unsigned short curMolType;
 	uint32_t cur1, cur2, cur3; // Coordinates of current subvolume within current region
 	uint32_t length[3]; // Sizes of dimensions used for cur1, cur2, cur3
-	uint32_t curX, curY, curZ; // Coordinates of current subvolume within current face
+	uint32_t curCoorInd[3];
 	bool bRealSub, bHaveCoor;
 	uint32_t curID = 0; // Current Subvolume ID
 	uint32_t curBoundID = 0; // Current subvolume in region boundary list
@@ -421,9 +421,9 @@ void buildSubvolArray(const uint32_t numSub,
 					bRealSub = true;
 					
 					// Assign tentative subvolume coordinates
-					subCoorInd[curID][0] = cur1;
-					subCoorInd[curID][1] = cur2;
-					subCoorInd[curID][2] = cur3;
+					curCoorInd[0] = cur1;
+					curCoorInd[1] = cur2;
+					curCoorInd[2] = cur3;
 					
 					// Check that current location is actually part of region
 					bHaveCoor = false;
@@ -451,7 +451,7 @@ void buildSubvolArray(const uint32_t numSub,
 								{
 									// Need actual subvolume coordinates in order to
 									// compare with child regions
-									findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
+									findSubvolCoor(curSubBound, regionArray[i], curCoorInd);
 									bHaveCoor = true;
 								}
 								
@@ -469,7 +469,7 @@ void buildSubvolArray(const uint32_t numSub,
 								// Need real coordinates of subvolume
 								if(!bHaveCoor)
 								{
-									findSubvolCoor(curSubBound, regionArray[i], subCoorInd[curID]);
+									findSubvolCoor(curSubBound, regionArray[i], curCoorInd);
 									bHaveCoor = true;
 								}
 								if(bBoundarySurround(regionArray[i].subShape, curSubBound,
@@ -499,6 +499,10 @@ void buildSubvolArray(const uint32_t numSub,
 						// Skip subvolume creation
 						continue;
 					}
+					
+					subCoorInd[curID][0] = curCoorInd[0];
+					subCoorInd[curID][1] = curCoorInd[1];
+					subCoorInd[curID][2] = curCoorInd[2];
 					
 					subID[i][cur1][cur2][cur3] = curID;
 					

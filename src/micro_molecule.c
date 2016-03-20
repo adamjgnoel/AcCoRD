@@ -623,8 +623,8 @@ bool validateMolecule(double newPoint[3],
 	
 	short trajRegion = curRegion; // Regions passed through by the molecule's trajectory
 	
-	if(bPointInRegionNotChild(curRegion, regionArray, newPoint)
-		&& regionArray[curRegion].numChildren < 1)
+	if(regionArray[curRegion].numChildren < 1
+		&& bPointInRegionNotChild(curRegion, regionArray, newPoint))
 	{ // This is simplest case. No region boundary interactions
 		return true;
 	} else
@@ -657,7 +657,7 @@ bool followMolecule(const double startPoint[3],
 {
 	short curNeigh, curRegion, closestNormal;
 	short curFace, nearestFace;
-	double minDist, curDist;
+	double minDist, curDist, minNormalDist;
 	double curIntersectPoint[3];
 	double nearestIntersectPoint[3];
 	double newEndPoint[3];
@@ -675,6 +675,7 @@ bool followMolecule(const double startPoint[3],
 	
 	// First check all neighbor regions to see which (if any) are intersected first
 	minDist = INFINITY;
+	minNormalDist = INFINITY;
 	* endRegion = SHRT_MAX;
 	closestNormal = SHRT_MAX;
 	for(curNeigh = 0; curNeigh < regionArray[startRegion].numRegionNeigh; curNeigh++)
@@ -684,16 +685,9 @@ bool followMolecule(const double startPoint[3],
 		switch(regionArray[startRegion].regionNeighDir[curRegion])
 		{
 			case PARENT:
-				// curRegion is startRegion's parent
-				// Need to check against all faces of startRegion
-				bCurIntersect = bLineHitRegion(startPoint, lineVector, lineLength,
-					startRegion, curRegion, regionArray,
-					&curFace, &curDist, curIntersectPoint)
-					&& !bSharedBoundary(startRegion, curRegion, regionArray, curFace);
-				break;
 			case CHILD:
-				// startRegion is curRegion's parent
-				// Need to check against all faces of curRegion
+				// one region is parent of other
+				// Need to check against all faces of child
 				bCurIntersect = bLineHitRegion(startPoint, lineVector, lineLength,
 					startRegion, curRegion, regionArray,
 					&curFace, &curDist, curIntersectPoint);
@@ -716,6 +710,7 @@ bool followMolecule(const double startPoint[3],
 			if(regionArray[curRegion].spec.type == REGION_NORMAL)
 			{
 				closestNormal = curRegion;
+				minNormalDist = curDist;
 			}
 			// Check region priority
 			if(* endRegion < SHRT_MAX
@@ -743,8 +738,9 @@ bool followMolecule(const double startPoint[3],
 		if(regionArray[*endRegion].spec.type != REGION_NORMAL)
 		{ // Closest region is some kind of surface
 			// Check whether we are actually in child of surface
-			if(!bPointInRegionOrChild(*endRegion, regionArray, nearestIntersectPoint, endRegion)
-				&& regionArray[*endRegion].spec.shape != SPHERE)
+			if(regionArray[*endRegion].spec.shape != SPHERE
+				&& !bPointInRegionOrChild(*endRegion, regionArray, nearestIntersectPoint,
+				endRegion, true))
 			{ // Something went wrong here because we are not actually
 				// in the endRegion region (or its children)
 				fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",
@@ -784,6 +780,60 @@ bool followMolecule(const double startPoint[3],
 					case SURFACE_MEMBRANE:
 						// Molecule can continue into the closest normal region
 						bContinue = true;
+						if(minNormalDist > minDist + regionArray[startRegion].subResolution)
+						{ // Normal region at same distance as membrane was not detected
+							// Assume that this was due to membrane being parent
+							// or child of startRegion
+							switch(regionArray[startRegion].regionNeighDir[*endRegion])
+							{
+								case PARENT:
+								case CHILD:
+									// Scan normal neighbors of membrane that are children or parent
+									for(curNeigh = 0; curNeigh < regionArray[*endRegion].numRegionNeigh; curNeigh++)
+									{
+										curRegion = regionArray[*endRegion].regionNeighID[curNeigh];
+										
+										if(curRegion == startRegion
+											|| regionArray[curRegion].spec.type != REGION_NORMAL)
+											continue;
+										
+										switch(regionArray[*endRegion].regionNeighDir[curRegion])
+										{
+											case PARENT:
+											case CHILD:
+												// One region is other's parent
+												// Need to check against all faces of child
+												bCurIntersect = bLineHitRegion(startPoint, lineVector, lineLength,
+													*endRegion, curRegion, regionArray,
+													&curFace, &curDist, curIntersectPoint);
+												break;
+											default:
+												// Something went wrong here
+												fprintf(stderr, "ERROR: Could not evaluate transition from region %u (Label: \"%s\") through membrane region %u (Label: \"%s\").\n",
+												startRegion, regionArray[startRegion].spec.label,
+												*endRegion, regionArray[*endRegion].spec.label);
+												exit(EXIT_FAILURE);
+										}
+										
+										if(bCurIntersect && curDist < minNormalDist)
+										{ // There is intersection with this face and it is closest normal region so far
+											minNormalDist = curDist;
+											closestNormal = curRegion;
+											nearestFace = curFace;
+											nearestIntersectPoint[0] = curIntersectPoint[0];
+											nearestIntersectPoint[1] = curIntersectPoint[1];
+											nearestIntersectPoint[2] = curIntersectPoint[2];
+										}
+									}
+									break;
+								default:
+									// Something went wrong here
+									fprintf(stderr, "ERROR: Could not evaluate transition from region %u (Label: \"%s\") through membrane region %u (Label: \"%s\").\n",
+									startRegion, regionArray[startRegion].spec.label,
+									*endRegion, regionArray[*endRegion].spec.label);
+									exit(EXIT_FAILURE);
+							}
+						}
 						*endRegion = closestNormal;
 						break;
 				}
@@ -820,7 +870,7 @@ bool followMolecule(const double startPoint[3],
 				}
 				
 				// Determine region that we should actually be in (could be child of *endRegion)
-				if(!bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion))
+				if(!bPointInRegionOrChild(*endRegion, regionArray, curIntersectPoint, endRegion, false))
 				{ // Something went wrong here because we are not actually
 					// in the endRegion region (or its children)
 					fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",

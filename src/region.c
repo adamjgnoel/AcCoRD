@@ -1101,9 +1101,6 @@ bool bLineHitRegion(const double p1[3],
 	switch(boundary1Type)
 	{
 		case RECTANGLE:
-			return bLineHitInfinitePlane(p1, L, length, RECTANGLE,
-				regionArray[startRegion].boundRegionFaceCoor[endRegion][0],
-				regionArray[endRegion].plane, false, d, intersectPoint);
 		case RECTANGULAR_BOX:
 			for(curPlane = 0;
 				curPlane < regionArray[startRegion].numRegionNeighFace[endRegion];
@@ -1169,7 +1166,8 @@ bool bPointInRegionNotChild(const short curRegion,
 bool bPointInRegionOrChild(const short curRegion,
 	const struct region regionArray[],
 	const double point[3],
-	short * actualRegion)
+	short * actualRegion,
+	bool bSurfaceOnly)
 {
 	short curChild;
 	
@@ -1178,8 +1176,10 @@ bool bPointInRegionOrChild(const short curRegion,
 	{ // Point is within the region's outer boundary
 		for(curChild = 0; curChild < regionArray[curRegion].numChildren; curChild++)
 		{
+			if(bSurfaceOnly && regionArray[regionArray[curRegion].childrenID[curChild]].spec.type == REGION_NORMAL)
+				continue;
 			if(bPointInRegionOrChild(regionArray[curRegion].childrenID[curChild],
-				regionArray, point, actualRegion))
+				regionArray, point, actualRegion, bSurfaceOnly))
 			{
 				return true;
 			}
@@ -1251,11 +1251,6 @@ void lockPointToRegion(double point[3],
 	switch(regionArray[boundRegion].spec.shape)
 	{
 		case RECTANGLE:
-			switch(faceID)
-			{
-				
-			}
-			break;
 		case RECTANGULAR_BOX:
 			if(faceID < 2)
 				point[0] = regionArray[boundRegion].boundary[faceID];

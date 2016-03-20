@@ -490,7 +490,8 @@ bool bPointInRegionNotChild(const short curRegion,
 bool bPointInRegionOrChild(const short curRegion,
 	const struct region regionArray[],
 	const double point[3],
-	short * actualRegion);
+	short * actualRegion,
+	bool bSurfaceOnly);
 
 // Is a specific face shared between two regions?
 bool bSharedBoundary(const short startRegion,

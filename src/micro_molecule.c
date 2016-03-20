@@ -15,6 +15,7 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
+ * - added surface reactions, including membrane transitions
  * - corrected distance to end point when a molecule is "pushed" into a neighboring
  * region
  * - added fail check to while loop when a molecule is "pushed" into a 
@@ -652,7 +653,7 @@ bool followMolecule(const double startPoint[3],
 	unsigned short * curRxn,
 	unsigned int depth)
 {
-	short curNeigh, curRegion;
+	short curNeigh, curRegion, closestNormal;
 	short curFace, nearestFace;
 	double minDist, curDist;
 	double curIntersectPoint[3];
@@ -673,6 +674,7 @@ bool followMolecule(const double startPoint[3],
 	// First check all neighbor regions to see which (if any) are intersected first
 	minDist = INFINITY;
 	* endRegion = SHRT_MAX;
+	closestNormal = SHRT_MAX;
 	for(curNeigh = 0; curNeigh < regionArray[startRegion].numRegionNeigh; curNeigh++)
 	{
 		curRegion = regionArray[startRegion].regionNeighID[curNeigh];
@@ -709,6 +711,10 @@ bool followMolecule(const double startPoint[3],
 		
 		if(bCurIntersect && curDist < minDist+regionArray[startRegion].subResolution)
 		{ // There is intersection with this face and it is ~closest so far
+			if(regionArray[curRegion].spec.type == REGION_NORMAL)
+			{
+				closestNormal = curRegion;
+			}
 			// Check region priority
 			if(* endRegion < SHRT_MAX
 				&& regionArray[*endRegion].spec.type != REGION_NORMAL
@@ -728,19 +734,39 @@ bool followMolecule(const double startPoint[3],
 	if(* endRegion < SHRT_MAX)
 	{
 		// Molecule has entered another region
-		// Assume that transition is valid and proceed to follow point into neighbor
+		// "Lock" location at exact boundary
+		lockPointToRegion(nearestIntersectPoint, startRegion, *endRegion, regionArray,
+				nearestFace);		
 		
 		if(regionArray[*endRegion].spec.type != REGION_NORMAL)
-		{
-			curRand = mt_drand();
-			for(i = 0; i < regionArray[*endRegion].numFirstCurReactant[molType]; i++)
-			{
-				if(curRand < regionArray[*endRegion].uniCumProb[molType][i])
+		{ // Closest region is some kind of surface
+			// Check whether we are actually in child of surface
+			if(!bPointInRegionOrChild(*endRegion, regionArray, nearestIntersectPoint, endRegion))
+			{ // Something went wrong here because we are not actually
+				// in the endRegion region (or its children)
+				fprintf(stderr, "ERROR: Invalid transition from region %u (Label: \"%s\") to region %u (Label: \"%s\"). Leaving molecule in \"%s\"\n",
+					startRegion, regionArray[startRegion].spec.label,
+					*endRegion, regionArray[*endRegion].spec.label,
+					regionArray[startRegion].spec.label);
+				endPoint[0] = startPoint[0];
+				endPoint[1] = startPoint[1];
+				endPoint[2] = startPoint[2];
+				*endRegion = startRegion;
+				return false;
+			}
+			
+			if(regionArray[*endRegion].numFirstRxn > 0)
+			{ // There is at least 1 possible reaction
+				curRand = mt_drand();
+				for(i = 0; i < regionArray[*endRegion].numFirstCurReactant[molType]; i++)
 				{
-					// Reaction i took place
-					*curRxn = regionArray[*endRegion].firstRxnID[molType][i];
-					*bReaction = true;
-					continue;
+					if(curRand < regionArray[*endRegion].uniCumProb[molType][i])
+					{
+						// Reaction i took place
+						*curRxn = regionArray[*endRegion].firstRxnID[molType][i];
+						*bReaction = true;
+						continue;
+					}
 				}
 			}
 			if(*bReaction)
@@ -753,8 +779,9 @@ bool followMolecule(const double startPoint[3],
 						bContinue = false;
 						break;
 					case SURFACE_MEMBRANE:
-						// Molecule can continue
+						// Molecule can continue into the closest normal region
 						bContinue = true;
+						*endRegion = closestNormal;
 						break;
 				}
 			} else
@@ -773,9 +800,7 @@ bool followMolecule(const double startPoint[3],
 			*endRegion = startRegion;
 		} else
 		{
-			// "Lock" location at exact boundary
-			lockPointToRegion(nearestIntersectPoint, startRegion, *endRegion, regionArray,
-				nearestFace);
+			// Assume that transition is valid and proceed to follow point into neighbor
 			
 			if(bContinue)
 			{

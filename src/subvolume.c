@@ -436,10 +436,7 @@ void buildSubvolArray(const uint32_t numSub,
 							// Is it possible for child to block subvolumes of parent?
 							if((regionArray[i].spec.type != REGION_NORMAL
 								&& regionArray[regionArray[i].childrenID[j]].spec.type
-								== REGION_NORMAL)
-								|| (regionArray[i].plane == PLANE_3D
-								&& regionArray[regionArray[i].childrenID[j]].plane
-								!= PLANE_3D))
+								== REGION_NORMAL))
 							{
 								continue; // This child cannot interfere with the
 										  // subvolumes of the parent
@@ -459,7 +456,7 @@ void buildSubvolArray(const uint32_t numSub,
 									regionArray[regionArray[i].childrenID[j]].spec.shape,
 									regionArray[regionArray[i].childrenID[j]].boundary, 0.))
 								{
-									// subvolume is entirely within spherical child
+									// subvolume is entirely within child
 									bRealSub = false;
 									subID[i][cur1][cur2][cur3] = UINT32_MAX;
 									break;

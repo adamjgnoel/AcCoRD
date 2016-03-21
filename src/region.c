@@ -648,6 +648,9 @@ void findRegionTouch(const short NUM_REGIONS,
 			if(regionArray[i].parentID == j)
 			{
 				// Region j is region i's parent
+				if(regionArray[j].spec.surfaceType == SURFACE_OUTER
+					|| regionArray[i].spec.surfaceType == SURFACE_INNER)
+					continue; // Regions are not actually neighbors
 				regionArray[i].isRegionNeigh[j] = true;
 				regionArray[i].regionNeighDir[j] = PARENT;
 				regionArray[i].numRegionNeigh++;		
@@ -657,6 +660,9 @@ void findRegionTouch(const short NUM_REGIONS,
 			if(regionArray[j].parentID == i)
 			{
 				// Region i is region j's parent
+				if(regionArray[j].spec.surfaceType == SURFACE_INNER
+					|| regionArray[i].spec.surfaceType == SURFACE_OUTER)
+					continue; // Regions are not actually neighbors
 				regionArray[i].isRegionNeigh[j] = true;
 				regionArray[i].regionNeighDir[j] = CHILD;
 				regionArray[i].numRegionNeigh++;
@@ -997,6 +1003,14 @@ double intersectRegionVolume(const short curRegion,
 	int intersectType;	
 	
 	bool bArea = regionArray[curRegion].effectiveDim != regionArray[curRegion].dimension;
+	
+	if(bArea && bBoundarySurround(boundary2Type, boundary2, 
+		regionArray[curRegion].spec.shape, regionArray[curRegion].boundary, 0.)
+		&& !bBoundarySurround(regionArray[curRegion].spec.shape, regionArray[curRegion].boundary,
+		boundary2Type, boundary2, 0.))
+	{ // Boundary is fully inside region such that there is no intersection with region boundary
+		return 0.;		
+	}
 	
 	// Calculate overall intersection area (including space occupied by children)
 	intersectType = intersectBoundary(regionArray[curRegion].spec.shape,
@@ -1472,11 +1486,16 @@ void initializeRegionNesting(const short NUM_REGIONS,
 					continue;
 				}
 				
-				// If child is a surface, confirm that it is an outer surface or membrane
-				if(regionArray[j].spec.surfaceType == SURFACE_INNER)
+				// If child is an inner surface, then parent must an outer surface that covers
+				// it fully
+				if(regionArray[j].spec.surfaceType == SURFACE_INNER
+					&& (regionArray[i].spec.surfaceType != SURFACE_OUTER
+					|| !bBoundarySurround(RECTANGULAR_BOX, regionArray[i].boundary,
+					RECTANGULAR_BOX, regionArray[j].boundary, -regionArray[i].subResolution)))
 				{
-					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is an inner-pointing surface with parent region %u (label: \"%s\").\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
-					fprintf(stderr, "A 3D child that is a surface must be outward-pointing or a membrane.\n");
+					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is an inner-pointing surface with parent region %u (label: \"%s\").\n",
+						j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+					fprintf(stderr, "A 3D child can only be an inner surface if its parent is an outer surface.\n");
 					*bFail = true;
 					continue;
 				}
@@ -1543,6 +1562,7 @@ void initializeRegionNesting(const short NUM_REGIONS,
 					fprintf(stderr, "Rectangular region %u should be inside of spherical region %u and there must be a clearance between the surfaces of at least the subvolume size of region %u which is %.2em.\n", j, i, j, regionArray[j].actualSubSize);
 					*bFail = true;
 				}
+				
 			} else if(regionArray[i].spec.shape == RECTANGULAR_BOX &&
 				regionArray[j].spec.shape == SPHERE)
 			{
@@ -1567,6 +1587,65 @@ void initializeRegionNesting(const short NUM_REGIONS,
 				{
 					// Child is sticking out of parent
 					fprintf(stderr, "ERROR: Outer boundary of spherical nested region %u (label: \"%s\") is not properly surrounded by spherical parent region %u (label: \"%s\").\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+					*bFail = true;
+				}
+			} else if(regionArray[i].spec.shape == RECTANGULAR_BOX &&
+				regionArray[j].spec.shape == RECTANGLE)
+			{ // A box region can have a rectangle child only if both regions are surfaces
+			
+				// NOTE: Short-circuiting this option for now!
+				// Combination of child and parent is invalid
+				fprintf(stderr, "ERROR: Combination of child/parent for region %u (label: \"%s\") nested in region %u (label: \"%s\") is invalid.\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+				fprintf(stderr, "Shapes are %s and %s, respectively.\n",
+					boundaryString(regionArray[j].spec.shape),
+					boundaryString(regionArray[i].spec.shape));
+				*bFail = true;
+				continue;
+			
+				if(regionArray[i].spec.type != REGION_SURFACE_3D
+					|| regionArray[j].spec.type != REGION_SURFACE_3D)
+				{
+					// Child is sticking out of parent
+					fprintf(stderr, "ERROR: Region %u (label: \"%s\") has improper child region %u (label: \"%s\").\n", i, regionArray[i].spec.label, j, regionArray[j].spec.label);
+					fprintf(stderr, "A rectangle can only be the child of a box region if both regions are surfaces.\n");
+					*bFail = true;
+				}
+				
+				bFailRectangleChild = false;
+				
+				// Determine coordinates of child relative to parent subvolumes
+				findChildCoordinates(i, j, curChild, regionArray);
+				
+				switch(regionArray[j].plane)
+				{
+					case PLANE_XY:
+						bFailRectangleChild = !(regionArray[i].childrenCoor[curChild][4]
+							|| regionArray[i].childrenCoor[curChild][5]);
+						break;
+					case PLANE_XZ:
+						bFailRectangleChild = !(regionArray[i].childrenCoor[curChild][2]
+							|| regionArray[i].childrenCoor[curChild][3]);
+						break;
+					case PLANE_YZ:
+						bFailRectangleChild = !(regionArray[i].childrenCoor[curChild][0]
+							|| regionArray[i].childrenCoor[curChild][1]);
+						break;
+				}
+				if(bFailRectangleChild)
+				{
+					fprintf(stderr, "ERROR: Nested region %u (label: \"%s\") is not on boundary of parent region %u (label: \"%s\").\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+					fprintf(stderr, "A rectangular surface region can only have a parent surface if it is directly on the surface of the parent.\n");
+					*bFail = true;
+					continue;
+				}
+				
+				// Confirm that child is inside of parent
+				if(!bBoundarySurround(RECTANGLE, regionArray[j].boundary,
+					RECTANGULAR_BOX, regionArray[i].boundary, -regionArray[i].subResolution))
+				{
+					// Child is sticking out of parent
+					fprintf(stderr, "ERROR: Outer boundary of nested region %u (label: \"%s\") is not properly surrounded by parent region %u (label: \"%s\").\n", j, regionArray[j].spec.label, i, regionArray[i].spec.label);
+					fprintf(stderr, "Both regions are rectangular.\n");
 					*bFail = true;
 				}
 			} else

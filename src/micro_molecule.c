@@ -782,56 +782,56 @@ bool followMolecule(const double startPoint[3],
 						bContinue = true;
 						if(minNormalDist > minDist + regionArray[startRegion].subResolution)
 						{ // Normal region at same distance as membrane was not detected
-							// Assume that this was due to membrane being parent
-							// or child of startRegion
-							switch(regionArray[startRegion].regionNeighDir[*endRegion])
+							// Check neighbors of membrane for closest normal region
+							// Scan normal neighbors of membrane that are children or parent
+							for(curNeigh = 0; curNeigh < regionArray[*endRegion].numRegionNeigh; curNeigh++)
 							{
-								case PARENT:
-								case CHILD:
-									// Scan normal neighbors of membrane that are children or parent
-									for(curNeigh = 0; curNeigh < regionArray[*endRegion].numRegionNeigh; curNeigh++)
-									{
-										curRegion = regionArray[*endRegion].regionNeighID[curNeigh];
-										
-										if(curRegion == startRegion
-											|| regionArray[curRegion].spec.type != REGION_NORMAL)
-											continue;
-										
-										switch(regionArray[*endRegion].regionNeighDir[curRegion])
-										{
-											case PARENT:
-											case CHILD:
-												// One region is other's parent
-												// Need to check against all faces of child
-												bCurIntersect = bLineHitRegion(startPoint, lineVector, lineLength,
-													*endRegion, curRegion, regionArray,
-													&curFace, &curDist, curIntersectPoint);
-												break;
-											default:
-												// Something went wrong here
-												fprintf(stderr, "ERROR: Could not evaluate transition from region %u (Label: \"%s\") through membrane region %u (Label: \"%s\").\n",
-												startRegion, regionArray[startRegion].spec.label,
-												*endRegion, regionArray[*endRegion].spec.label);
-												exit(EXIT_FAILURE);
-										}
-										
-										if(bCurIntersect && curDist < minNormalDist)
-										{ // There is intersection with this face and it is closest normal region so far
-											minNormalDist = curDist;
-											closestNormal = curRegion;
-											nearestFace = curFace;
-											nearestIntersectPoint[0] = curIntersectPoint[0];
-											nearestIntersectPoint[1] = curIntersectPoint[1];
-											nearestIntersectPoint[2] = curIntersectPoint[2];
-										}
-									}
-									break;
-								default:
-									// Something went wrong here
-									fprintf(stderr, "ERROR: Could not evaluate transition from region %u (Label: \"%s\") through membrane region %u (Label: \"%s\").\n",
-									startRegion, regionArray[startRegion].spec.label,
-									*endRegion, regionArray[*endRegion].spec.label);
-									exit(EXIT_FAILURE);
+								curRegion = regionArray[*endRegion].regionNeighID[curNeigh];
+								
+								if(curRegion == startRegion
+									|| regionArray[curRegion].spec.type != REGION_NORMAL)
+									continue;
+								
+								switch(regionArray[*endRegion].regionNeighDir[curRegion])
+								{
+									case PARENT:
+									case CHILD:
+										// One region is other's parent
+										// Need to check against all faces of child
+										bCurIntersect = bLineHitRegion(startPoint, lineVector, lineLength,
+											*endRegion, curRegion, regionArray,
+											&curFace, &curDist, curIntersectPoint);
+										break;
+									default:
+										// Regions are adjacent. Only check adjacent plane
+										curFace = regionArray[*endRegion].regionNeighDir[curRegion];
+										bCurIntersect = bLineHitInfinitePlane(startPoint, lineVector,
+											lineLength, RECTANGULAR_BOX,
+											regionArray[*endRegion].boundRegionFaceCoor[curRegion][0],
+											curFace, false, &curDist, curIntersectPoint)
+											&& bPointOnFace(curIntersectPoint, RECTANGULAR_BOX,
+											regionArray[*endRegion].boundRegionFaceCoor[curRegion][0],
+											curFace);
+										break;
+								}
+								
+								if(bCurIntersect && curDist < minNormalDist)
+								{ // There is intersection with this face and it is closest normal region so far
+									minNormalDist = curDist;
+									closestNormal = curRegion;
+									nearestFace = curFace;
+									nearestIntersectPoint[0] = curIntersectPoint[0];
+									nearestIntersectPoint[1] = curIntersectPoint[1];
+									nearestIntersectPoint[2] = curIntersectPoint[2];
+								}
+							}
+							if(minNormalDist > minDist + regionArray[startRegion].subResolution)
+							{ // Could not find region in membrane neighbor list
+								// Region is probably a grandparent or grandchild to membrane
+								fprintf(stderr, "ERROR: Could not evaluate transition from region %u (Label: \"%s\") through membrane region %u (Label: \"%s\").\n",
+								startRegion, regionArray[startRegion].spec.label,
+								*endRegion, regionArray[*endRegion].spec.label);
+								exit(EXIT_FAILURE);
 							}
 						}
 						*endRegion = closestNormal;

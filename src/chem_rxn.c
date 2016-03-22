@@ -16,6 +16,7 @@
  * - removed limit on number of molecule types
  * - removed limit on number of products in a reaction
  * - added region label when giving errors about region initialization
+ * - added bSurface, surfRxnType members to reaction structure
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -57,7 +58,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
-	const struct chem_rxn_struct chem_rxn[])
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	short i; // Current region
 	unsigned short j; // Current reaction
@@ -69,6 +71,11 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	uint32_t numTotalProd; // Total number of products in a reaction
 	
 	bool bFoundReactant; // Have we found the first reactant yet?
+	bool bHasExclusiveRxn; // Does the current combination of region type and reaction type
+							// permit only one reaction for reactant(s)?
+	
+	unsigned short numInfRxn; // Number of 1st order reactions for current reactant that have infinite
+								// reaction rates
 	
 	bool (* bRxnInRegion)[NUM_REGIONS]; // Which reactions can occur in which regions?
 	unsigned short (* rxnInRegionID)[NUM_REGIONS]; // IDs of reactions that can occur in each region
@@ -86,7 +93,9 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		regionArray[i].numChemRxn = 0;
 		for(j = 0; j < MAX_RXNS; j++)
 		{
-			if(chem_rxn[j].bEverywhere)
+			if(chem_rxn[j].bEverywhere &&
+				((chem_rxn[j].bSurface && regionArray[i].spec.type != REGION_NORMAL)
+				|| (!chem_rxn[j].bSurface && regionArray[i].spec.type != REGION_NORMAL)))
 				bRxnInRegion[j][i] = true;
 			else
 				bRxnInRegion[j][i] = false;
@@ -249,6 +258,20 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].numRxnProducts[j] = 0;
 			curRxn = rxnInRegionID[j][i]; // Current reaction in chem_rxn array
 			
+			if(chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE
+				&& regionArray[i].spec.surfaceType != SURFACE_MEMBRANE)
+			{
+				fprintf(stderr, "ERROR: Chemical reaction %u is a membrane reaction but is defined for region %u (label:\"%s\"), which is not a membrane region.\n",
+					j, i, regionArray[i].spec.label);
+				exit(EXIT_FAILURE);
+			} else if(chem_rxn[curRxn].surfRxnType != RXN_MEMBRANE
+				&& regionArray[i].spec.surfaceType == SURFACE_MEMBRANE)
+			{
+				fprintf(stderr, "ERROR: Chemical reaction %u is not a membrane reaction but is defined for membrane region %u (label:\"%s\").\n",
+					j, i, regionArray[i].spec.label);
+				exit(EXIT_FAILURE);
+			}
+			
 			for(k = 0; k < NUM_MOL_TYPES; k++)
 			{
 				num_reactants += chem_rxn[curRxn].reactants[k];
@@ -305,6 +328,12 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			switch(num_reactants)
 			{
 				case 0:
+					if(chem_rxn[curRxn].bSurface && chem_rxn[curRxn].surfRxnType != RXN_NORMAL)
+					{
+						fprintf(stderr, "ERROR: Chemical reaction %u is 0th order and must be defined as a normal surface reaction.\n", j);
+						exit(EXIT_FAILURE);
+					}
+				
 					// meso rxnRate must be calculated for one subvolume
 					if (regionArray[i].plane == PLANE_3D
 						&& regionArray[i].spec.type == REGION_NORMAL)
@@ -323,10 +352,29 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 					regionArray[i].zerothRxn[regionArray[i].numZerothRxn++] = j;
 					break;
 				case 1:
-					regionArray[i].rxnRate[j] = chem_rxn[curRxn].k;
+					switch(chem_rxn[curRxn].surfRxnType)
+					{
+						case RXN_RECEPTOR:
+						case RXN_MEMBRANE:
+						case RXN_NORMAL:
+							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k;
+							break;
+						case RXN_ABSORBING:
+							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k *
+								sqrt(PI*regionArray[i].spec.dt*DIFF_COEF[i][j]);
+							break;
+						default:
+							fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", j, chem_rxn[curRxn].surfRxnType);
+							exit(EXIT_FAILURE);
+					}
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
+					if(chem_rxn[curRxn].bSurface && chem_rxn[curRxn].surfRxnType != RXN_NORMAL)
+					{
+						fprintf(stderr, "ERROR: Chemical reaction %u is 2nd order and must be defined as a normal surface reaction.\n", j);
+						exit(EXIT_FAILURE);
+					}
 					if (regionArray[i].plane == PLANE_3D
 						&& regionArray[i].spec.type == REGION_NORMAL)
 						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
@@ -352,19 +400,30 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].numFirstCurReactant[j] = 0;
 			regionArray[i].uniSumRate[j] = 0.;
 			regionArray[i].uniCumProb[j][0] = 0.;
+			numInfRxn = 0;
+			
+			bHasExclusiveRxn = false;
 		
 			// Scan reactions to see which have current molecule as a reactant
 			for(k = 0; k < regionArray[i].numChemRxn; k++)
 			{
 				switch(regionArray[i].rxnOrder[k])
 				{
-					case 1:						
+					case 1:
 						if(chem_rxn[k].reactants[j] > 0)
 						{
 							regionArray[i].firstRxnID[j][regionArray[i].numFirstCurReactant[j]] = k;
 							regionArray[i].uniSumRate[j] += regionArray[i].rxnRate[k];		
 							
 							regionArray[i].numFirstCurReactant[j]++;
+							
+							if(regionArray[i].rxnRate[k] == INFINITY)
+								numInfRxn++;
+							
+							if(chem_rxn[k].surfRxnType != RXN_NORMAL)
+							{
+								bHasExclusiveRxn = true;
+							}
 						}
 						break;
 					case 2:
@@ -372,25 +431,58 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				}
 			}
 			
+			if(bHasExclusiveRxn && regionArray[i].numFirstCurReactant[j] > 1)
+			{ // This reactant has an exclusive reaction but it is supposed to participate
+				// in more than one reaction
+				fprintf(stderr, "ERROR: Molecule type %u in region %u can participate in %d chemical reactions but at least one reaction is exclusive.\n",
+					j, i, regionArray[i].numFirstCurReactant[j]);
+				fprintf(stderr, "Generally, non-normal reactions are exclusive.\n");
+				exit(EXIT_FAILURE);
+			}
+			
 			// Scan reactions with current molecule as reactant to determine the
 			// cumulative reaction probabilities
 			for(k = 0; k < regionArray[i].numFirstCurReactant[j]; k++)
 			{
-				if(k > 0)
-					regionArray[i].uniCumProb[j][k] = regionArray[i].uniCumProb[j][k-1];
+				switch(chem_rxn[regionArray[i].firstRxnID[j][k]].surfRxnType)
+				{
+					case RXN_RECEPTOR:
+					case RXN_MEMBRANE:
+					case RXN_NORMAL:
+						if(k > 0)
+							regionArray[i].uniCumProb[j][k] = regionArray[i].uniCumProb[j][k-1];
 				
-				// Relative rate will be used when we need to recalculate the probabilities
-				// due to smaller time step size
-				regionArray[i].uniRelativeRate[j][k] =
-					regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]]
-					/ regionArray[i].uniSumRate[j];
-				
-				// The following cumulative probability calculation is valid for when
-				// a molecule existed from the end of the last region time step
-				regionArray[i].uniCumProb[j][k] +=
-					regionArray[i].uniRelativeRate[j][k]
-					* (1 - exp(-regionArray[i].spec.dt*regionArray[i].uniSumRate[j]));
-				
+						// Relative rate will be used when we need to recalculate the probabilities
+						// due to smaller time step size
+						if(regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]] == INFINITY)
+						{
+							regionArray[i].uniRelativeRate[j][k] = 1/numInfRxn;
+							regionArray[i].uniCumProb[j][k] += 1/numInfRxn;
+						}
+						else
+						{
+							regionArray[i].uniRelativeRate[j][k] =
+								regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]]
+								/ regionArray[i].uniSumRate[j];
+								
+							// The following cumulative probability calculation is valid for when
+							// a molecule existed from the end of the last region time step
+							regionArray[i].uniCumProb[j][k] +=
+								regionArray[i].uniRelativeRate[j][k]
+								* (1 - exp(-regionArray[i].spec.dt*regionArray[i].uniSumRate[j]));
+						}
+						
+						break;
+					case RXN_ABSORBING:
+						regionArray[i].uniRelativeRate[j][0] =
+							regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]];
+						regionArray[i].uniCumProb[j][0] =
+							regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]];						
+						break;
+					default:
+						fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", j, chem_rxn[curRxn].surfRxnType);
+						exit(EXIT_FAILURE);
+				}	
 			}
 			
 			regionArray[i].minRxnTimeRV[j] =

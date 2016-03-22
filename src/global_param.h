@@ -97,4 +97,11 @@
 // NOTE: Changes to list of names must be reflected in file_io.c
 #define CSK 0
 
+// 1st Order Surface reaction types
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define RXN_NORMAL 0
+#define RXN_ABSORBING 1
+#define RXN_RECEPTOR 2
+#define RXN_MEMBRANE 3
+
 #endif // GLOBAL_PARAM_H

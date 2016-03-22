@@ -53,7 +53,14 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Base reaction rate k (units depends on order of reaction)
 	double k;
 	
+	// Is the reaction a surface reaction?
+	// This will affect where a reaction will take place by default,
+	// as indicated by bEverywhere
+	bool bSurface;
+	
 	// Can the reaction take place anywhere by default?
+	// Actual regions will depend on value of bSurface and whether a given
+	// region is a normal region or a surface
 	bool bEverywhere;
 	
 	// Number of regions that are exceptions to the location default
@@ -65,6 +72,12 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	
 	// TODO: Add parameters for reactions that take place across multiple
 	// regions (i.e., surface interactions)
+	
+	// Type of surface reaction.
+	// Affects how the reaction probability is calculated
+	// Default is RXN_NORMAL, which determines reaction probability from
+	// reaction rate as if it were a solution reaction
+	short surfRxnType;
 };
 
 //
@@ -79,7 +92,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
-	const struct chem_rxn_struct chem_rxn[]);
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void deleteRegionChemRxn(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,

@@ -227,7 +227,7 @@ void initializeRegionArray(struct region regionArray[],
 	
 	// Define chemical reaction network
 	initializeRegionChemRxn(NUM_REGIONS, regionArray,
-		NUM_MOL_TYPES, MAX_RXNS, chem_rxn);
+		NUM_MOL_TYPES, MAX_RXNS, chem_rxn, DIFF_COEF);
 }
 
 // Initialize region knowledge of the subvolumes that are adjacent to it

@@ -16,6 +16,7 @@
  * - modified check on number of subvolumes along each dimension of a rectangular region
  * - added type and surfaceType properties to region. Default values are REGION_NORMAL and
  * NO_SURFACE, respectively
+ * - added bSurface and surfRxnType properties to chemical reaction. Default values are false and RXN_NORMAL, respectively.
  * - added stringWrite function to nest some calls to stringAllocate, strlen,
  * and strcpy
  * - removed NUM_DIM parameter from simulation spec
@@ -302,7 +303,7 @@ void loadConfig(const char * CONFIG_NAME,
 	if(!cJSON_bItemValid(chemSpec,"Chemical Reaction Specification", cJSON_Array))
 	{
 		bWarn = true;
-		printf("WARNING %d: Configuration file is missing \"Chemical Reaction Specification\" array. Assuming that no chemcial reactions are possible.", numWarn++);
+		printf("WARNING %d: Configuration file is missing \"Chemical Reaction Specification\" array. Assuming that no chemical reactions are possible.", numWarn++);
 		curSpec->MAX_RXNS = 0;
 	} else
 	{
@@ -320,11 +321,26 @@ void loadConfig(const char * CONFIG_NAME,
 		for(curArrayItem = 0;
 			curArrayItem < curSpec->MAX_RXNS; curArrayItem++)
 		{
+			curSpec->chem_rxn[curArrayItem].reactants =
+				malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
+			curSpec->chem_rxn[curArrayItem].products =
+				malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
+			if(curSpec->chem_rxn[curArrayItem].reactants == NULL
+				|| curSpec->chem_rxn[curArrayItem].products == NULL)
+			{
+				fprintf(stderr,"ERROR: Memory could not be allocated to store chemical reaction reactants and products\n");
+				exit(EXIT_FAILURE);
+			}
+			
 			if(!cJSON_bArrayItemValid(rxnSpec, curArrayItem, cJSON_Object))
 			{
 				bWarn = true;
 				printf("WARNING %d: \"Chemical Reaction Specification\" item %d is not a JSON object. Creating empty reaction.\n", numWarn++, curArrayItem);
 				curSpec->chem_rxn[curArrayItem].k = 0.;
+				curSpec->chem_rxn[curArrayItem].bSurface = false;
+				curSpec->chem_rxn[curArrayItem].bEverywhere = false;
+				curSpec->chem_rxn[curArrayItem].numRegionExceptions = 0;
+				curSpec->chem_rxn[curArrayItem].regionExceptionLabel = NULL;
 				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
 				curMolType++)
 				{
@@ -333,16 +349,7 @@ void loadConfig(const char * CONFIG_NAME,
 				}
 			} else
 			{
-				curSpec->chem_rxn[curArrayItem].reactants =
-					malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
-				curSpec->chem_rxn[curArrayItem].products =
-					malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
-				if(curSpec->chem_rxn[curArrayItem].reactants == NULL
-					|| curSpec->chem_rxn[curArrayItem].products == NULL)
-				{
-					fprintf(stderr,"ERROR: Memory could not be allocated to store chemical reaction reactants and products\n");
-					exit(EXIT_FAILURE);
-				}
+				
 				curObj = cJSON_GetArrayItem(rxnSpec, curArrayItem);
 				if(!cJSON_bItemValid(curObj,"Reaction Rate", cJSON_Number) ||
 					!cJSON_bItemValid(curObj,"Reactants", cJSON_Array) ||
@@ -354,6 +361,10 @@ void loadConfig(const char * CONFIG_NAME,
 					bWarn = true;
 					printf("WARNING %d: \"Chemical Reaction Specification\" item %d has missing parameters, an invalid reaction rate, or an incorrect number of molecule types. Creating empty reaction.\n", numWarn++, curArrayItem);
 					curSpec->chem_rxn[curArrayItem].k = 0.;
+					curSpec->chem_rxn[curArrayItem].bSurface = false;
+					curSpec->chem_rxn[curArrayItem].bEverywhere = false;
+					curSpec->chem_rxn[curArrayItem].numRegionExceptions = 0;
+					curSpec->chem_rxn[curArrayItem].regionExceptionLabel = NULL;
 					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
 					curMolType++)
 					{
@@ -361,9 +372,61 @@ void loadConfig(const char * CONFIG_NAME,
 						curSpec->chem_rxn[curArrayItem].products[curMolType] = 0;
 					}
 				} else
-				{
+				{					
+					if(!cJSON_bItemValid(curObj,"Surface Reaction?", cJSON_True))
+					{ // Reaction does not have a valid Surface Reaction?
+						bWarn = true;
+						printf("WARNING %d: Chemical reaction %d does not have a valid \"Surface Reaction?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+						curSpec->chem_rxn[curArrayItem].bSurface = false;
+						curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
+					} else
+					{
+						curSpec->chem_rxn[curArrayItem].bSurface = 
+							cJSON_GetObjectItem(curObj, "Surface Reaction?")->valueint;
+					}
+					
+					if(curSpec->chem_rxn[curArrayItem].bSurface)
+					{ // We have a surface reaction. Determine what type
+						if(!cJSON_bItemValid(curObj,"Surface Reaction Type", cJSON_String))
+						{ // Reaction does not have a defined Surface Reaction Type
+							bWarn = true;
+							printf("WARNING %d: Chemical reaction %d does not have a defined \"Surface Reaction Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+							tempString =
+								stringWrite("Normal");
+						} else{
+							tempString =
+								stringWrite(cJSON_GetObjectItem(curObj,
+								"Surface Reaction Type")->valuestring);
+						}
+						
+						if(strcmp(tempString,"Normal") == 0)
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
+						else if(strcmp(tempString,"Absorbing") == 0)
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_ABSORBING;
+						else if(strcmp(tempString,"Receptor Binding") == 0)
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_RECEPTOR;
+						else if(strcmp(tempString,"Membrane") == 0)
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_MEMBRANE;
+						else
+						{
+							bWarn = true;
+							printf("WARNING %d: Region %d has an invalid \"Surface Reaction Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
+						}
+						free(tempString);
+					} else
+					{
+						curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
+						// Check for existence of unnecessary parameters and display warnings if they are defined
+						if(cJSON_bItemValid(curObj,"Surface Reaction Type", cJSON_String))
+						{
+							bWarn = true;
+							printf("WARNING %d: Reaction %d does not need \"Surface Reaction Type\" defined. Ignoring.\n", numWarn++, curArrayItem);
+						}
+					}
+					
 					if(!cJSON_bItemValid(curObj,"Default Everywhere?", cJSON_True))
-					{ // Region does not have a valid Default Everywhere?
+					{ // Reaction does not have a valid Default Everywhere?
 						bWarn = true;
 						printf("WARNING %d: Chemical reaction %d does not have a valid \"Default Everywhere?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
 						curSpec->chem_rxn[curArrayItem].bEverywhere = true;

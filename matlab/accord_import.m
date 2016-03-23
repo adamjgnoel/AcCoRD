@@ -1,4 +1,4 @@
-function [data, config] = accord_import(fileName, seedRange)
+function [data, config] = accord_import(fileName, seedRange, bWrite)
 %
 % The AcCoRD Simulator
 % (Actor-based Communication via Reaction-Diffusion)
@@ -26,9 +26,13 @@ function [data, config] = accord_import(fileName, seedRange)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD v0.4.1
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_RELEASE
+% - added bWrite input argument to control whether output is saved to
+% mat-file
 %
 % Revision v0.4.1
 % - changed output filename convention and location for increased
@@ -190,5 +194,7 @@ for s = 1:data.numSeed
 end
 
 %% Write output to a .mat file
-[~,configName,~] = fileparts(data.configName);
-save([configName '_out'], 'data', 'config');
+if bWrite
+    [~,configName,~] = fileparts(data.configName);
+    save([configName '_out'], 'data', 'config');
+end

@@ -16,7 +16,8 @@
  * - removed limit on number of molecule types
  * - removed limit on number of products in a reaction
  * - added region label when giving errors about region initialization
- * - added bSurface, surfRxnType members to reaction structure
+ * - added bSurface, surfRxnType members to reaction structure to add specialized
+ * - implementations of some reactions
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -361,7 +362,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 							break;
 						case RXN_ABSORBING:
 							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k *
-								sqrt(PI*regionArray[i].spec.dt*DIFF_COEF[i][j]);
+								sqrt(PI*regionArray[i].spec.dt/DIFF_COEF[i][j]);
 							break;
 						default:
 							fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", j, chem_rxn[curRxn].surfRxnType);

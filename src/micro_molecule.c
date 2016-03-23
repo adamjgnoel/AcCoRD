@@ -23,6 +23,8 @@
  * - added fail check to while loop when a molecule is "pushed" into a 
  * neighboring region. Error will display if we did not end up in specified
  * region or one of its children.
+ * - corrected molecule diffusion validation algorithm to reflect off of the correct
+ * surface boundary when a reflection is needed
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -673,6 +675,9 @@ bool followMolecule(const double startPoint[3],
 	
 	double pushFrac = SUB_ADJ_RESOLUTION;
 	
+	bool bReflectInside;
+	short reflectRegion;
+	
 	// First check all neighbor regions to see which (if any) are intersected first
 	minDist = INFINITY;
 	minNormalDist = INFINITY;
@@ -850,7 +855,9 @@ bool followMolecule(const double startPoint[3],
 		if(bReflect)
 		{
 			// Reflect the point back into its starting region
+			reflectRegion = *endRegion;
 			*endRegion = startRegion;
+			bReflectInside = false;
 		} else
 		{
 			// Assume that transition is valid and proceed to follow point into neighbor
@@ -911,12 +918,16 @@ bool followMolecule(const double startPoint[3],
 		// Point is still in current region so diffusion is valid with no further modification
 		*endRegion = startRegion;
 		return true;
+	} else
+	{
+		bReflectInside = true;
+		reflectRegion = startRegion;
 	}
 	
 	// Point needs to be reflected off of its own region boundary	
 	if(!reflectPoint(startPoint, lineVector, lineLength, endPoint, newEndPoint,
-		nearestIntersectPoint, &nearestFace, regionArray[startRegion].spec.shape,
-		regionArray[startRegion].boundary, true))
+		nearestIntersectPoint, &nearestFace, regionArray[reflectRegion].spec.shape,
+		regionArray[reflectRegion].boundary, bReflectInside))
 	{ // Reflection failed. Leave point at nearestIntersectPoint
 		*endRegion = startRegion;
 		endPoint[0] = nearestIntersectPoint[0];

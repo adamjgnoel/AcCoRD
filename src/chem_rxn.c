@@ -97,7 +97,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		{
 			if(chem_rxn[j].bEverywhere &&
 				((chem_rxn[j].bSurface && regionArray[i].spec.type != REGION_NORMAL)
-				|| (!chem_rxn[j].bSurface && regionArray[i].spec.type != REGION_NORMAL)))
+				|| (!chem_rxn[j].bSurface && regionArray[i].spec.type == REGION_NORMAL)))
 				bRxnInRegion[j][i] = true;
 			else
 				bRxnInRegion[j][i] = false;

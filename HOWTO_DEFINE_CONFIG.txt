@@ -8,12 +8,13 @@
 // For user documentation, read README.txt in the root AcCoRD directory
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
-// Last revised for AcCoRD LATEST_RELEASE
+//
+// Last revised for AcCoRD v0.5 (2016-04-15)
 //
 // Revision history:
 //
-// Revision LATEST_RELEASE
-// - noted important of passive actor time step shifts from microscopic time steps
+// Revision v0.5 (2016-04-15)
+// - noted importance of passive actor time step shifts from microscopic time steps
 //
 // Revision v0.4.1
 // - made placement of config file and output more flexible
@@ -36,7 +37,7 @@
 // With that out of the way, welcome to this "tutorial" for preparing proper
 // AcCoRD configuration files.
 //
-// This document is current as of v0.4.1 (2016-02-18).
+// This document is current as of v0.5 (2016-04-15).
 //
 // Please note that valid configuration files cannot have these comments
 // preceded by "//". If you remove these comments and place a copy of
@@ -98,7 +99,7 @@
 	
 		"Number of Repeats": 2, 	
 		// The number of independent realizations/runs
-		// to execute in the simulation
+		// to execute in the simulation. Will be converted to an integer.
 									
 		"Final Simulation Time": 1e-2,
 		// Simulation will stop once this time is surpassed
@@ -126,26 +127,48 @@
 		"Max Number of Progress Updates": 100
 		// Control the maximum number of updates
 		// to display in the console. There will be no more
-		// than one update per realization
+		// than one update per realization. Will be converted to an integer.
 	},
 	"Chemical Properties": {
 	// Describes the molecules in the system and how they interact
 	
 		"Number of Molecule Types": 1,
 		// Number of distinct types of molecules. A reaction intermediate would count as one new type
+		// Will be converted to an integer.
 		
 		"Diffusion Coefficients": [1e-9],
 		// An array of length "Number of Molecule Types". Units are metre^2/second
 		
 		"Chemical Reaction Specification": [
-		// Array of chemical reactions in the environment. No reactions are required
+		// Array of chemical reactions in the environment. No reactions are required (can leave array empty)
 			{									
 			// First (and only) chemical reaction. This one is actually meaningless because no
 			// reactants or products are defined. See sample configurations for actual reactions
 			
 				"Notes": "",
+				"Surface Reaction?": false,
+				// A chemical reaction can either occur in "normal" regions or in "surface regions"
+				
+				"Surface Reaction Type": "Normal",
+				// Type of surface reaction. Only checked if "Surface Reaction?" is true.
+				// Implemented values are "Normal", "Absorbing", and "Membrane".
+				// If a reaction is "Membrane", then it should only be assigned to
+				// regions that are membranes, it should be first order, and it
+				// should be the only reaction associated with this molecule at
+				// those regions.
+				// If a reaction is "Absorbing", then it should only be assigned
+				// to surface regions that aren't membranes, it should be first
+				// order, and all first-order reactions associated with this
+				// reactant should also be absorbing (this last constraint might
+				// be fixed in a future release). To avoid issues due to the last
+				// constraint, an absorption reaction should have a product that
+				// is a different type of molecule. Reaction must be defined as
+				// "Absorbing" for the correct absorption probability to be calculated.
+				
 				"Default Everywhere?": true,
 				// A chemical reaction can by default take place everywhere or nowhere.
+				// This applies either to all "normal" regions or all "surface" regions,
+				// depending on "Surface Reaction?".
 				// Exceptions to this general setting are defined by "Exception Regions"
 												
 				"Exception Regions": [],
@@ -156,28 +179,31 @@
 				// An array of length "Number of Molecule Types". Indicates how many of each type of molecule are
 				// reactants. THERE MUST BE NO MORE THAN TWO REACTANTS, AND NO MORE THAN ONE
 				// REACTANT IF THE REACTION CAN TAKE PLACE IN A MICROSCOPIC REGION
+				// Will be converted to integers.
 												
 				"Products": [0],
 				// An array of length "Number of Molecule Types". Indicates how many of each
 				// type of molecule are products. There is no limit to the number of products.
+				// Will be converted to integers.
 												
 				"Reaction Rate": 1
 				// Chemical reaction rate. Units depend on the order of the reaction.
+				// To have an "infinite" reaction rate (e.g., for perfect absorption),
+				// set to 1e9999.
 			}
 		]
 	},
 	"Environment":	{
 	// Describes the physical dimensions of the simulation space and the actors inside it
-	
-		"Number of Dimensions": 3,
-		// Number of physical dimensions. Must be 3 at this time
 		
 		"Subvolume Base Size": 1e-6,
 		// Environment is defined by a set of regions. Each region, whether microscopic
 		// or mesoscopic, is measured by number of square/cubic subvolumes in the region. This
 		// base size is used to scale ALL Rectangular subvolumes in the environment (every subvolume
 		// in a rectangular region has a size that is an integer multiple of the base size)
-		// Units are meters.
+		// Units are meters. This base size is also used when determining margin of error
+		// for improperly-overlapping regions, so it should still be assigned a "small" value
+		// when only spherical regions are defined.
 										
 		"Region Specification": [
 		// Array of regions in the environment. There must be at least ONE region
@@ -204,7 +230,26 @@
 				// are permitted).
 				
 				"Shape": "Rectangular Box",
-				// Shape of the region. CURRENTLY "Rectangular Box" and "Sphere" ARE SUPPORTED
+				// Shape of the region. CURRENTLY "Rectangular Box", "Sphere", and
+				// "Rectangle" ARE SUPPORTED
+				
+				"Type": "Normal",
+				// Type of region. CURRENTLY "Normal", "3D Surface", and "2D Surface"
+				// ARE SUPPORTED. 3D (2D) surface regions must be on the boundary of normal
+				// 3D (2D) regions.
+				
+				"Surface Type": "Outer",
+				// Type of surface region. Only define if "Type" is "3D Surface" or
+				// "2D Surface". Possible values are "Outer", "Inner", and "Membrane".
+				// "Outer" and "Inner" surfaces are one-sided and specify what side
+				// they interact with. Such a surface must be fully covered by neighboring
+				// regions on its active side. If "Outer", then the active side faces its lower
+				// x/y/z, or the entire "outside" if the surface is of the same dimension as
+				// the regions that it is a surface to (e.g., if a 3D surface is a 3D box, then
+				// the "Outer" faces are all outward faces on the box).
+				// "Membrane" surfaces are double-sided, and need first order reactions
+				// to define whether individual molecules can pass through them. A membrane
+				// surface must be fully covered by normal neoghboring regions on both sides.
 				
 				"Anchor X Coordinate": 0,									
 				"Anchor Y Coordinate": 0,
@@ -248,11 +293,13 @@
 				// always have one subvolume.
 			},
 			{							
-			// Object describing the second region. Only one region is necessary
+			// Object describing the second region. Only one region must be described
 				"Notes": "",			
 				"Label": "B",
 				// Optional ID			
 				"Parent label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				
 				"Anchor X Coordinate": 20e-6,
 				// Note that here the second region is placed so that it is to the "right" of region 1.
@@ -272,17 +319,12 @@
 				"Label": "C",
 				// Optional ID			
 				"Parent label": "B",
+				"Shape": "Sphere",
+				"Type": "Normal",
 				
 				"Anchor X Coordinate": 25e-6,				
 				"Anchor Y Coordinate": 5e-6,
 				"Anchor Z Coordinate": 5e-6,
-				
-							
-				//
-				//!!!!  The remaining parameters apply to Sphere regions ONLY !!!!
-				// AcCoRD will produce warnings if any of these parameters are defined for a
-				// rectangular box region
-				//
 				
 				"Radius": 4e-6
 				// Radius of the sphere. This region is inside of a rectuangular box region
@@ -302,10 +344,23 @@
 			// Object describing the first actor
 			
 				"Notes": "",
+				
+				"Is Actor Location Defined by Regions?": false,
+				// Declare how the actor's shape is defined. If true, then "List of Regions
+				// Defining Location" is needed. If false, then the shape and its boundary
+				// must be specified.
+				
+				"List of Regions Defining Location": [],
+				// Only define if "Is Actor Location Defined by Regions?" is true. List the
+				// labels of regions whose union form the space occupied by this actor.
+				
 				"Shape": "Rectangular Box",
-				// Shape of the actor. CURRENTLY "Rectangular Box" and "Sphere" ARE SUPPORTED
+				// Only define if "Is Actor Location Defined by Regions?" is false.
+				// Shape of the actor. CURRENTLY "Rectangular Box", "Sphere", and
+				// "Rectangle" ARE SUPPORTED
 				
 				"Outer Boundary": [0, 20e-6, 0, 10e-6, 0, 10e-6],
+				// Only define if "Is Actor Location Defined by Regions?" is false.
 				// The coordinates of the actor. For a "Rectangular Box" actor, the format is
 				// [x min, x max, y min, y max, z min, z max].
 				// For a "Sphere" actor, the format is [x center, y center, z center, radius].
@@ -409,6 +464,7 @@
 			// It is passive and overlaps region 2.
 			
 				"Notes": "",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangle",	
 				"Outer Boundary": [20e-6, 30e-6, 0, 10e-6, 0, 10e-6], 														
 				"Is Actor Active?": false,				
@@ -441,10 +497,11 @@
 			{
 			// Object describing the third actor
 			// It is passive and overlaps region 1.
+			// The overlap of region 1 ("B") is defined explicitly.
 			
 				"Notes": "",
-				"Shape": "Rectangle",	
-				"Outer Boundary": [0, 20e-6, 0, 10e-6, 0, 10e-6], 														
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["B"],														
 				"Is Actor Active?": false,				
 				"Start Time": 1e-6,																
 				"Is There Max Number of Actions?": false,	

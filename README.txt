@@ -71,6 +71,7 @@ This list is current as of v0.5. See https://github.com/adamjgnoel/AcCoRD/issues
 * Active actor modulation scheme is presented as a configuration option but the only current valid choice is "CSK" (concentration shift keying)
 * The bit stream of active actors will always be written to the output file, independent of the setting of "Is Actor Activity Recorded?". This is because active actor emission is currently always random.
 * Point sources are not accommodated
+* All first-order reactions in a non-membrane surface region are treated as absorption reactions when a molecule of the corresponding reactant type collides with the surface. However, the "correct" absorption probability is only calculated for reactions that are explicitly defined as "Absorbing"
 * 2 regions must share an outer face in order to be classified as neighbors, unless one region is the parent of the other. So, if a child region is up against a face of its parent, and that parent also has a parent but doesn't share the same face with its parent, then the parent's parent will not be recognized as a neighbor of the child. In such a case molecule transitions between the child and the "grandparent" are not possible.
 * A child region is always assumed to be a neighbor of its parent, which is not strictly true but should not create a problem during a simulation
 * microscopic molecules in a spherical region may go a very small distance beyond the region boundary but are still believe to be inside the sphere. This is due to numerical underflow, and might mean that the potential chemical reactions for the molecule are inconsistent with its location.
@@ -150,11 +151,11 @@ To import simulation output as a structure in MATLAB, use the accord_import func
 [data, config] = accord_import(FILENAME, SEEDRANGE, bWrite)
 
 where
-FILENAME - the output filename to load (including the relative path, if applicable, but excluding the '_SEEDX.txt' suffix)
-SEEDRANGE - a vector specifying the seed values to import (each seed value corresponds to one pair of output files)
-bWrite - switch to write the "data" and "config" structures to a MATLAB mat-file named CONFIG_NAME_out.mat in the "matlab" directory, where CONFIG_NAME is the name of the configuration file that was originally used to run the simulation.
-data - output structure of simulation data
-config - output structure with the parameters of the configuration file used to run the simulation
+* FILENAME - the output filename to load (including the relative path, if applicable, but excluding the '_SEEDX.txt' suffix)
+* SEEDRANGE - a vector specifying the seed values to import (each seed value corresponds to one pair of output files)
+* bWrite - switch to write the "data" and "config" structures to a MATLAB mat-file named CONFIG_NAME_out.mat in the "matlab" directory, where CONFIG_NAME is the name of the configuration file that was originally used to run the simulation.
+* data - output structure of simulation data
+* config - output structure with the parameters of the configuration file used to run the simulation
 
 accord_import will use the summary file to learn the name of the original configuration file and will search for that file in the current directory, then in the "config", "../config/", "../", "../../", and "../../config" directories (and in that order). If a file with a matching configuration filename cannot be found, then "config" will be an empty array.
 

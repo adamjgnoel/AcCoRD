@@ -143,7 +143,7 @@ struct actorStructSpec3D { // Configuration parameters
 	
 	// Which types of molecules are released?
 	// The number of types with value 1 should be consistent with the modulation scheme
-	bool bReleaseMol[MAX_MOL_TYPES];
+	bool * bReleaseMol;
 	
 	// TODO: Consider parameters for recording the actions of this actor (i.e., the
 	// randomly-modulated bits, random signal strength, action times, etc)
@@ -159,11 +159,11 @@ struct actorStructSpec3D { // Configuration parameters
 	bool bRecordTime;
 	
 	// Which molecule types are observed? (if bWrite == true)
-	bool bRecordMol[MAX_MOL_TYPES];
+	bool * bRecordMol;
 	
 	// Which molecule types have positions recorded?
 	// (if bWrite == true AND bRecordMol[ID] == true)
-	bool bRecordPos[MAX_MOL_TYPES];
+	bool * bRecordPos;
 };
 
 /* The actorStruct3D structure contains all parameters specific to any 3D
@@ -275,7 +275,7 @@ struct actorActiveStruct3D { // Active actor parameters
 	
 	// Indices of the molecule types that actor could release
 	// NOTE: The molecule types need to be defined in the order corresponding to the bit
-	unsigned short molType[MAX_MOL_TYPES];
+	unsigned short * molType;
 	
 	// The cumulative fraction of actor that is within a given mesoscopic subvolume, given that the
 	// subvolume is within actor space. Only applies if region is mesoscopic.

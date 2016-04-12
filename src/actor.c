@@ -576,12 +576,16 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 	for(curActive = 0; curActive < NUM_ACTORS_ACTIVE; curActive++)
 	{
 		curActor = actorActiveArray[curActive].actorID;
-		actorActiveArray[curActive].cumFracActorInSub = malloc(actorCommonArray[curActor].numRegion*sizeof(double *));
+		actorActiveArray[curActive].cumFracActorInSub =
+			malloc(actorCommonArray[curActor].numRegion*sizeof(double *));
+		actorActiveArray[curActive].molType =
+			malloc(NUM_MOL_TYPES*sizeof(double *));
 		
 		initializeListRelease(&actorActiveArray[curActive].releaseList);
 		initializeListData(&actorActiveArray[curActive].binaryData);
 		
-		if(actorActiveArray[curActive].cumFracActorInSub == NULL){
+		if(actorActiveArray[curActive].cumFracActorInSub == NULL ||
+			actorActiveArray[curActive].molType == NULL){
 			fprintf(stderr,"ERROR: Memory allocation for structure members of active actor %u.\n", curActive);
 			exit(EXIT_FAILURE);
 		}
@@ -898,6 +902,8 @@ void deleteActor(const short NUM_ACTORS,
 					
 			if(actorActiveArray[curActive].cumFracActorInSub != NULL)
 				free(actorActiveArray[curActive].cumFracActorInSub);
+			if(actorActiveArray[curActive].molType != NULL)
+				free(actorActiveArray[curActive].molType);
 			
 			emptyListRelease(&actorActiveArray[curActive].releaseList);
 			emptyListData(&actorActiveArray[curActive].binaryData);

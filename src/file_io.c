@@ -1254,6 +1254,14 @@ void loadConfig(const char * CONFIG_NAME,
 					cJSON_GetObjectItem(curObj, "Modulation Strength")->valuedouble;
 			}
 			
+			curSpec->actorSpec[curArrayItem].bReleaseMol =
+				malloc(curSpec->NUM_MOL_TYPES * sizeof(bool));
+			if(curSpec->actorSpec[curArrayItem].bReleaseMol == NULL)
+			{
+				fprintf(stderr,"ERROR: Memory could not be allocated to store array of booleans for actor %d, which is active.\n", curArrayItem);
+				exit(EXIT_FAILURE);
+			}
+			
 			if(!cJSON_bItemValid(curObj,"Is Molecule Type Released?", cJSON_Array) ||
 				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Is Molecule Type Released?")) != curSpec->NUM_MOL_TYPES)
 			{ // Config file does not list a valid Is Molecule Type Released? array
@@ -1303,6 +1311,17 @@ void loadConfig(const char * CONFIG_NAME,
 			{
 				curSpec->actorSpec[curArrayItem].bRecordTime = 
 					cJSON_GetObjectItem(curObj, "Is Time Recorded with Activity?")->valueint;
+			}
+			
+			curSpec->actorSpec[curArrayItem].bRecordMol =
+				malloc(curSpec->NUM_MOL_TYPES * sizeof(bool));
+			curSpec->actorSpec[curArrayItem].bRecordPos =
+				malloc(curSpec->NUM_MOL_TYPES * sizeof(bool));
+			if(curSpec->actorSpec[curArrayItem].bRecordMol == NULL ||
+				curSpec->actorSpec[curArrayItem].bRecordPos == NULL)
+			{
+				fprintf(stderr,"ERROR: Memory could not be allocated to store array of booleans for actor %d, which is passive.\n", curArrayItem);
+				exit(EXIT_FAILURE);
 			}
 			
 			
@@ -1382,40 +1401,76 @@ void deleteConfig(struct simSpec3D curSpec)
 	unsigned short curRegion, curActor;
 	unsigned short curRxn;
 	
-	free(curSpec.DIFF_COEF);
-	free(curSpec.OUTPUT_NAME);
+	if(curSpec.DIFF_COEF != NULL)
+		free(curSpec.DIFF_COEF);
+	if(curSpec.OUTPUT_NAME != NULL)
+		free(curSpec.OUTPUT_NAME);
 	
-	for(curRxn = 0; curRxn < curSpec.MAX_RXNS; curRxn++)
+	if(curSpec.chem_rxn != NULL)
 	{
-		free(curSpec.chem_rxn[curRxn].reactants);
-		free(curSpec.chem_rxn[curRxn].products);
-		for(curRegion = 0; curRegion < curSpec.chem_rxn[curRxn].numRegionExceptions; curRegion++)
+		for(curRxn = 0; curRxn < curSpec.MAX_RXNS; curRxn++)
 		{
-			free(curSpec.chem_rxn[curRxn].regionExceptionLabel[curRegion]);
-		}
-		free(curSpec.chem_rxn[curRxn].regionExceptionLabel);
-	}
-	free(curSpec.chem_rxn);
-	
-	for(curRegion = 0; curRegion < curSpec.NUM_REGIONS; curRegion++)
-	{
-		free(curSpec.subvol_spec[curRegion].label);
-		free(curSpec.subvol_spec[curRegion].parent);
-	}
-	free(curSpec.subvol_spec);
-	
-	for(curActor = 0; curRegion < curSpec.NUM_ACTORS; curRegion++)
-	{
-		if(curSpec.actorSpec[curActor].bDefinedByRegions)
-		{
-			for(curRegion = 0; curRegion < curSpec.actorSpec[curActor].numRegion; curRegion++)
+			if(curSpec.chem_rxn[curRxn].reactants != NULL)
+				free(curSpec.chem_rxn[curRxn].reactants);
+			if(curSpec.chem_rxn[curRxn].products != NULL)
+				free(curSpec.chem_rxn[curRxn].products);
+			
+			if(curSpec.chem_rxn[curRxn].regionExceptionLabel != NULL)
 			{
-				free(curSpec.actorSpec[curActor].regionLabel[curRegion]);
+				for(curRegion = 0; curRegion < curSpec.chem_rxn[curRxn].numRegionExceptions; curRegion++)
+				{
+					if(curSpec.chem_rxn[curRxn].regionExceptionLabel[curRegion] != NULL)
+						free(curSpec.chem_rxn[curRxn].regionExceptionLabel[curRegion]);
+				}
+				free(curSpec.chem_rxn[curRxn].regionExceptionLabel);
 			}
-			free(curSpec.actorSpec[curActor].regionLabel);
 		}
+		free(curSpec.chem_rxn);
 	}
-	free(curSpec.actorSpec);
+	
+	if(curSpec.subvol_spec != NULL)
+	{
+		for(curRegion = 0; curRegion < curSpec.NUM_REGIONS; curRegion++)
+		{
+			if(curSpec.subvol_spec[curRegion].label != NULL)
+				free(curSpec.subvol_spec[curRegion].label);
+			if(curSpec.subvol_spec[curRegion].parent != NULL)
+				free(curSpec.subvol_spec[curRegion].parent);
+		}
+		free(curSpec.subvol_spec);
+	}
+	
+	if(curSpec.actorSpec != NULL)
+	{
+		for(curActor = 0; curRegion < curSpec.NUM_ACTORS; curRegion++)
+		{
+			if(curSpec.actorSpec[curActor].bDefinedByRegions)
+			{
+				if(curSpec.actorSpec[curActor].regionLabel != NULL)
+				{
+					for(curRegion = 0; curRegion < curSpec.actorSpec[curActor].numRegion; curRegion++)
+					{
+						if(curSpec.actorSpec[curActor].regionLabel[curRegion] != NULL)
+							free(curSpec.actorSpec[curActor].regionLabel[curRegion]);
+					}
+					free(curSpec.actorSpec[curActor].regionLabel);
+				}
+			}
+			
+			if(curSpec.actorSpec[curActor].bActive)
+			{
+				if(curSpec.actorSpec[curActor].bReleaseMol != NULL)
+					free(curSpec.actorSpec[curActor].bReleaseMol);
+			} else
+			{
+				if(curSpec.actorSpec[curActor].bRecordMol != NULL)
+					free(curSpec.actorSpec[curActor].bRecordMol);
+				if(curSpec.actorSpec[curActor].bRecordPos != NULL)
+					free(curSpec.actorSpec[curActor].bRecordPos);
+			}
+		}
+		free(curSpec.actorSpec);
+	}
 }
 
 // Initialize the simulation output file

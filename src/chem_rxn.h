@@ -17,8 +17,8 @@
  * - removed limit on number of molecule types
  * - removed limit on number of products in a reaction
  * - added region label when giving errors about region initialization
- * - added bSurface, surfRxnType members to reaction structure to add specialized
- * - implementations of some reactions
+ * - added bSurface, surfRxnType members to reaction structure to add specialized reactions
+ * - implementations of some surface reactions
  *
  * Revision v0.4.1
  * - improved use and format of error messages

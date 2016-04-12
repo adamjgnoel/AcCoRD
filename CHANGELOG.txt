@@ -2,7 +2,30 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.4.1.1 (public beta, 2016-02-18)
+This document is the CHANGELOG for AcCoRD v0.5 (public beta, 2016-04-15)
+- [NEW] added surface regions, which can be defined on the border(s) of normal regions. Surface regions can be used to control transitions between regions, or to be chemical reaction sites. Surface regions and the "Normal" regions that they touch must currently be defined as microscopic (and not mesoscopic).
+- [NEW] added some surface chemical reactions, including properties to declare whether a given reaction occurs at a surface. "Membrane" surfaces should have a reaction that defines whether a molecule crosses the membrane or is reflected
+- [NEW] added normal 2D regions. Implementation is at alpha stage. "Normal" 2D regions cannot be neighbors of normal 3D regions
+- [NEW] an actor's location can be defined as the union of a set of regions. It is still possible to define an actor by an explicit shape.
+- [NEW] added display of initialization start time (this is in addition to the start of the actual simulation)
+- [ENHANCEMENT] improved how a passive actor observes molecules in a region if the entire region is known to be inside the actor. In such a case, all molecules inside the region are automatically assumed to be inside the actor, without explicit coordinate checks
+- [ENHANCEMENT] removed hard-coded limits on the number of molecule types and the number of reaction products
+- [ENHANCEMENT] adjusted the clearance distance between spherical and rectangular regions, when one is nested inside the other, so that the distance is scaled by the subvolume adjacency error
+- [ENHANCEMENT] added more checks on region parameters to verify the validity of a configuration file. This includes a check on using unique region labels
+- [ENHANCEMENT] region configuration errors will include the region's label string for easier identification
+- [ENHANCEMENT] delayed program exit due to region configuration errors until all region checks have been completed, so that the user can address all errors at once instead of seeing them one-by-one
+- [ENHANCEMENT] tidied up initialization of region array to nest more code in subfunctions
+- [ENHANCEMENT] tidied up calculations of subvolume coordinates
+- [ENHANCEMENT] error messages about shapes will print the actual name of the shape
+- [ENHANCEMENT] removed the number of dimensions as a configuration parameter
+- [FIX] corrected how molecules get "locked" to the surface of a spherical region when transitioning to or from a spherical region. Previous algorithm could lock a molecule to an imaginary point
+- [FIX] corrected the distance to the end point when a microscopic molecule diffuses from one region to another
+- [FIX] corrected memory allocation for the subvolume helper arrays
+- [FIX] added fail check for when a microscopic molecule is "pushed" from one region into one of its neighbors, in case molecule ends up in no actual region. If this occurs, an error message is displayed, the molecule is returned to its starting point, and the simulation continues. There are currently no known cases where this error would occur.
+- [FIX] corrected reflection off a surface boundary in microscopic molecule diffusion validation, such that reflection is off the right surface
+- [FIX] corrected display of simulation end time
+
+Changes introduced in v0.4.1.1
 - Minor updates to README to reflect new installation and usage
 - Corrected build scripts to create the bin subdirectory if it doesn't exist.
 

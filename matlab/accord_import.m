@@ -60,21 +60,34 @@ summary = loadjson([fileName ...
 data.configName = summary{1}.ConfigFile; % Original configuration file
 
 % "Search" for configuration file
+bFoundConfig = false;
 if exist(data.configName, 'file')
     configFile = data.configName;
+	bFoundConfig = true;
 elseif exist(['config/' data.configName], 'file')
     configFile = ['config/' data.configName];
+	bFoundConfig = true;
 elseif exist(['../config/' data.configName], 'file')
     configFile = ['../config/' data.configName];
+	bFoundConfig = true;
 elseif exist(['../' data.configName], 'file')
     configFile = ['../' data.configName];
+	bFoundConfig = true;
 elseif exist(['../../' data.configName], 'file')
     configFile = ['../../' data.configName];
+	bFoundConfig = true;
 elseif exist(['../../config' data.configName], 'file')
     configFile = ['../../config' data.configName];
+	bFoundConfig = true;
+else
+	warning(sprintf('The original configuration file %s used to run the simulation cannot be found', data.configName));
 end
 
-config = loadjson(configFile, opt);
+if bFoundConfig
+	config = loadjson(configFile, opt);
+else
+	config = [];
+end
 %data.seed = summary{1}.SEED;
 data.startTime = summary{1}.StartTime;
 data.endTime = summary{2}.EndTime;

@@ -33,6 +33,7 @@
 #include <stdlib.h> // for exit(), malloc
 #include <stdbool.h> // for C++ bool naming, requires C99
 #include <limits.h> // For SHRT_MAX
+#include <string.h> // for strlen(), strcmp()
 #include "region.h"
 #include "base.h" // For region adjacency
 #include "micro_molecule.h" // For molecule coordinate linked list
@@ -54,12 +55,27 @@ struct actorStructSpec3D { // Configuration parameters
 	*  Parameters Common to Any Actor
 	*/
 	
+	// Is the actor's location defined by a list of regions?
+	// If true, then there must be a list of regions that define the location of the actor
+	// If false, then the actor needs a shape and boundary specified
+	bool bDefinedByRegions;
+	
+	// Number of regions that define the actor's location
+	// Used if bDefinedByRegions == true
+	short numRegion;
+	
+	// Names of regions that define the actor's location
+	// Length is numRegionDefined
+	char ** regionLabel;
+	
 	// Actor shape type
 	// Values defined in global_param.h
+	// Used if bDefinedByRegions == false
 	int shape;
 	
 	// Outer boundary of this actor, defined in absolute space
-	// TODO: Account for shapes besides rectangles (at least circles)
+	// TODO: Account for more actor shapes
+	// Used if bDefinedByRegions == false
 	double boundary[6];
 	
 	// Actors are "Active" or "Passive"

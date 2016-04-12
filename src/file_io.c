@@ -13,6 +13,7 @@
  * Revision history:
  *
  * Revision LATEST_RELEASE
+ * - added ability to define location of actor by a list of regions
  * - modified check on number of subvolumes along each dimension of a rectangular region
  * - added type and surfaceType properties to region. Default values are REGION_NORMAL and
  * NO_SURFACE, respectively
@@ -902,82 +903,138 @@ void loadConfig(const char * CONFIG_NAME,
 			exit(EXIT_FAILURE);
 		}
 		
-		curObj = cJSON_GetArrayItem(actorSpec, curArrayItem);
+		curObj = cJSON_GetArrayItem(actorSpec, curArrayItem);		
 		
-		if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
-		{ // Actor does not have a defined Shape
+		if(!cJSON_bItemValid(curObj,"Is Actor Location Defined by Regions?", cJSON_True))
+		{ // Actor does not have a valid Is Actor Location Defined by Regions?
 			bWarn = true;
-			printf("WARNING %d: Actor %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
-			tempString =
-				stringWrite("Rectangular Box");
-		} else{
-			tempString =
-				stringWrite(cJSON_GetObjectItem(curObj,
-				"Shape")->valuestring);
-		}
-		
-		if(strcmp(tempString,"Rectangle") == 0)
+			printf("WARNING %d: Actor %d does not have a valid \"Is Actor Location Defined by Regions?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].bDefinedByRegions = false;
+		} else
 		{
-			curSpec->actorSpec[curArrayItem].shape = RECTANGLE;
-			arrayLen = 6;
-		}
-		else if(strcmp(tempString,"Circle") == 0)
-		{
-			curSpec->actorSpec[curArrayItem].shape = CIRCLE;
-			arrayLen = 4;
-		}
-		else if(strcmp(tempString,"Rectangular Box") == 0)
-		{
-			curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
-			arrayLen = 6;
-		}
-		else if(strcmp(tempString,"Sphere") == 0)
-		{
-			curSpec->actorSpec[curArrayItem].shape = SPHERE;
-			arrayLen = 4;
-		}
-		else
-		{
-			bWarn = true;
-			printf("WARNING %d: Actor %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
-			curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
-			arrayLen = 6;
+			curSpec->actorSpec[curArrayItem].bDefinedByRegions = 
+				cJSON_GetObjectItem(curObj, "Is Actor Location Defined by Regions?")->valueint;
 		}
 		
-		if(!cJSON_bItemValid(curObj,"Outer Boundary", cJSON_Array) ||
-			cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Outer Boundary")) != arrayLen)
+		if(curSpec->actorSpec[curArrayItem].bDefinedByRegions)
 		{
-			bWarn = true;
-			printf("WARNING %d: Actor %d has a missing or invalid \"Outer Boundary\". Setting to default value all \"0\"s.\n", numWarn++, curArrayItem);
-			for(i = 0; i < arrayLen; i++)
+			// Read regions that define location of actor
+			if(!cJSON_bItemValid(curObj,"List of Regions Defining Location", cJSON_Array))
+			{ // Actor does not have a List of Regions Defining Location array
+				bWarn = true;
+				printf("WARNING %d: Actor %d has a missing or invalid \"List of Regions Defining Location\". Assigning default value of \"0\" regions.\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].numRegion = 0;
+			} else
 			{
-				curSpec->actorSpec[curArrayItem].boundary[i] = 0;
+				// Read number of regions
+				curSpec->actorSpec[curArrayItem].numRegion =
+					cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"List of Regions Defining Location"));
+				
+				curSpec->actorSpec[curArrayItem].regionLabel =
+					malloc(curSpec->actorSpec[curArrayItem].numRegion * sizeof(char *));
+				if(curSpec->actorSpec[curArrayItem].regionLabel == NULL)
+				{
+					fprintf(stderr,"ERROR: Memory could not be allocated to store region list to define actor %d\n", curArrayItem);
+					exit(EXIT_FAILURE);
+				}
+				
+				// Read in names of regions							
+				curObjInner = cJSON_GetObjectItem(curObj,"List of Regions Defining Location");
+				for(i = 0; i < curSpec->actorSpec[curArrayItem].numRegion; i++)
+				{
+					if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_String))
+					{ // Exception region is not a valid string. Ignore
+						bWarn = true;
+						printf("WARNING %d: Actor %d region %d is not a valid string. Assigning empty string.\n", numWarn++, curArrayItem, i);
+						curSpec->actorSpec[curArrayItem].regionLabel[i] = '\0';
+					} else
+					{
+						curSpec->actorSpec[curArrayItem].regionLabel[i] =
+							stringWrite(cJSON_GetArrayItem(curObjInner,i)->valuestring);
+					}					
+				}
 			}
 		} else
 		{
-			curObjInner = cJSON_GetObjectItem(curObj,"Outer Boundary");
-			for(i = 0; i < arrayLen; i++)
-			{
-				if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number))
-				{
-					bWarn = true;
-					printf("WARNING %d: Actor %d has an invalid \"Outer Boundary\" parameter %d. Setting to default value \"0\".\n", numWarn++, curArrayItem, i);
-					curSpec->actorSpec[curArrayItem].boundary[i] = 0;
-				} else
-				{
-					curSpec->actorSpec[curArrayItem].boundary[i] =
-						cJSON_GetArrayItem(curObjInner, i)->valuedouble;
-				}					
+			// 
+			curSpec->actorSpec[curArrayItem].numRegion = 0;
+			curSpec->actorSpec[curArrayItem].regionLabel = NULL;
+			
+			if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
+			{ // Actor does not have a defined Shape
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not have a defined \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
+				tempString =
+					stringWrite("Rectangular Box");
+			} else{
+				tempString =
+					stringWrite(cJSON_GetObjectItem(curObj,
+					"Shape")->valuestring);
 			}
+			
+			if(strcmp(tempString,"Rectangle") == 0)
+			{
+				curSpec->actorSpec[curArrayItem].shape = RECTANGLE;
+				arrayLen = 6;
+			}
+			else if(strcmp(tempString,"Circle") == 0)
+			{
+				curSpec->actorSpec[curArrayItem].shape = CIRCLE;
+				arrayLen = 4;
+			}
+			else if(strcmp(tempString,"Rectangular Box") == 0)
+			{
+				curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
+				arrayLen = 6;
+			}
+			else if(strcmp(tempString,"Sphere") == 0)
+			{
+				curSpec->actorSpec[curArrayItem].shape = SPHERE;
+				arrayLen = 4;
+			}
+			else
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d has an invalid \"Shape\". Setting to default value \"Rectangular Box\".\n", numWarn++, curArrayItem);
+				curSpec->actorSpec[curArrayItem].shape = RECTANGULAR_BOX;
+				arrayLen = 6;
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Outer Boundary", cJSON_Array) ||
+				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Outer Boundary")) != arrayLen)
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d has a missing or invalid \"Outer Boundary\". Setting to default value all \"0\"s.\n", numWarn++, curArrayItem);
+				for(i = 0; i < arrayLen; i++)
+				{
+					curSpec->actorSpec[curArrayItem].boundary[i] = 0;
+				}
+			} else
+			{
+				curObjInner = cJSON_GetObjectItem(curObj,"Outer Boundary");
+				for(i = 0; i < arrayLen; i++)
+				{
+					if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number))
+					{
+						bWarn = true;
+						printf("WARNING %d: Actor %d has an invalid \"Outer Boundary\" parameter %d. Setting to default value \"0\".\n", numWarn++, curArrayItem, i);
+						curSpec->actorSpec[curArrayItem].boundary[i] = 0;
+					} else
+					{
+						curSpec->actorSpec[curArrayItem].boundary[i] =
+							cJSON_GetArrayItem(curObjInner, i)->valuedouble;
+					}					
+				}
+			}
+			
+			// Add r^2 term for spherical boundaries
+			if(strcmp(tempString,"Sphere") == 0)
+			{
+				curSpec->actorSpec[curArrayItem].boundary[4] =
+					squareDBL(curSpec->actorSpec[curArrayItem].boundary[3]);
+			}
+			free(tempString);
 		}
-		
-		// Add r^2 term for spherical boundaries
-		if(strcmp(tempString,"Sphere") == 0)
-		{
-			curSpec->actorSpec[curArrayItem].boundary[4] =
-				squareDBL(curSpec->actorSpec[curArrayItem].boundary[3]);
-		}
-		free(tempString);
 		
 		if(!cJSON_bItemValid(curObj,"Is Actor Active?", cJSON_True))
 		{ // Actor does not have a valid Is Actor Active?
@@ -1299,11 +1356,10 @@ void loadConfig(const char * CONFIG_NAME,
 // Release memory allocated to configuration settings
 void deleteConfig(struct simSpec3D curSpec)
 {
-	unsigned short curRegion;
+	unsigned short curRegion, curActor;
 	unsigned short curRxn;
 	
 	free(curSpec.DIFF_COEF);
-	free(curSpec.actorSpec);
 	free(curSpec.OUTPUT_NAME);
 	
 	for(curRxn = 0; curRxn < curSpec.MAX_RXNS; curRxn++)
@@ -1324,6 +1380,19 @@ void deleteConfig(struct simSpec3D curSpec)
 		free(curSpec.subvol_spec[curRegion].parent);
 	}
 	free(curSpec.subvol_spec);
+	
+	for(curActor = 0; curRegion < curSpec.NUM_ACTORS; curRegion++)
+	{
+		if(curSpec.actorSpec[curActor].bDefinedByRegions)
+		{
+			for(curRegion = 0; curRegion < curSpec.actorSpec[curActor].numRegion; curRegion++)
+			{
+				free(curSpec.actorSpec[curActor].regionLabel[curRegion]);
+			}
+			free(curSpec.actorSpec[curActor].regionLabel);
+		}
+	}
+	free(curSpec.actorSpec);
 }
 
 // Initialize the simulation output file

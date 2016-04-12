@@ -10,9 +10,24 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
+ *
+ * Revision v0.5 (2016-04-15)
+ * - re-structured region array initialization to nest more code in functions
+ * - added more checks on region parameters (including label uniqueness) to verify placement
+ * - pushed error exit to end of region initialization so that all errors will be displayed
+ * before exiting.
+ * - added 2D regions
+ * - added type member to spec and plane, dimension, and effectiveDim members to main
+ * struct in order to accommodate surface and other 2D regions
+ * - added region label when giving errors about region initialization
+ * - adjusted clearance between spherical and rectangular regions such that the clearance
+ * between them (when one is nested inside the other) is scaled by the subvolume adjacency
+ * error
+ * - corrected "locking" to spherical region so that the coordinate that is "locked" is
+ * the one that is the furthest from the center of the sphere
  *
  * Revision v0.4.1
  * - improved use and format of error messages

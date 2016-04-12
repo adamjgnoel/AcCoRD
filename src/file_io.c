@@ -8,11 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * file_io.c - interface with JSON configuration files
- * Last revised for AcCoRD LATEST_RELEASE
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions
  * - modified check on number of subvolumes along each dimension of a rectangular region
  * - added type and surfaceType properties to region. Default values are REGION_NORMAL and

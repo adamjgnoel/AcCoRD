@@ -8,11 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * actor.c - operations on array of actors and its elements
- * Last revised for AcCoRD LATEST_RELEASE
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions
  * - added 2D and surface regions. Regions that have an effective dimension different
  * from their actual dimension cannot be intersected by a actor boundary (such regions

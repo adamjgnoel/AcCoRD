@@ -8,9 +8,18 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * actor.h - operations on array of actors and its elements
- * Last revised for AcCoRD v0.4.1
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
+ *
+ * Revision v0.5 (2016-04-15)
+ * - added ability to define location of actor by a list of regions
+ * - added 2D and surface regions. Regions that have an effective dimension different
+ * from their actual dimension cannot be intersected by a actor boundary (such regions
+ * must be fully inside). Molecules will not be placed by an actor on a 2D region if
+ * the actor overlaps at least 1 3D region
+ * - tidied up calculations of subvolume coordinates
  *
  * Revision v0.4.1
  * - improved use and format of error messages

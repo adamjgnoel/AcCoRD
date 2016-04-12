@@ -8,9 +8,17 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * chem_rxn.h - structure for storing chemical reaction properties
- * Last revised for AcCoRD v0.4.1
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
+ *
+ * Revision v0.5 (2016-04-15)
+ * - removed limit on number of molecule types
+ * - removed limit on number of products in a reaction
+ * - added region label when giving errors about region initialization
+ * - added bSurface, surfRxnType members to reaction structure to add specialized
+ * - implementations of some reactions
  *
  * Revision v0.4.1
  * - improved use and format of error messages

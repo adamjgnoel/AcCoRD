@@ -10,9 +10,21 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.4.1
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
+ *
+ * Revision v0.5 (2016-04-15)
+ * - added surface reactions, including membrane transitions
+ * - added switch to record all molecules in a region instead of just those
+ * within some specified boundary
+ * - corrected distance to end point when a molecule is "pushed" into a neighboring
+ * region
+ * - added fail check to while loop when a molecule is "pushed" into a 
+ * neighboring region. Error will display if we did not end up in specified
+ * region or one of its children.
+ * - corrected molecule diffusion validation algorithm to reflect off of the correct
+ * surface boundary when a reflection is needed
  *
  * Revision v0.4.1
  * - improved use and format of error messages

@@ -918,6 +918,21 @@ void loadConfig(const char * CONFIG_NAME,
 		
 		if(curSpec->actorSpec[curArrayItem].bDefinedByRegions)
 		{
+			// Set actor parameters that are not needed and see if config file still
+			// defines them
+			curSpec->actorSpec[curArrayItem].shape = UNDEFINED_SHAPE;
+						
+			if(cJSON_bItemValid(curObj,"Shape", cJSON_String))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Shape\" defined because its location is defined by regions. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Outer Boundary", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Outer Boundary\" defined because its location is defined by regions. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			
 			// Read regions that define location of actor
 			if(!cJSON_bItemValid(curObj,"List of Regions Defining Location", cJSON_Array))
 			{ // Actor does not have a List of Regions Defining Location array
@@ -956,9 +971,16 @@ void loadConfig(const char * CONFIG_NAME,
 			}
 		} else
 		{
-			// 
+			// Set actor parameters that are not needed and see if config file still
+			// defines them
 			curSpec->actorSpec[curArrayItem].numRegion = 0;
 			curSpec->actorSpec[curArrayItem].regionLabel = NULL;
+			
+			if(cJSON_bItemValid(curObj,"List of Regions Defining Location", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"List of Regions Defining Location\" defined because its location is defined by an explicit shape. Ignoring.\n", numWarn++, curArrayItem);
+			}
 			
 			if(!cJSON_bItemValid(curObj,"Shape", cJSON_String))
 			{ // Actor does not have a defined Shape

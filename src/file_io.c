@@ -1442,7 +1442,7 @@ void deleteConfig(struct simSpec3D curSpec)
 	
 	if(curSpec.actorSpec != NULL)
 	{
-		for(curActor = 0; curRegion < curSpec.NUM_ACTORS; curRegion++)
+		for(curActor = 0; curActor < curSpec.NUM_ACTORS; curActor++)
 		{
 			if(curSpec.actorSpec[curActor].bDefinedByRegions)
 			{

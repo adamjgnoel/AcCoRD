@@ -10,7 +10,7 @@
 	"Output Filename": "accord_sample_reactor_microscopic",
 	"Warning Override": false,
 	"Simulation Control": {
-		"Number of Repeats": 100,
+		"Number of Repeats": 1,
 		"Final Simulation Time": 1000,
 		"Global Microscopic Time Step": 1,
 		"Random Number Seed": 1,

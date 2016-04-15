@@ -282,7 +282,7 @@ void initializeActorCommon(const short NUM_ACTORS,
 					{ // The actor's location is defined by this region
 						actorCommonArray[curActor].regionInterType[curInterRegion] =
 							regionArray[curRegion].spec.shape;
-						for(i - 0; i < 6; i++)
+						for(i = 0; i < 6; i++)
 						{
 							actorCommonArray[curActor].regionInterBound[curInterRegion][i] =
 								regionArray[curRegion].boundary[i];

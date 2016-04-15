@@ -4,7 +4,7 @@
 		regime. We define a chain of subvolumes that form a pipe. Molecules are added
 		by an active actor at one end of the chamber and can convert into an immobile product molecule at the other end. This file has no 2nd order reactions so it also has
 		a microscopic equivalent. 1 repeat of this simulation should take less than 1 minute to
-		execute on a personal computer (it is much slower.",
+		execute on a personal computer (it is much slower).",
 	"Output Filename": "accord_sample_pipe_reaction_diffusion",
 	"Warning Override": false,
 	"Simulation Control": {
@@ -20,6 +20,7 @@
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur in the destination region.",
+				"Surface Reaction?": false,
 				"Default Everywhere?": false,
 				"Exception Regions": ["Destination"],
 				"Reactants": [1, 0],
@@ -37,6 +38,7 @@
 				"Label": "Pipe",
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 0,
 				"Anchor Y Coordinate": 0,
 				"Anchor Z Coordinate": 0,
@@ -51,6 +53,7 @@
 				"Label": "Destination",
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 10e-6,
 				"Anchor Y Coordinate": 0,
 				"Anchor Z Coordinate": 0,
@@ -64,6 +67,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Molecule source. Release molecules at start.",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 1e-6, 0, 1e-6, 0, 1e-6],
 				"Is Actor Active?": true,
@@ -85,8 +89,8 @@
 		},
 		{
 				"Notes": "Destination observer",
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [10e-6, 11e-6, 0e-6, 1e-6, 0e-6, 1e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["Destination"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,
@@ -100,6 +104,7 @@
 		},
 		{
 				"Notes": "Source observer",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0e-6, 1e-6, 0e-6, 1e-6, 0e-6, 1e-6],
 				"Is Actor Active?": false,
@@ -115,6 +120,7 @@
 		},
 		{
 				"Notes": "System observer (to show conservation of molecules)",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0e-6, 11e-6, 0e-6, 1e-6, 0e-6, 1e-6],
 				"Is Actor Active?": false,

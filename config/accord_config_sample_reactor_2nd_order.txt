@@ -9,7 +9,7 @@
 	"Output Filename": "accord_sample_reactor_2nd_order",
 	"Warning Override": false,
 	"Simulation Control": {
-		"Number of Repeats": 100,
+		"Number of Repeats": 1,
 		"Final Simulation Time": 20,
 		"Global Microscopic Time Step": 1,
 		"Random Number Seed": 1,
@@ -21,6 +21,7 @@
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Enzyme binding.",
+				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],
 				"Reactants": [1, 1, 0, 0],
@@ -29,6 +30,7 @@
 			},
 			{							
 				"Notes": "Enzyme unbinding.",
+				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],
 				"Reactants": [0, 0, 1, 0],
@@ -37,6 +39,7 @@
 			},
 			{							
 				"Notes": "Degradation",
+				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],
 				"Reactants": [0, 0, 1, 0],
@@ -54,6 +57,7 @@
 				"Label": "A",
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 0,
 				"Anchor Y Coordinate": 0,
 				"Anchor Z Coordinate": 0,
@@ -67,6 +71,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Initialization of molecule 0",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
 				"Is Actor Active?": true,
@@ -88,6 +93,7 @@
 		},
 		{
 				"Notes": "Initialization of molecule 1",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
 				"Is Actor Active?": true,
@@ -109,8 +115,8 @@
 		},
 		{
 				"Notes": "Observer",
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["A"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,

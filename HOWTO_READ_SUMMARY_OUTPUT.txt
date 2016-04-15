@@ -2,7 +2,7 @@
 // The AcCoRD Simulator
 // (Actor-based Communication via Reaction-Diffusion)
 //
-// Copyright 2015 Adam Noel. All rights reserved.
+// Copyright 2016 Adam Noel. All rights reserved.
 // 
 // For license details, read LICENSE.txt in the root AcCoRD directory
 // For user documentation, read README.txt in the root AcCoRD directory

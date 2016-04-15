@@ -8,11 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * accord.c - main file
- * Last revised for AcCoRD LATEST_RELEASE
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v0.5 (2016-04-15)
  * - corrected display of simulation end time
  * - added display of initialization start time
  *
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version LATEST_RELEASE (public beta, 2016-02-12)\n");
+	printf("Version v0.5 (2016-04-15) (public beta)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	

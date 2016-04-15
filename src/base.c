@@ -10,11 +10,11 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD LATEST_RELEASE
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v0.5 (2016-04-15)
  * - filling in cases for 2D Rectangles
  * - added function to calculate boundary surface area. Renamed boundaryArea
  * function to boundaryVolume to avoid name confusion

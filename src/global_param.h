@@ -9,11 +9,11 @@
  *
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
- * Last revised for AcCoRD LATEST_RELEASE
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v0.5 (2016-04-15)
  * - removed use of MAX_MOL_TYPES
  * - removed use of MAX_RXN_PRODUCTS
  * - added types of regions and surfaces

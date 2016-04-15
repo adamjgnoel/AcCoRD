@@ -2,56 +2,79 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.4.1.1 (public beta, 2016-02-18)
-- Minor updates to README to reflect new installation and usage
-- Corrected build scripts to create the bin subdirectory if it doesn't exist.
+This document is the CHANGELOG for AcCoRD v0.5 (public beta, 2016-04-15)
+- [NEW] added surface regions, which can be defined on the border(s) of normal regions. Surface regions can be used to control transitions between regions, or to be chemical reaction sites. Surface regions and the "Normal" regions that they touch must currently be defined as microscopic (and not mesoscopic).
+- [NEW] added some surface chemical reactions, including properties to declare whether a given reaction occurs at a surface. "Membrane" surfaces should have a reaction that defines whether a molecule crosses the membrane or is reflected
+- [NEW] added normal 2D regions. Implementation is at alpha stage. "Normal" 2D regions cannot be neighbors of normal 3D regions
+- [NEW] an actor's location can be defined as the union of a set of regions. It is still possible to define an actor by an explicit shape.
+- [NEW] added display of initialization start time (this is in addition to the start of the actual simulation)
+- [ENHANCEMENT] improved how a passive actor observes molecules in a region if the entire region is known to be inside the actor. In such a case, all molecules inside the region are automatically assumed to be inside the actor, without explicit coordinate checks
+- [ENHANCEMENT] removed hard-coded limits on the number of molecule types and the number of reaction products
+- [ENHANCEMENT] adjusted the clearance distance between spherical and rectangular regions, when one is nested inside the other, so that the distance is scaled by the subvolume adjacency error
+- [ENHANCEMENT] added more checks on region parameters to verify the validity of a configuration file. This includes a check on using unique region labels
+- [ENHANCEMENT] region configuration errors will include the region's label string for easier identification
+- [ENHANCEMENT] delayed program exit due to region configuration errors until all region checks have been completed, so that the user can address all errors at once instead of seeing them one-by-one
+- [ENHANCEMENT] tidied up initialization of region array to nest more code in subfunctions
+- [ENHANCEMENT] tidied up calculations of subvolume coordinates
+- [ENHANCEMENT] error messages about shapes will print the actual name of the shape
+- [ENHANCEMENT] removed the number of dimensions as a configuration parameter
+- [FIX] corrected how molecules get "locked" to the surface of a spherical region when transitioning to or from a spherical region. Previous algorithm could lock a molecule to an imaginary point
+- [FIX] corrected the distance to the end point when a microscopic molecule diffuses from one region to another
+- [FIX] corrected memory allocation for the subvolume helper arrays
+- [FIX] added fail check for when a microscopic molecule is "pushed" from one region into one of its neighbors, in case molecule ends up in no actual region. If this occurs, an error message is displayed, the molecule is returned to its starting point, and the simulation continues. There are currently no known cases where this error would occur.
+- [FIX] corrected reflection off a surface boundary in microscopic molecule diffusion validation, such that reflection is off the right surface
+- [FIX] corrected display of simulation end time
+
+Changes introduced in v0.4.1.1
+- [FIX] corrected build scripts to create the bin subdirectory if it doesn't exist.
+- [UPDATE] Minor updates to README to reflect new installation and usage
 
 Changes introduced in v0.4.1
-- Removed binaries from source code.
-- Relaxed placement of executable file relative to configuration file. See README.txt for details.
-- Improved console output with initialization details and better error messages.
+- [ENHANCEMENT] removed binaries from source code.
+- [ENHANCEMENT] relaxed placement of executable file relative to configuration file. See README.txt for details.
+- [ENHANCEMENT] improved console output with initialization details and better error messages.
 
 Changes introduced in v0.4:
-- Added spherical regions and actors. Spherical regions must be microscopic and are always composed of a single subvolume. Spherical regions can have cartesian parent or child regions, but there must be a clearance of at least the cartesian subvolume size to the boundary of the cartesian region. The surface of spherical actors must not intersect any cartesian region boundaries or any mesoscopic subvolumes.
-- Added option to restrict chemical reactions to specific regions.
-- Added more sample configuration files for common usage and stress testing.
-- Improved validation of molecule diffusion in microscopic regions to track molecule trajectory from initial location. This accommodates reflections and multiple region boundary transitions as necessary. Trajectory intersections are determined algebraically, and care is taken to avoid numerical problems. Special cases include a region that shares a boundary with its parent, and molecules that are very close to a boundary before or after they diffuse.
-- Changed data types of large integers to extended integer types uint32_t and uint64_t. This makes performance more consistent across OSs (for example, unsigned long is 32bits on Win but 64bits on Ubuntu)
-- Simplified overlap test between actors and subvolumes when a region is known to be entirely inside an actor, or if an actor is inside just one region.
-- Simplified code for updating subvolume reaction propensities. Actual execution is a bit more computationally complex, particularly for reactions with just a single molecule, but now with much less code and also avoids numerical underflow issues
-- Corrected the detection of a rectangular child region being outside of its rectangular parent.
-- Corrected counting of molecules to include those that are on the actor boundary.
-- Corrected diffusion rates out of mesoscopic subvolumes. Overall, rates were off by a factor of 2.
-- Corrected diffusion rate from a mesoscopic subvolume to a microscopic neighbor so that it is only a function of the size of the mesoscopic subvolume and the size of the overlap to the neighbor (but independent of the size of the neighbor).
-- Corrected meso-to-micro transition when a mesoscopic subvolume borders the same microscopic region along more than one face (i.e., when the microscopic region is a parent).
-- Corrected molecule placement in microscopic regions to account for nested regions.
-- Corrected reaction rate calculation for 0th order reactions to properly account for a region's effective volume (i.e., minus that of nested regions).
-- Corrected generation of output molecules due to 0th order reactions.
-- Corrected calculation for the number of heap levels, as used when determining the sequence of mesoscopic reactions and the sequence of actor/region behavior.
-- Corrected bug where molecules leaving mesoscopic regime to enter microscopic regime were always simultaneously turned into the first molecule type.
-- Removed deprecated debug functions (using gdb as a debugger is much more powerful).
-- Updated comments in randistrs.c and LICENSE file to indicate changes made for AcCoRD.
+- [NEW] added spherical regions and actors. Spherical regions must be microscopic and are always composed of a single subvolume. Spherical regions can have cartesian parent or child regions, but there must be a clearance of at least the cartesian subvolume size to the boundary of the cartesian region. The surface of spherical actors must not intersect any cartesian region boundaries or any mesoscopic subvolumes.
+- [NEW] added option to restrict chemical reactions to specific regions.
+- [NEW] added more sample configuration files for common usage and stress testing.
+- [ENHANCEMENT] improved validation of molecule diffusion in microscopic regions to track molecule trajectory from initial location. This accommodates reflections and multiple region boundary transitions as necessary. Trajectory intersections are determined algebraically, and care is taken to avoid numerical problems. Special cases include a region that shares a boundary with its parent, and molecules that are very close to a boundary before or after they diffuse.
+- [ENHANCEMENT] changed data types of large integers to extended integer types uint32_t and uint64_t. This makes performance more consistent across OSs (for example, unsigned long is 32bits on Win but 64bits on Ubuntu)
+- [ENHANCEMENT] simplified overlap test between actors and subvolumes when a region is known to be entirely inside an actor, or if an actor is inside just one region.
+- [ENHANCEMENT] simplified code for updating subvolume reaction propensities. Actual execution is a bit more computationally complex, particularly for reactions with just a single molecule, but now with much less code and also avoids numerical underflow issues
+- [FIX] corrected the detection of a rectangular child region being outside of its rectangular parent.
+- [FIX] corrected counting of molecules to include those that are on the actor boundary.
+- [FIX] corrected diffusion rates out of mesoscopic subvolumes. Overall, rates were off by a factor of 2.
+- [FIX] corrected diffusion rate from a mesoscopic subvolume to a microscopic neighbor so that it is only a function of the size of the mesoscopic subvolume and the size of the overlap to the neighbor (but independent of the size of the neighbor).
+- [FIX] corrected meso-to-micro transition when a mesoscopic subvolume borders the same microscopic region along more than one face (i.e., when the microscopic region is a parent).
+- [FIX] corrected molecule placement in microscopic regions to account for nested regions.
+- [FIX] corrected reaction rate calculation for 0th order reactions to properly account for a region's effective volume (i.e., minus that of nested regions).
+- [FIX] corrected generation of output molecules due to 0th order reactions.
+- [FIX] corrected calculation for the number of heap levels, as used when determining the sequence of mesoscopic reactions and the sequence of actor/region behavior.
+- [FIX] corrected bug where molecules leaving mesoscopic regime to enter microscopic regime were always simultaneously turned into the first molecule type.
+- [UPDATE] Removed deprecated debug functions (using gdb as a debugger is much more powerful).
+- [UPDATE] Updated comments in randistrs.c and LICENSE file to indicate changes made for AcCoRD.
 
 Changes introduced in v0.3.1.1 (2016-01-06)
-- corrected how the volume of a region is calculated so that empty regions return 0
-- corrected message that appears when there are warnings from loading the configuration file
-- updated HOWTO_DEFINE_CONFIG.txt to say that child regions must be fully defined within their parent
+- [FIX] corrected how the volume of a region is calculated so that empty regions return 0
+- [FIX] corrected message that appears when there are warnings from loading the configuration file
+- [UPDATE] updated HOWTO_DEFINE_CONFIG.txt to say that child regions must be fully defined within their parent
 
 Changes introduced in v0.3.1 (2015-12-28)
-- populated license file with BSD Simplified license for AcCoRD source and the corresponding copyright information for third-party source code.
-- updated loading of configuration files to catch missing parameters and incorrect formats. Some major omissions will result in an error that closes the simulation, but many incorrect inputs produce a warning and lead to a default value. Any warning will trigger user input to continue simulation, unless a parameter to override is defined.
-- added outputs to fread and scanf calls to avoid warnings when compiling optimized version.
-- cleaned up JSONlab files for loading JSON into Matlab. Kept minimal files and moved them to dedicated sub-subdirectory
+- [NEW] populated license file with BSD Simplified license for AcCoRD source and the corresponding copyright information for third-party source code.
+- [ENHANCEMENT] updated loading of configuration files to catch missing parameters and incorrect formats. Some major omissions will result in an error that closes the simulation, but many incorrect inputs produce a warning and lead to a default value. Any warning will trigger user input to continue simulation, unless a parameter to override is defined.
+- [FIX] added outputs to fread and scanf calls to avoid warnings when compiling optimized version.
+- [UPDATE] cleaned up JSONlab files for loading JSON into Matlab. Kept minimal files and moved them to dedicated sub-subdirectory
 
 Changes introduced in v0.3 (2015-09-04)
-- environments now 3D instead of 2D
-- added ability to nest regions within each other by identifying a region's parent region. This enables much easier creation of environments where there is a micro region surrouded by meso regions, or vice versa.
-- improved calculation of overlap between adjacent mesoscopic subvolumes so they can now be shifted by any amount and the diffusion rates between them will be correct.
-- fixed bug in determining the maximum number of neighbors that a subvolume will have. Counting of neighbors is now done manually without any estimating
+- [NEW] environments now 3D instead of 2D
+- [NEW] added ability to nest regions within each other by identifying a region's parent region. This enables much easier creation of environments where there is a micro region surrouded by meso regions, or vice versa.
+- [ENHANCEMENT] improved calculation of overlap between adjacent mesoscopic subvolumes so they can now be shifted by any amount and the diffusion rates between them will be correct.
+- [FIX] corrected bug in determining the maximum number of neighbors that a subvolume will have. Counting of neighbors is now done manually without any estimating
 
 Changes introduced in v0.2 (2015-08-12):
-- re-structured simulation output from 1 JSON file to 2 files (one summary in JSON, one in formatted ASCII). This change made to reduce import times when loading into MATLAB.
-- modified how input filenames are read and how output files are named to facilitate running simulations with many seed values
-- re-wrote MATLAB importing code to accommodate changes in output filenames and format, including the ability to merge results from simulations that used different seed values.
-- fixed bugs in how the mesoscopic model simulates chemical reactions
-- fixed bug in how cumulative fraction of actor in a subvolume was calculated, where molecules being placed in the 2nd region or later were very likely to be placed in that region's first subvolume
+- [ENHANCEMENT] re-structured simulation output from 1 JSON file to 2 files (one summary in JSON, one in formatted ASCII). This change made to reduce import times when loading into MATLAB.
+- [ENHANCEMENT] modified how input filenames are read and how output files are named to facilitate running simulations with many seed values
+- [ENHANCEMENT] re-wrote MATLAB importing code to accommodate changes in output filenames and format, including the ability to merge results from simulations that used different seed values.
+- [FIX] corrected bugs in how the mesoscopic model simulates chemical reactions
+- [FIX] corrected bug in how cumulative fraction of actor in a subvolume was calculated, where molecules being placed in the 2nd region or later were very likely to be placed in that region's first subvolume

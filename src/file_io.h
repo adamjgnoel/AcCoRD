@@ -8,9 +8,21 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * file_io.h - interface with JSON configuration files
- * Last revised for AcCoRD v0.4.1
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
+ *
+ * Revision v0.5 (2016-04-15)
+ * - added ability to define location of actor by a list of regions
+ * - modified check on number of subvolumes along each dimension of a rectangular region
+ * - added type and surfaceType properties to region. Default values are REGION_NORMAL and
+ * NO_SURFACE, respectively
+ * - added bSurface and surfRxnType properties to chemical reaction. Default values are false and RXN_NORMAL, respectively.
+ * - added stringWrite function to nest some calls to stringAllocate, strlen,
+ * and strcpy
+ * - removed NUM_DIM parameter from simulation spec
+ * - removed upper limit on number of molecule types
  *
  * Revision v0.4.1
  * - added search for configuration file. First checks current directory, then

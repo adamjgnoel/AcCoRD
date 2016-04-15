@@ -8,11 +8,12 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * actor.c - operations on array of actors and its elements
- * Last revised for AcCoRD LATEST_RELEASE
+ *
+ * Last revised for AcCoRD v0.5 (2016-04-15)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions
  * - added 2D and surface regions. Regions that have an effective dimension different
  * from their actual dimension cannot be intersected by a actor boundary (such regions
@@ -281,7 +282,7 @@ void initializeActorCommon(const short NUM_ACTORS,
 					{ // The actor's location is defined by this region
 						actorCommonArray[curActor].regionInterType[curInterRegion] =
 							regionArray[curRegion].spec.shape;
-						for(i - 0; i < 6; i++)
+						for(i = 0; i < 6; i++)
 						{
 							actorCommonArray[curActor].regionInterBound[curInterRegion][i] =
 								regionArray[curRegion].boundary[i];
@@ -575,12 +576,16 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 	for(curActive = 0; curActive < NUM_ACTORS_ACTIVE; curActive++)
 	{
 		curActor = actorActiveArray[curActive].actorID;
-		actorActiveArray[curActive].cumFracActorInSub = malloc(actorCommonArray[curActor].numRegion*sizeof(double *));
+		actorActiveArray[curActive].cumFracActorInSub =
+			malloc(actorCommonArray[curActor].numRegion*sizeof(double *));
+		actorActiveArray[curActive].molType =
+			malloc(NUM_MOL_TYPES*sizeof(double *));
 		
 		initializeListRelease(&actorActiveArray[curActive].releaseList);
 		initializeListData(&actorActiveArray[curActive].binaryData);
 		
-		if(actorActiveArray[curActive].cumFracActorInSub == NULL){
+		if(actorActiveArray[curActive].cumFracActorInSub == NULL ||
+			actorActiveArray[curActive].molType == NULL){
 			fprintf(stderr,"ERROR: Memory allocation for structure members of active actor %u.\n", curActive);
 			exit(EXIT_FAILURE);
 		}
@@ -897,6 +902,8 @@ void deleteActor(const short NUM_ACTORS,
 					
 			if(actorActiveArray[curActive].cumFracActorInSub != NULL)
 				free(actorActiveArray[curActive].cumFracActorInSub);
+			if(actorActiveArray[curActive].molType != NULL)
+				free(actorActiveArray[curActive].molType);
 			
 			emptyListRelease(&actorActiveArray[curActive].releaseList);
 			emptyListData(&actorActiveArray[curActive].binaryData);

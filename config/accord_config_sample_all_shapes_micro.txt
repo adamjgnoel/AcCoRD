@@ -5,6 +5,8 @@
 	toy example with many nested regions. Molecules are uniformly distributed and freely diffuse
 	throughout, so the average observation at each passive actor should remain constant.
 	There are 2 molecule types and their behavior should be independent.
+	The definition of the actors is a blend of absolute (defined by geometry) and
+	relative (defined by list of regions).
 	In this version, all regions are microscopic.",
 	"Output Filename": "accord_sample_all_shapes_micro",
 	"Warning Override": false,
@@ -29,6 +31,7 @@
 				"Label": "A",
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 0,
 				"Anchor Y Coordinate": 0,
 				"Anchor Z Coordinate": 0,
@@ -44,6 +47,7 @@
 				"Label": "B",
 				"Parent Label": "A",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 10e-6,
 				"Anchor Y Coordinate": 10e-6,
 				"Anchor Z Coordinate": 10e-6,
@@ -59,6 +63,7 @@
 				"Label": "C",
 				"Parent Label": "A",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 70e-6,
 				"Anchor Y Coordinate": 10e-6,
 				"Anchor Z Coordinate": 10e-6,
@@ -74,6 +79,7 @@
 				"Label": "BChild1",
 				"Parent Label": "B",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 60e-6,
 				"Anchor Y Coordinate": 15e-6,
 				"Anchor Z Coordinate": 15e-6,
@@ -90,6 +96,7 @@
 				"Label": "BChild2",
 				"Parent Label": "B",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 60e-6,
 				"Anchor Y Coordinate": 30e-6,
 				"Anchor Z Coordinate": 30e-6,
@@ -106,6 +113,7 @@
 				"Label": "D",
 				"Parent Label": "B",
 				"Shape": "Sphere",
+				"Type": "Normal",
 				"Anchor X Coordinate": 30.1e-6,
 				"Anchor Y Coordinate": 27.55e-6,
 				"Anchor Z Coordinate": 27.5e-6,
@@ -117,6 +125,7 @@
 				"Label": "DChild1",
 				"Parent Label": "D",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 23.6e-6,
 				"Anchor Y Coordinate": 21.1e-6,
 				"Anchor Z Coordinate": 21.2e-6,
@@ -132,6 +141,7 @@
 				"Label": "DChild2",
 				"Parent Label": "D",
 				"Shape": "Rectangular Box",
+				"Type": "Normal",
 				"Anchor X Coordinate": 23.6e-6,
 				"Anchor Y Coordinate": 27.1e-6,
 				"Anchor Z Coordinate": 21.2e-6,
@@ -147,6 +157,7 @@
 				"Label": "DChild3",
 				"Parent Label": "D",
 				"Shape": "Sphere",
+				"Type": "Normal",
 				"Anchor X Coordinate": 36.9e-6,
 				"Anchor Y Coordinate": 27.5e-6,
 				"Anchor Z Coordinate": 27.3e-6,
@@ -156,6 +167,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Observer of whole system",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
 				"Is Actor Active?": false,
@@ -171,6 +183,7 @@
 		},
 		{
 				"Notes": "Observer of region B and its children",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [10e-6, 70e-6, 10e-6, 45e-6, 10e-6, 45e-6],
 				"Is Actor Active?": false,
@@ -186,6 +199,7 @@
 		},
 		{
 				"Notes": "Observer of region C and its children",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [70e-6, 90e-6, 10e-6, 40e-6, 10e-6, 40e-6],
 				"Is Actor Active?": false,
@@ -201,8 +215,8 @@
 		},
 		{
 				"Notes": "Observer of region BChild1",
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [60e-6, 70e-6, 15e-6, 25e-6, 15e-6, 25e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["BChild1"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,
@@ -216,8 +230,8 @@
 		},
 		{
 				"Notes": "Observer of region BChild2",
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [60e-6, 70e-6, 30e-6, 40e-6, 30e-6, 40e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["BChild2"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,
@@ -231,8 +245,8 @@
 		},
 		{
 				"Notes": "Observer of region D and its children",
-				"Shape": "Sphere",
-				"Outer Boundary": [30.1e-6, 27.55e-6, 27.5e-6, 12.407e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["D", "DChild1", "DChild2", "DChild3"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,
@@ -246,8 +260,8 @@
 		},
 		{
 				"Notes": "Observer of region DChild1",
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [23.6e-6, 31.6e-6, 21.1e-6, 27.1e-6, 21.2e-6, 29.2e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["DChild1"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,
@@ -261,8 +275,8 @@
 		},
 		{
 				"Notes": "Observer of region DChild2",
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [23.6e-6, 31.6e-6, 27.1e-6, 30.1e-6, 21.2e-6, 29.2e-6],
+				"Is Actor Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["DChild2"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,
@@ -276,6 +290,7 @@
 		},
 		{
 				"Notes": "Observer of region DChild3",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [36.9e-6, 27.5e-6, 27.3e-6, 4.1528e-6],
 				"Is Actor Active?": false,
@@ -291,6 +306,7 @@
 		},
 		{
 				"Notes": "Transmitter 1. Releases 1 molecule per 10 cubic microns",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
 				"Is Actor Active?": true,
@@ -312,6 +328,7 @@
 		},
 		{
 				"Notes": "Transmitter 2. Releases 10000 molecules (i.e., 100 for every 1% of system volume).",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
 				"Is Actor Active?": true,

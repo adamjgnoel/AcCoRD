@@ -32,6 +32,7 @@
 				"Label": "A",
 				"Parent Label": "",
 				"Shape": "Sphere",
+				"Type": "Normal",
 				"Anchor X Coordinate": 0,
 				"Anchor Y Coordinate": 0,
 				"Anchor Z Coordinate": 0,
@@ -43,6 +44,7 @@
 				"Notes": "Point Transmitter at origin with 10ms symbol length. Note that the slot
 				interval is actually smaller than the microscopic time step, but that is fine because
 				the simulator accommodates smaller times when new molecules are created.",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
 				"Is Actor Active?": true,
@@ -65,6 +67,7 @@
 		{
 				"Notes": "Observer at molecule source. Demonstrates that molecules quickly
 					leave the source",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e-7],
 				"Is Actor Active?": false,
@@ -80,6 +83,7 @@
 		},
 		{
 				"Notes": "Spherical observer.",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 2e-6, 0, 0.5e-6],
 				"Is Actor Active?": false,
@@ -95,6 +99,7 @@
 		},
 		{
 				"Notes": "Global observer.",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e9999],
 				"Is Actor Active?": false,

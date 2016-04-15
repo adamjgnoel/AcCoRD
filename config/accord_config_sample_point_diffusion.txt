@@ -8,8 +8,8 @@
 		rectangle) placed some distance away, and one infinitely large actor to show that all of
 		the molecules remain in the system. The point source is not a true point but is defined
 		as a very small box. Note that the global subvolume base size is set to a correspondingly
-		low value so that the placement of the source is detected. This simulation with 100 repeats
-		should take less than a minute to execute on a personal computer.",
+		low value so that the placement of the source is detected. This simulation with 10 repeats
+		should take less than 10 seconds to execute on a personal computer.",
 	"Output Filename": "accord_sample_point_diffusion",
 	"Warning Override": false,
 	"Simulation Control": {
@@ -34,6 +34,7 @@
 				"Label": "A",
 				"Parent Label": "",
 				"Shape": "Sphere",
+				"Type": "Normal",
 				"Anchor X Coordinate": 0,
 				"Anchor Y Coordinate": 0,
 				"Anchor Z Coordinate": 0,
@@ -43,6 +44,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Point Transmitter at origin",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
 				"Is Actor Active?": true,
@@ -65,6 +67,7 @@
 		{
 				"Notes": "Observer at molecule source. Demonstrates that molecules quickly
 					leave the source",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e-7],
 				"Is Actor Active?": false,
@@ -81,6 +84,7 @@
 		{
 				"Notes": "Spherical observer. Radius chosen so that volume is the same as that
 					of the box observer",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 2e-6, 0, 0.3102e-6],
 				"Is Actor Active?": false,
@@ -96,6 +100,7 @@
 		},
 		{
 				"Notes": "Box observer",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [1.75e-6, 2.25e-6, -0.25e-6, 0.25e-6, -0.25e-6, 0.25e-6],
 				"Is Actor Active?": false,
@@ -111,6 +116,7 @@
 		},
 		{
 				"Notes": "Global observer.",
+				"Is Actor Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e9999],
 				"Is Actor Active?": false,

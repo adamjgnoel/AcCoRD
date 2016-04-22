@@ -10,9 +10,13 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added 2D rectangle case to point reflection. Actually only works for surface cases,
+ * since definition of faces are for the 3D case
  *
  * Revision v0.5 (2016-04-15)
  * - filling in cases for 2D Rectangles
@@ -961,6 +965,7 @@ bool reflectPoint(const double oldPoint[3],
 	
 	switch(boundary1Type)
 	{
+		case RECTANGLE:
 		case RECTANGULAR_BOX:		
 				
 			switch(*planeID)

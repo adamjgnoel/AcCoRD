@@ -44,7 +44,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Point Transmitter at origin",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
 				"Is Actor Active?": true,
@@ -67,7 +67,7 @@
 		{
 				"Notes": "Observer at molecule source. Demonstrates that molecules quickly
 					leave the source",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e-7],
 				"Is Actor Active?": false,
@@ -84,7 +84,7 @@
 		{
 				"Notes": "Spherical observer. Radius chosen so that volume is the same as that
 					of the box observer",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 2e-6, 0, 0.3102e-6],
 				"Is Actor Active?": false,
@@ -100,7 +100,7 @@
 		},
 		{
 				"Notes": "Box observer",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [1.75e-6, 2.25e-6, -0.25e-6, 0.25e-6, -0.25e-6, 0.25e-6],
 				"Is Actor Active?": false,
@@ -116,7 +116,7 @@
 		},
 		{
 				"Notes": "Global observer.",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e9999],
 				"Is Actor Active?": false,

@@ -9,9 +9,13 @@
  *
  * chem_rxn.h - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added bReleaseProduct for surface reactions to indicate which products are
+ * released from the surface
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -53,9 +57,11 @@
 */
 struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Indicate the indices of the reactants and the number of each
+	// Length is the number of molecule types
 	uint32_t * reactants;
 	
 	// Indicate the indices of the products and the number of each
+	// Length is the number of molecule types
 	uint32_t * products;
 	
 	// Base reaction rate k (units depends on order of reaction)
@@ -65,6 +71,12 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// This will affect where a reaction will take place by default,
 	// as indicated by bEverywhere
 	bool bSurface;
+	
+	// Are products of a surface reaction released from surface?
+	// If true for given product, then the product molecule is placed in closest neighboring
+	// region when it is created.
+	// Length is the number of molecule types
+	bool * bReleaseProduct;
 	
 	// Can the reaction take place anywhere by default?
 	// Actual regions will depend on value of bSurface and whether a given

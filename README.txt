@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v0.5 (public beta, 2016-04-15)
+This document is the README for AcCoRD LATEST_VERSION (public beta)
 
 # Introduction
 
@@ -77,6 +77,7 @@ This list is current as of v0.5. See https://github.com/adamjgnoel/AcCoRD/issues
 * microscopic molecules in a spherical region may go a very small distance beyond the region boundary but are still believe to be inside the sphere. This is due to numerical underflow, and might mean that the potential chemical reactions for the molecule are inconsistent with its location.
 * A mesoscopic subvolume adjacent to a microscopic region needs that region to cover the entirety of every face that is adjacent to that region (i.e., part of the adjacent face should not also be adjacent to some other region). Otherwise the hybrid interface will not have proper transitions.
 * Actors that act at the same time will do so in a random order (this is by design). So, if an active actor is adding molecules at the exact time that a passive actor is supposed to observe them, it is unknown a priori which will act first. It will depend on whichever is currently ranked higher in the timer heap. This could be modified in the future to rank the actors in the order they are defined in the event that their timer values are the same.
+* Implementation of reflection off region boundaries is only correct for 3D regions and their surfaces
 
 
 # Future Features

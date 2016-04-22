@@ -71,7 +71,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Initialization of molecule 0",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
 				"Is Actor Active?": true,
@@ -93,7 +93,7 @@
 		},
 		{
 				"Notes": "Initialization of molecule 1",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0e-6, 100e-6, 0e-6, 100e-6, 0e-6, 100e-6],
 				"Is Actor Active?": true,
@@ -115,7 +115,7 @@
 		},
 		{
 				"Notes": "Observer",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["A"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,

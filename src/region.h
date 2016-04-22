@@ -10,9 +10,15 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated function bPointInRegionNotChild to take an extra input to indicate
+ * whether to ignore children regions that are surfaces
+ * - added bReleaseProduct for surface reactions to indicate whether products are
+ * released from the surface
  *
  * Revision v0.5 (2016-04-15)
  * - re-structured region array initialization to nest more code in functions
@@ -72,14 +78,6 @@ struct spec_region3D { // Used to define a region of subvolumes
 	// that this region is nested in.
 	char * label;
 	char * parent;
-	
-	// Is the region actually a surface?
-	// Surfaces are hollow regions with a number of unique properties
-	// The primary characteristic is that they control transitions
-	// between regions that are on each side of the surface.
-	// Surfaces can have parents if they are embedded within a region(s)
-	// Surfaces can have children if their shape is 3D
-	bool bSurface;
 	
 	// Is the region microscopic?
 	bool bMicro;
@@ -320,6 +318,10 @@ struct region { // Region boundary parameters
 	// Size is numChemRxn x numRxnProducts
 	unsigned short ** productID;
 	
+	// Bool indicating whether each product is released from region surface
+	// Size is numChemRxn x numRxnProducts
+	bool ** bReleaseProduct;
+	
 	// Indicator of what molecule number changes mean that a reaction propensity
 	// must be updated.
 	// This must be specified because the reactants cannot always be inferred from
@@ -483,7 +485,8 @@ bool bLineHitRegion(const double p1[3],
 // Is point inside region and not one of its children?
 bool bPointInRegionNotChild(const short curRegion,
 	const struct region regionArray[],
-	const double point[3]);
+	const double point[3],
+	bool bIgnoreSurfaceChildren);
 
 // Is point in a region or any of its nested children?
 // If true, actualRegion will be the ID of the region with the point

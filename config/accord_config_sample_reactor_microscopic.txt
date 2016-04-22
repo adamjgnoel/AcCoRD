@@ -65,7 +65,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Observer",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["A"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,

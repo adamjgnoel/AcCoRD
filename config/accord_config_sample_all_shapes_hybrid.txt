@@ -170,7 +170,7 @@
 		"Actor Specification": [
 		{
 				"Notes": "Observer of whole system",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
 				"Is Actor Active?": false,
@@ -186,7 +186,7 @@
 		},
 		{
 				"Notes": "Observer of region B and its children",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [10e-6, 70e-6, 10e-6, 45e-6, 10e-6, 45e-6],
 				"Is Actor Active?": false,
@@ -202,7 +202,7 @@
 		},
 		{
 				"Notes": "Observer of region C",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [70e-6, 90e-6, 10e-6, 40e-6, 10e-6, 40e-6],
 				"Is Actor Active?": false,
@@ -218,7 +218,7 @@
 		},
 		{
 				"Notes": "Observer of region BChild1",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["BChild1"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
@@ -233,7 +233,7 @@
 		},
 		{
 				"Notes": "Observer of region BChild2",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["BChild2"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
@@ -248,7 +248,7 @@
 		},
 		{
 				"Notes": "Observer of region D and its children",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["D", "DChild1", "DChild2", "DChild3"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
@@ -263,7 +263,7 @@
 		},
 		{
 				"Notes": "Observer of region DChild1",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["DChild1"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
@@ -278,7 +278,7 @@
 		},
 		{
 				"Notes": "Observer of region DChild2",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["DChild2"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
@@ -293,7 +293,7 @@
 		},
 		{
 				"Notes": "Observer of region DChild3",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [36.9e-6, 27.5e-6, 27.3e-6, 4.1528e-6],
 				"Is Actor Active?": false,
@@ -309,7 +309,7 @@
 		},
 		{
 				"Notes": "Transmitter 1. Releases 1 molecule per 10 cubic microns",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
 				"Is Actor Active?": true,
@@ -331,7 +331,7 @@
 		},
 		{
 				"Notes": "Transmitter 2. Releases 10000 molecules (i.e., 100 for every 1% of system volume).",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
 				"Is Actor Active?": true,

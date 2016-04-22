@@ -9,9 +9,12 @@
  *
  * actor.h - operations on array of actors and its elements
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated call to bPointInRegionNotChild to not exclude surface regions
  *
  * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions

@@ -9,9 +9,13 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added bReleaseProduct for surface reactions to indicate which products are
+ * released from the surface
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -140,6 +144,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			malloc(regionArray[i].numChemRxn*sizeof(uint32_t));
 		regionArray[i].productID =
 			malloc(regionArray[i].numChemRxn * sizeof(unsigned short *));
+		regionArray[i].bReleaseProduct =
+			malloc(regionArray[i].numChemRxn * sizeof(bool *));
 		regionArray[i].bUpdateProp =
 			malloc(regionArray[i].numChemRxn * sizeof(bool *));
 		regionArray[i].rxnOrder =
@@ -177,6 +183,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			|| regionArray[i].bMolAdd == NULL
 			|| regionArray[i].numRxnProducts == NULL
 			|| regionArray[i].productID == NULL
+			|| regionArray[i].bReleaseProduct == NULL
 			|| regionArray[i].bUpdateProp == NULL
 			|| regionArray[i].rxnOrder == NULL
 			|| regionArray[i].rxnRate == NULL
@@ -216,11 +223,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			regionArray[i].productID[j] =
 				malloc(numTotalProd * sizeof(unsigned short));
+			regionArray[i].bReleaseProduct[j] =
+				malloc(numTotalProd * sizeof(bool));
 			regionArray[i].bUpdateProp[j] =
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			if(regionArray[i].numMolChange[j] == NULL
 				|| regionArray[i].bMolAdd[j] == NULL
 				|| regionArray[i].productID[j] == NULL
+				|| regionArray[i].bReleaseProduct[j] == NULL
 				|| regionArray[i].bUpdateProp[j] == NULL)
 			{
 				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u (label: \"%s\").\n", j, i, regionArray[i].spec.label);
@@ -319,8 +329,11 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				// Is molecule k a product?
 				// If it is, then we must list it in the listing of reaction products
 				// for the current reaction
+				// We also check for whether product must be released from surface regions
 				for(curProd = 0; curProd < chem_rxn[curRxn].products[k]; curProd++)
 				{
+					regionArray[i].bReleaseProduct[j][regionArray[i].numRxnProducts[j]] =
+						chem_rxn[curRxn].bReleaseProduct[k];
 					regionArray[i].productID[j][regionArray[i].numRxnProducts[j]++] = k;
 				}
 			}
@@ -524,6 +537,8 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 				free(regionArray[i].bMolAdd[j]);
 			if(regionArray[i].productID[j] != NULL)
 				free(regionArray[i].productID[j]);
+			if(regionArray[i].bReleaseProduct[j] != NULL)
+				free(regionArray[i].bReleaseProduct[j]);
 			if(regionArray[i].bUpdateProp[j] != NULL)
 				free(regionArray[i].bUpdateProp[j]);
 		}
@@ -542,6 +557,7 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		if(regionArray[i].bMolAdd != NULL) free(regionArray[i].bMolAdd);
 		if(regionArray[i].numRxnProducts != NULL) free(regionArray[i].numRxnProducts);
 		if(regionArray[i].productID != NULL) free(regionArray[i].productID);
+		if(regionArray[i].bReleaseProduct != NULL) free(regionArray[i].bReleaseProduct);
 		if(regionArray[i].bUpdateProp != NULL) free(regionArray[i].bUpdateProp);
 		if(regionArray[i].rxnOrder != NULL) free(regionArray[i].rxnOrder);
 		if(regionArray[i].rxnRate != NULL) free(regionArray[i].rxnRate);

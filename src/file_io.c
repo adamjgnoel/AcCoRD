@@ -9,9 +9,13 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added bReleaseProduct to chemical reaction. Applies to surface reactions
+ * - shortened string used to indicate how actor location is defined
  *
  * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions
@@ -327,8 +331,11 @@ void loadConfig(const char * CONFIG_NAME,
 				malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
 			curSpec->chem_rxn[curArrayItem].products =
 				malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
+			curSpec->chem_rxn[curArrayItem].bReleaseProduct =
+				malloc(curSpec->NUM_MOL_TYPES * sizeof(uint32_t));
 			if(curSpec->chem_rxn[curArrayItem].reactants == NULL
-				|| curSpec->chem_rxn[curArrayItem].products == NULL)
+				|| curSpec->chem_rxn[curArrayItem].products == NULL
+				|| curSpec->chem_rxn[curArrayItem].bReleaseProduct == NULL)
 			{
 				fprintf(stderr,"ERROR: Memory could not be allocated to store chemical reaction reactants and products\n");
 				exit(EXIT_FAILURE);
@@ -348,6 +355,7 @@ void loadConfig(const char * CONFIG_NAME,
 				{
 					curSpec->chem_rxn[curArrayItem].reactants[curMolType] = 0;
 					curSpec->chem_rxn[curArrayItem].products[curMolType] = 0;
+					curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
 				}
 			} else
 			{
@@ -364,6 +372,7 @@ void loadConfig(const char * CONFIG_NAME,
 					printf("WARNING %d: \"Chemical Reaction Specification\" item %d has missing parameters, an invalid reaction rate, or an incorrect number of molecule types. Creating empty reaction.\n", numWarn++, curArrayItem);
 					curSpec->chem_rxn[curArrayItem].k = 0.;
 					curSpec->chem_rxn[curArrayItem].bSurface = false;
+					curSpec->chem_rxn[curArrayItem].bReleaseProduct = NULL;
 					curSpec->chem_rxn[curArrayItem].bEverywhere = false;
 					curSpec->chem_rxn[curArrayItem].numRegionExceptions = 0;
 					curSpec->chem_rxn[curArrayItem].regionExceptionLabel = NULL;
@@ -372,6 +381,7 @@ void loadConfig(const char * CONFIG_NAME,
 					{
 						curSpec->chem_rxn[curArrayItem].reactants[curMolType] = 0;
 						curSpec->chem_rxn[curArrayItem].products[curMolType] = 0;
+						curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
 					}
 				} else
 				{					
@@ -416,15 +426,55 @@ void loadConfig(const char * CONFIG_NAME,
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
 						}
 						free(tempString);
+						
+						// Check for whether bReleaseProduct array is defined
+						if(!cJSON_bItemValid(curObj,"Products Released?", cJSON_Array) ||
+							cJSON_GetArraySize(cJSON_GetObjectItem(curObj,
+							"Products Released?")) != curSpec->NUM_MOL_TYPES)
+						{ // Reaction does not have a valid Products Released? array
+							bWarn = true;
+							printf("WARNING %d: Chemical reaction %d does not have a defined \"Products Released?\" array. Setting all values to \"false\".\n", numWarn++, curArrayItem);	
+							for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
+							curMolType++)
+							{
+								curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
+							}
+						} else{
+							curObjInner = cJSON_GetObjectItem(curObj,"Products Released?");
+							for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
+							curMolType++)
+							{
+								if(!cJSON_bArrayItemValid(curObjInner,curMolType, cJSON_True))
+								{
+									bWarn = true;
+									printf("WARNING %d: Molecule type %d does not have a valid \"Products Released?\" value for chemical reaction %d. Setting to default value \"false\".\n", numWarn++, curMolType, curArrayItem);
+									curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
+								} else
+								{
+									curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] =
+										cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
+								}
+							}
+						}
 					} else
 					{
 						curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
+						for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
+						curMolType++)
+						{
+							curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
+						}
 						// Check for existence of unnecessary parameters and display warnings if they are defined
 						if(cJSON_bItemValid(curObj,"Surface Reaction Type", cJSON_String))
 						{
 							bWarn = true;
-							printf("WARNING %d: Reaction %d does not need \"Surface Reaction Type\" defined. Ignoring.\n", numWarn++, curArrayItem);
+							printf("WARNING %d: Reaction %d is not a surface reaction and so does not need \"Surface Reaction Type\" defined. Ignoring.\n", numWarn++, curArrayItem);
 						}
+						if(cJSON_bItemValid(curObj,"Products Released?", cJSON_Array))
+						{
+							bWarn = true;
+							printf("WARNING %d: Reaction %d is not a surface reaction and so does not need \"Products Released?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+						}						
 					}
 					
 					if(!cJSON_bItemValid(curObj,"Default Everywhere?", cJSON_True))
@@ -906,15 +956,15 @@ void loadConfig(const char * CONFIG_NAME,
 		
 		curObj = cJSON_GetArrayItem(actorSpec, curArrayItem);		
 		
-		if(!cJSON_bItemValid(curObj,"Is Actor Location Defined by Regions?", cJSON_True))
-		{ // Actor does not have a valid Is Actor Location Defined by Regions?
+		if(!cJSON_bItemValid(curObj,"Is Location Defined by Regions?", cJSON_True))
+		{ // Actor does not have a valid Is Location Defined by Regions?
 			bWarn = true;
-			printf("WARNING %d: Actor %d does not have a valid \"Is Actor Location Defined by Regions?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+			printf("WARNING %d: Actor %d does not have a valid \"Is Location Defined by Regions?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
 			curSpec->actorSpec[curArrayItem].bDefinedByRegions = false;
 		} else
 		{
 			curSpec->actorSpec[curArrayItem].bDefinedByRegions = 
-				cJSON_GetObjectItem(curObj, "Is Actor Location Defined by Regions?")->valueint;
+				cJSON_GetObjectItem(curObj, "Is Location Defined by Regions?")->valueint;
 		}
 		
 		if(curSpec->actorSpec[curArrayItem].bDefinedByRegions)
@@ -1414,6 +1464,8 @@ void deleteConfig(struct simSpec3D curSpec)
 				free(curSpec.chem_rxn[curRxn].reactants);
 			if(curSpec.chem_rxn[curRxn].products != NULL)
 				free(curSpec.chem_rxn[curRxn].products);
+			if(curSpec.chem_rxn[curRxn].bReleaseProduct != NULL)
+				free(curSpec.chem_rxn[curRxn].bReleaseProduct);
 			
 			if(curSpec.chem_rxn[curRxn].regionExceptionLabel != NULL)
 			{

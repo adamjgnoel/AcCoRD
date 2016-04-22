@@ -10,9 +10,14 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated first order reaction functions to account for surface reactions that
+ * release products from the surface. Includes new function to find destination region
+ * - corrected how molecules are locked to region boundary when they cross regions
  *
  * Revision v0.5 (2016-04-15)
  * - added surface reactions, including membrane transitions
@@ -111,18 +116,28 @@ void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
 
 void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF);
 
-void rxnFirstOrder(ListMol3D * p_list,
-	const struct region regionArray,
-	unsigned short curMolType,
+void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
-	ListMolRecent3D pRecentList[NUM_MOL_TYPES]);
+	unsigned short curRegion,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	unsigned short curMolType,
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES]);
 
-void rxnFirstOrderRecent(const unsigned short NUM_MOL_TYPES,
-	ListMolRecent3D pRecentList[NUM_MOL_TYPES],
-	const struct region regionArray,
+void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	unsigned short curRegion,
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
 	unsigned short curMolType,
 	bool bCheckCount,
-	uint32_t numMolCheck[NUM_MOL_TYPES]);
+	uint32_t numMolCheck[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// If a molecule is the product of a surface reaction and it is supposed
+// to be released from the surface, find the destination region
+unsigned short findDestRegion(const double point[3],
+	const unsigned short curRegion,
+	const struct region regionArray[]);
 
 void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList);
 

@@ -1144,7 +1144,7 @@ bool bLineHitRegion(const double p1[3],
 				if(bLineHitInfinitePlane(p1, L, length, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[endRegion][curPlane],
 					regionArray[startRegion].regionNeighFaceDir[endRegion][curPlane],
-					false, d, intersectPoint)
+					false, d, intersectPoint, false)
 					&& bPointOnFace(intersectPoint, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[endRegion][curPlane], regionArray[startRegion].regionNeighFaceDir[endRegion][curPlane])
 					&& *d < minDist)
@@ -1168,7 +1168,8 @@ bool bLineHitRegion(const double p1[3],
 		case SPHERE:
 			return bLineHitInfinitePlane(p1, L, length, SPHERE,
 				regionArray[startRegion].boundRegionFaceCoor[endRegion][0],
-				regionArray[startRegion].regionNeighFaceDir[endRegion][0], bInside, d, intersectPoint);
+				regionArray[startRegion].regionNeighFaceDir[endRegion][0], bInside,
+				d, intersectPoint, false);
 		default:
 			fprintf(stderr,"ERROR: Boundary type %d invalid for boundary intersection between regions %u and %u.\n", boundary1Type, startRegion, endRegion);
 			return false;		

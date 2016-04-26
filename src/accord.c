@@ -793,7 +793,7 @@ int main(int argc, char *argv[])
 				// 2 sets of molecule lists into 1
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
 					microMolListRecent, regionArray, mesoSubArray, subvolArray,
-					micro_sigma, DIFF_COEF);
+					micro_sigma, spec.chem_rxn, DIFF_COEF);
 				
 				
 				if(numMesoSub > 0)

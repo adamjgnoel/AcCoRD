@@ -43,9 +43,12 @@
 #define CHEM_RXN_H
 
 #include <math.h> // for exp()
+#include <complex.h> // for complex error function
 
 #include "region.h"
 #include "global_param.h"
+#include "cerf.h" // for complex error function
+#include "defs.h" // definitions for cerf.h
 
 /*
 * Data Type Declarations

@@ -16,6 +16,8 @@
  * Revision LATEST_VERSION
  * - added bReleaseProduct for surface reactions to indicate which products are
  * released from the surface
+ * - updating reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use.
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -85,6 +87,10 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	
 	bool (* bRxnInRegion)[NUM_REGIONS]; // Which reactions can occur in which regions?
 	unsigned short (* rxnInRegionID)[NUM_REGIONS]; // IDs of reactions that can occur in each region
+	
+	double kPrime; // Normalized reaction rate for surface reactions
+	double kminus1Prime;
+	double complex c1, c2;
 	
 	// Build arrays to indicate where each reaction can take place
 	bRxnInRegion = malloc(MAX_RXNS * sizeof(bool [NUM_REGIONS]));
@@ -377,6 +383,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						case RXN_ABSORBING:
 							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k *
 								sqrt(PI*regionArray[i].spec.dt/DIFF_COEF[i][j]);
+							kPrime = chem_rxn[curRxn].k*sqrt(regionArray[i].spec.dt/DIFF_COEF[i][j]/2);
+							kminus1Prime = chem_rxn[1].k*regionArray[i].spec.dt;
+							c1 = (kPrime - csqrt(C(kPrime*kPrime-2*kminus1Prime,0)))/sqrt(2);
+							c2 = (kPrime + csqrt(C(kPrime*kPrime-2*kminus1Prime,0)))/sqrt(2);
+							regionArray[i].rxnRate[j] = cabs(kPrime*sqrt(2*PI)*
+								(c2-c1 - c2*cerfcx(c1) + c1*cerfcx(c2))/c1/c2/(c2-c1));
+							//regionArray[i].rxnRate[j] = kPrime*sqrt(2*PI) - 3.33321*kPrime*kPrime
+							//	+ 3.35669*kPrime*kPrime*kPrime - 1.52092*kPrime*kPrime*kPrime*kPrime;
 							break;
 						default:
 							fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", j, chem_rxn[curRxn].surfRxnType);
@@ -485,6 +499,11 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 							regionArray[i].uniCumProb[j][k] +=
 								regionArray[i].uniRelativeRate[j][k]
 								* (1 - exp(-regionArray[i].spec.dt*regionArray[i].uniSumRate[j]));
+							
+							// TEMP: Overriding for desorption
+							regionArray[i].uniCumProb[j][k] = regionArray[i].rxnRate[j]/
+								chem_rxn[0].k*regionArray[i].rxnRate[0]*
+								sqrt(DIFF_COEF[i][0]*regionArray[i].spec.dt/PI);
 						}
 						
 						break;

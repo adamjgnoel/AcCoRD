@@ -9,9 +9,13 @@
  *
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ *
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - removed MAX_MOL_TYPES, MAX_RXN_PRODUCTS
  *
  * Revision v0.5 (2016-04-15)
  * - removed use of MAX_MOL_TYPES
@@ -28,13 +32,6 @@
 // simulation.
 
 #define PI 3.14159265359
-
-// Maximum number of types of molecules in a single simulation.
-// Used to initialize the structure defining chemical reactions.
-#define MAX_MOL_TYPES 20
-
-// Maximum number of products that a single chemical reaction can have
-#define MAX_RXN_PRODUCTS 4
 
 // Dimensions
 #define DIM_X 0

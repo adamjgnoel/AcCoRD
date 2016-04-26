@@ -55,11 +55,16 @@
 #include <stdbool.h> // for C++ bool naming, requires C99
 #include <limits.h> // For SHRT_MAX
 #include <math.h> // For sqrt()
+#include <complex.h> // for complex error function
+
 #include "randistrs.h" // For PRNGs
 #include "region.h"
 #include "meso.h"
 #include "subvolume.h"
+#include "chem_rxn.h"
 #include "global_param.h" // for common global parameters
+#include "cerf.h" // for complex error function
+#include "defs.h" // definitions for cerf.h
 
 // micro_molecule specific declarations
 
@@ -110,6 +115,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
@@ -144,12 +150,17 @@ void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList);
 bool validateMolecule(double newPoint[3],
 	double oldPoint[3],
 	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
+	bool bRecent,
+	double dt,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned short * curRxn);
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
@@ -162,10 +173,16 @@ bool followMolecule(const double startPoint[3],
 	const short startRegion,
 	short * endRegion,
 	short * transRegion,
+	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
 	unsigned short * curRxn,
+	bool bRecent,
+	double dt,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned int depth);
 
 uint64_t countMolecules(ListMol3D * p_list,

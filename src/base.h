@@ -121,7 +121,8 @@ bool bLineHitInfinitePlane(const double p1[3],
 	const short planeID,
 	const bool bInside,
 	double * d,
-	double intersectPoint[3]);
+	double intersectPoint[3],
+	bool bZeroDist);
 
 // Is point that is in infinite plane also on boundary face?
 // Assert that point is already on corresponding plane

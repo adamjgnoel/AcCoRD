@@ -17,6 +17,8 @@
  * Revision LATEST_VERSION
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
  * since definition of faces are for the 3D case
+ * - updated check on a line hitting an infinite plane where acceptance of the distance = 0
+ * case is passed as an argument
  *
  * Revision v0.5 (2016-04-15)
  * - filling in cases for 2D Rectangles
@@ -468,7 +470,7 @@ bool bLineHitBoundary(const double p1[3],
 	{
 		case RECTANGLE:
 			if(bLineHitInfinitePlane(p1, L, length, RECTANGLE, boundary1,
-				planeIDConst, false, d, intersectPoint)
+				planeIDConst, false, d, intersectPoint, false)
 				&& bPointOnFace(intersectPoint, RECTANGLE, boundary1, planeIDConst)
 				&& *d < minDist)
 			{
@@ -479,7 +481,7 @@ bool bLineHitBoundary(const double p1[3],
 			for(curPlane = 0; curPlane < 6; curPlane++)
 			{
 				if(bLineHitInfinitePlane(p1, L, length, RECTANGULAR_BOX, boundary1,
-					curPlane, false, d, intersectPoint)
+					curPlane, false, d, intersectPoint, false)
 					&& bPointOnFace(intersectPoint, RECTANGULAR_BOX, boundary1, curPlane)
 					&& *d < minDist)
 				{ // Line does intersect this face at a valid distance and it is closest
@@ -502,7 +504,7 @@ bool bLineHitBoundary(const double p1[3],
 			return false;
 		case SPHERE:
 			return bLineHitInfinitePlane(p1, L, length, SPHERE, boundary1,
-					curPlane, bInside, d, intersectPoint);
+					curPlane, bInside, d, intersectPoint, false);
 		default:
 			fprintf(stderr,"ERROR: Cannot determine whether shape %s intersects another shape.\n", boundaryString(boundary1Type));
 			return false;		
@@ -518,7 +520,8 @@ bool bLineHitInfinitePlane(const double p1[3],
 	const short planeID,
 	const bool bInside,
 	double * d,
-	double intersectPoint[3])
+	double intersectPoint[3],
+	bool bZeroDist)
 {	
 	double centerToP1[3];
 	double LDotCenterToP1;
@@ -595,8 +598,11 @@ bool bLineHitInfinitePlane(const double p1[3],
 			*d = 0;
 			return false;	
 	}
-			
-	return *d > 0. && *d <= length;
+	
+	if(bZeroDist)
+		return *d >= 0. && *d <= length;
+	else
+		return *d > 0. && *d <= length;
 }
 
 // Is point that is in infinite plane also on boundary face?

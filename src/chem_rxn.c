@@ -442,11 +442,12 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						if(chem_rxn[k].reactants[j] > 0)
 						{
 							regionArray[i].firstRxnID[j][regionArray[i].numFirstCurReactant[j]] = k;
-							regionArray[i].uniSumRate[j] += regionArray[i].rxnRate[k];		
+							curRxn = rxnInRegionID[k][i];
+							regionArray[i].uniSumRate[j] += chem_rxn[curRxn].k;		
 							
 							regionArray[i].numFirstCurReactant[j]++;
 							
-							if(regionArray[i].rxnRate[k] == INFINITY)
+							if(chem_rxn[curRxn].k == INFINITY)
 								numInfRxn++;
 							
 							if(chem_rxn[k].surfRxnType != RXN_NORMAL)
@@ -504,6 +505,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 							regionArray[i].uniCumProb[j][k] = regionArray[i].rxnRate[j]/
 								chem_rxn[0].k*regionArray[i].rxnRate[0]*
 								sqrt(DIFF_COEF[i][0]*regionArray[i].spec.dt/PI);
+							regionArray[i].uniSumRate[j] =
+								-log(1-regionArray[i].uniCumProb[j][k])/regionArray[i].spec.dt;
 						}
 						
 						break;

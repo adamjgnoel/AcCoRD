@@ -18,6 +18,8 @@
  * - updated first order reaction functions to account for surface reactions that
  * release products from the surface. Includes new function to find destination region
  * - corrected how molecules are locked to region boundary when they cross regions
+ * - updating reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use.
  *
  * Revision v0.5 (2016-04-15)
  * - added surface reactions, including membrane transitions
@@ -109,6 +111,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	NodeMol3D * curNode, * prevNode, * nextNode;
@@ -178,8 +181,9 @@ void diffuseMolecules(const short NUM_REGIONS,
 					newPoint[2] = curNode->item.z;
 								
 					bReaction = false;
-					if(validateMolecule(newPoint, oldPoint, NUM_REGIONS, curRegion,
-						&newRegion, &transRegion, regionArray, curType, &bReaction, &curRxn))
+					if(validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+						&newRegion, &transRegion, regionArray, curType, &bReaction,
+						false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn))
 					{
 						// Molecule is still within region and no further action is required
 						prevNode = curNode;
@@ -293,8 +297,9 @@ void diffuseMolecules(const short NUM_REGIONS,
 				// Once molecule is validated, we can proceed directly to transferring
 				// it to the relevant "normal" list and remove it from this list				
 				bReaction = false;
-				validateMolecule(newPoint, oldPoint, NUM_REGIONS, curRegion,
-					&newRegion, &transRegion, regionArray, curType, &bReaction, &curRxn);
+				validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+					&newRegion, &transRegion, regionArray, curType, &bReaction,
+					true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
 					
 				if(regionArray[newRegion].spec.bMicro)
 				{ // Region is microscopic. Move to appropriate list
@@ -441,6 +446,15 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 							point[1] = curNode->item.y;
 							point[2] = curNode->item.z;
 							destRegion = findDestRegion(point, curRegion, regionArray);
+							// TEMP diffusion after desorption
+							curRand = mt_drand();
+							curNode->item.x = curNode->item.x +
+								sqrt(2*5e-12*(regionArray[curRegion].spec.dt))*
+								(0.729614*curRand - 0.70252*curRand*curRand)/
+								(1 - 1.47494*curRand + 0.484371*curRand*curRand);
+							//curNode->item.x += 2*fabs(rd_normal(0,
+							//	sqrt(2*(regionArray[curRegion].spec.dt-curTime)*5e-12)));
+							curTime = regionArray[curRegion].spec.dt;
 						} else
 						{ // Place product molecule in current region
 							destRegion = curRegion;
@@ -707,12 +721,17 @@ void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList)
 bool validateMolecule(double newPoint[3],
 	double oldPoint[3],
 	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
+	bool bRecent,
+	double dt,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned short * curRxn)
 {
 	double trajLine[3];
@@ -735,7 +754,9 @@ bool validateMolecule(double newPoint[3],
 		
 		return followMolecule(oldPoint, newPoint, trajLine,
 			lineLength, curRegion,
-			newRegion, transRegion, regionArray, molType, bReaction, curRxn, 0);
+			newRegion, transRegion, NUM_REGIONS, NUM_MOL_TYPES,
+			regionArray, molType, bReaction, curRxn,
+			bRecent, dt, chem_rxn, DIFF_COEF, 0);
 	}
 }
 
@@ -749,10 +770,16 @@ bool followMolecule(const double startPoint[3],
 	const short startRegion,
 	short * endRegion,
 	short * transRegion,
+	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
 	unsigned short * curRxn,
+	bool bRecent,
+	double dt,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned int depth)
 {
 	short curNeigh, curRegion, closestNormal;
@@ -766,10 +793,12 @@ bool followMolecule(const double startPoint[3],
 	
 	double curRand;
 	int i;
-	unsigned short curProd;
+	unsigned short curProd, rxnID;
 	* bReaction = false;
 	bool bContinue = false;
 	bool bReflect = false;
+	double rxnProb, kPrime, kminus1Prime;
+	complex double c1, c2;
 	
 	double pushFrac = SUB_ADJ_RESOLUTION;
 	
@@ -801,7 +830,7 @@ bool followMolecule(const double startPoint[3],
 				bCurIntersect = bLineHitInfinitePlane(startPoint, lineVector,
 					lineLength, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[curRegion][0],
-					curFace, false, &curDist, curIntersectPoint)
+					curFace, false, &curDist, curIntersectPoint, true)
 					&& bPointOnFace(curIntersectPoint, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[curRegion][0],
 					curFace);
@@ -834,6 +863,23 @@ bool followMolecule(const double startPoint[3],
 	if(* endRegion < SHRT_MAX)
 	{
 		// Molecule has entered another region
+		
+		// Check if we started on region boundary
+		if(minDist == 0)
+		{ // We started on neighbor region boundary. Check whether we diffused "back" into startRegion
+			pushPoint(nearestIntersectPoint, curIntersectPoint, lineLength*pushFrac, lineVector);
+			if(bPointInRegionNotChild(startRegion, regionArray, curIntersectPoint, false))
+			{
+				// We didn't actually "cross" region boundary
+				// Keep following molecule within own region
+				lineLength -= lineLength*pushFrac; // Correct line length for having been pushed
+				return followMolecule(curIntersectPoint, endPoint, lineVector,
+					lineLength, startRegion, endRegion, transRegion,
+					NUM_REGIONS, NUM_MOL_TYPES, regionArray, molType,
+					bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1);
+			}
+		}
+		
 		// "Lock" location at exact boundary
 		if(regionArray[startRegion].regionNeighDir[*endRegion] != PARENT
 			&& regionArray[startRegion].regionNeighDir[*endRegion] != CHILD)
@@ -867,7 +913,29 @@ bool followMolecule(const double startPoint[3],
 				curRand = mt_drand();
 				for(i = 0; i < regionArray[*endRegion].numFirstCurReactant[molType]; i++)
 				{
-					if(curRand < regionArray[*endRegion].uniCumProb[molType][i])
+					// TEMP Need better way to do this
+					if(bRecent)
+					{
+						// TEMP: Need to fix this line
+						rxnID = regionArray[*endRegion].firstRxnID[molType][i];
+						switch(chem_rxn[rxnID].surfRxnType)
+						{
+							case RXN_MEMBRANE:
+								rxnProb = 1 - exp(-dt*chem_rxn[rxnID].k);
+								break;
+							case RXN_ABSORBING:
+								kPrime = chem_rxn[rxnID].k*sqrt(dt/DIFF_COEF[startRegion][molType]/2);
+								kminus1Prime = chem_rxn[rxnID].k*dt;
+								c1 = (kPrime - csqrt(C(kPrime*kPrime-2*kminus1Prime,0)))/sqrt(2);
+								c2 = (kPrime + csqrt(C(kPrime*kPrime-2*kminus1Prime,0)))/sqrt(2);
+								rxnProb = cabs(kPrime*sqrt(2*PI)*
+									(c2-c1 - c2*cerfcx(c1) + c1*cerfcx(c2))/c1/c2/(c2-c1));
+						}
+					}
+					else
+						rxnProb = regionArray[*endRegion].uniCumProb[molType][i];
+					
+					if(curRand < rxnProb)
 					{
 						// Reaction i took place
 						*curRxn = regionArray[*endRegion].firstRxnID[molType][i];
@@ -916,7 +984,7 @@ bool followMolecule(const double startPoint[3],
 										bCurIntersect = bLineHitInfinitePlane(startPoint, lineVector,
 											lineLength, RECTANGULAR_BOX,
 											regionArray[*endRegion].boundRegionFaceCoor[curRegion][0],
-											curFace, false, &curDist, curIntersectPoint)
+											curFace, false, &curDist, curIntersectPoint, true)
 											&& bPointOnFace(curIntersectPoint, RECTANGULAR_BOX,
 											regionArray[*endRegion].boundRegionFaceCoor[curRegion][0],
 											curFace);
@@ -1002,11 +1070,12 @@ bool followMolecule(const double startPoint[3],
 					endPoint[2] = curIntersectPoint[2];
 					* transRegion = startRegion; // Indicate from which micro region we came from
 					return false;
-				}			
+				}
 				lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
 				return followMolecule(curIntersectPoint, endPoint, lineVector,
-					lineLength, *endRegion, endRegion, transRegion, regionArray, molType,
-					bReaction, curRxn, depth+1)
+					lineLength, *endRegion, endRegion, transRegion,
+					NUM_REGIONS, NUM_MOL_TYPES, regionArray, molType,
+					bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1)
 					&& startRegion == *endRegion;
 			} else
 			{
@@ -1045,8 +1114,9 @@ bool followMolecule(const double startPoint[3],
 	defineLine(nearestIntersectPoint, newEndPoint, lineVector, &lineLength);
 	
 	followMolecule(nearestIntersectPoint, newEndPoint, lineVector,
-			lineLength, startRegion, endRegion, transRegion, regionArray,
-			molType, bReaction, curRxn, depth+1);
+			lineLength, startRegion, endRegion, transRegion,
+			NUM_REGIONS, NUM_MOL_TYPES, regionArray,
+			molType, bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1);
 	
 	endPoint[0] = newEndPoint[0];
 	endPoint[1] = newEndPoint[1];

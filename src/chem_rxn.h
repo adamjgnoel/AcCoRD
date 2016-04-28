@@ -14,6 +14,8 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - added label, bReversible, and labelCoupled so that reactions can be named
+ * and coupled together
  * - added bReleaseProduct for surface reactions to indicate which products are
  * released from the surface
  *
@@ -59,6 +61,18 @@
  * firing of a single chemical reaction
 */
 struct chem_rxn_struct { // Used to define a single chemical reaction
+	// label is an optional string to name the reaction.
+	// Needed if reaction is reversible so that we can identify the coupled reaction
+	char * label;
+	
+	// Is reaction reversible?
+	// Reversibility impacts the calculation of the reaction rates, especially
+	// for surface transition reactions
+	bool bReversible;
+	
+	// If reversible, what is the name of the coupled reaction?
+	char * labelCoupled;
+	
 	// Indicate the indices of the reactants and the number of each
 	// Length is the number of molecule types
 	uint32_t * reactants;
@@ -81,6 +95,12 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Length is the number of molecule types
 	bool * bReleaseProduct;
 	
+	// Type of product release from surface
+	// Default is PROD_PLACEMENT_LEAVE, which will leave the molecule next to
+	// the surface.
+	// Defined only for desorbing reactions
+	short releaseType;
+	
 	// Can the reaction take place anywhere by default?
 	// Actual regions will depend on value of bSurface and whether a given
 	// region is a normal region or a surface
@@ -93,14 +113,16 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Length is numRegionExceptions
 	char ** regionExceptionLabel;
 	
-	// TODO: Add parameters for reactions that take place across multiple
-	// regions (i.e., surface interactions)
-	
 	// Type of surface reaction.
 	// Affects how the reaction probability is calculated
+	// Constraints are imposed on the number of surface transition reactions
 	// Default is RXN_NORMAL, which determines reaction probability from
 	// reaction rate as if it were a solution reaction
 	short surfRxnType;
+	
+	// Type of surface reaction probability calculation
+	// Default is RXN_PROB_NORMAL, which is inaccurate for surface reactions
+	short rxnProbType;
 };
 
 //

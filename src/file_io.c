@@ -80,6 +80,7 @@ void loadConfig(const char * CONFIG_NAME,
 	int ch;
 	size_t temp; // Garbage variable for discarded file content length
 	int minSubDim = 0; // Minimum # of subvolumes along each dimension for a rectangular region
+	bool bNeedReleaseType;
 	
 	// Construct full name of configuration file
 	nameLength = strlen(CONFIG_NAME);
@@ -384,7 +385,49 @@ void loadConfig(const char * CONFIG_NAME,
 						curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
 					}
 				} else
-				{					
+				{		
+					// Reaction label
+					if(!cJSON_bItemValid(curObj,"Label", cJSON_String))
+					{ // Reaction does not have a defined Label
+						bWarn = true;
+						printf("WARNING %d: Chemical reaction %d does not have a defined \"Label\". Assigning empy string.\n", numWarn++, curArrayItem);
+						curSpec->chem_rxn[curArrayItem].label = '\0';
+					} else{
+						curSpec->chem_rxn[curArrayItem].label =
+							stringWrite(cJSON_GetObjectItem(curObj,"Label")->valuestring);
+					}
+					
+					// Is reaction reversible?
+					if(!cJSON_bItemValid(curObj,"Is Reaction Reversible?", cJSON_True))
+					{ // Reaction does not have a valid Is Reaction Reversible?
+						bWarn = true;
+						printf("WARNING %d: Chemical reaction %d does not have a valid \"Is Reaction Reversible?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+						curSpec->chem_rxn[curArrayItem].bReversible = false;
+					} else
+					{
+						curSpec->chem_rxn[curArrayItem].bReversible = 
+							cJSON_GetObjectItem(curObj, "Is Reaction Reversible?")->valueint;
+					
+						if(curSpec->chem_rxn[curArrayItem].bReversible)
+						{ // Reaction is reversible. Store name of reverse reaction
+							if(!cJSON_bItemValid(curObj,"Reverse Reaction Label", cJSON_String))
+							{ // Reaction does not have a defined Reverse Reaction Label
+								bWarn = true;
+								printf("WARNING %d: Chemical reaction %d is reversible but does not have a defined \"Reverse Reaction Label\". Assigning empy string.\n", numWarn++, curArrayItem);
+								curSpec->chem_rxn[curArrayItem].labelCoupled = '\0';
+							} else{
+								curSpec->chem_rxn[curArrayItem].labelCoupled =
+									stringWrite(cJSON_GetObjectItem(curObj,"Reverse Reaction Label")->valuestring);
+							}
+						} else if(cJSON_bItemValid(curObj,"Reverse Reaction Label", cJSON_String))
+						{
+							bWarn = true;
+							printf("WARNING %d: Chemical reaction %d does not need \"Reverse Reaction Label\" defined. Ignoring.\n", numWarn++, curArrayItem);
+							curSpec->chem_rxn[curArrayItem].labelCoupled = '\0';
+						}
+					}
+					
+					
 					if(!cJSON_bItemValid(curObj,"Surface Reaction?", cJSON_True))
 					{ // Reaction does not have a valid Surface Reaction?
 						bWarn = true;
@@ -415,6 +458,8 @@ void loadConfig(const char * CONFIG_NAME,
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
 						else if(strcmp(tempString,"Absorbing") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_ABSORBING;
+						else if(strcmp(tempString,"Desorbing") == 0)
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_DESORBING;
 						else if(strcmp(tempString,"Receptor Binding") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_RECEPTOR;
 						else if(strcmp(tempString,"Membrane") == 0)
@@ -422,12 +467,13 @@ void loadConfig(const char * CONFIG_NAME,
 						else
 						{
 							bWarn = true;
-							printf("WARNING %d: Region %d has an invalid \"Surface Reaction Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+							printf("WARNING %d: Chemical reaction %d has an invalid \"Surface Reaction Type\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
 						}
 						free(tempString);
 						
 						// Check for whether bReleaseProduct array is defined
+						bNeedReleaseType = false; // By default, we don't need to define release type
 						if(!cJSON_bItemValid(curObj,"Products Released?", cJSON_Array) ||
 							cJSON_GetArraySize(cJSON_GetObjectItem(curObj,
 							"Products Released?")) != curSpec->NUM_MOL_TYPES)
@@ -439,6 +485,8 @@ void loadConfig(const char * CONFIG_NAME,
 							{
 								curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] = false;
 							}
+							curSpec->chem_rxn[curArrayItem].releaseType =
+								PROD_PLACEMENT_LEAVE;
 						} else{
 							curObjInner = cJSON_GetObjectItem(curObj,"Products Released?");
 							for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
@@ -453,6 +501,48 @@ void loadConfig(const char * CONFIG_NAME,
 								{
 									curSpec->chem_rxn[curArrayItem].bReleaseProduct[curMolType] =
 										cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
+									if(cJSON_GetArrayItem(curObjInner, curMolType)->valueint)
+									{
+										bNeedReleaseType = true;
+									}
+								}
+							}
+							
+							// How are released molecules placed?
+							if(bNeedReleaseType)
+							{
+								if(!cJSON_bItemValid(curObj,"Release Placement Type", cJSON_String))
+								{ // Reaction does not have a defined Release Placement Type
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d does not have a defined \"Release Placement Type\". Setting to default value \"Leave\".\n", numWarn++, curArrayItem);
+									tempString =
+										stringWrite("Leave");
+								} else{
+									tempString =
+										stringWrite(cJSON_GetObjectItem(curObj,
+										"Release Placement Type")->valuestring);
+								}
+								
+								if(strcmp(tempString,"Leave") == 0)
+									curSpec->chem_rxn[curArrayItem].releaseType =
+										PROD_PLACEMENT_LEAVE;
+								else if(strcmp(tempString,"Full Diffusion") == 0)
+									curSpec->chem_rxn[curArrayItem].releaseType = PROD_PLACEMENT_FORCE;
+								else if(strcmp(tempString,"Steady State Diffusion") == 0)
+									curSpec->chem_rxn[curArrayItem].releaseType = PROD_PLACEMENT_STEADY_STATE;
+								else
+								{
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d has an invalid \"Release Placement Type\". Setting to default value \"Leave\".\n", numWarn++, curArrayItem);
+									curSpec->chem_rxn[curArrayItem].releaseType = PROD_PLACEMENT_LEAVE;
+								}
+								free(tempString);
+							} else
+							{
+								if(cJSON_bItemValid(curObj,"Release Placement Type", cJSON_String))
+								{ // Reaction did not need defined Release Placement Type
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d has \"Release Placement Type\" defined but there are no products released. Ignoring.\n", numWarn++, curArrayItem);
 								}
 							}
 						}

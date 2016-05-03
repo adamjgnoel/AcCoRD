@@ -18,6 +18,14 @@
  * and coupled together
  * - added bReleaseProduct for surface reactions to indicate which products are
  * released from the surface
+ * - updated reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use. Added types to store user choices
+ * - adsorption and desorption probability calculations are mostly based on
+ * S.S. Andrews, "Accurate particle-based simulation of adsorption, desorption
+ * and partial transmission" Physical Biology, vol. 6, p.046015, 2009
+ * - constrained absorbing and desorbing reactions to one per type of molecule
+ * at a given region. In many cases these reactions are now treated separately
+ * from other types of 1st order reactions
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -46,6 +54,7 @@
 
 #include <math.h> // for exp()
 #include <complex.h> // for complex error function
+#include <limits.h> // For USHRT_MAX
 
 #include "region.h"
 #include "global_param.h"
@@ -121,7 +130,7 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	short surfRxnType;
 	
 	// Type of surface reaction probability calculation
-	// Default is RXN_PROB_NORMAL, which is inaccurate for surface reactions
+	// Default is RXN_PROB_NORMAL, which is inaccurate for surface transition reactions
 	short rxnProbType;
 };
 
@@ -143,5 +152,26 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 void deleteRegionChemRxn(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[]);
+
+// Calculate probability of desorption reaction for specified time step
+bool calculateDesorptionProb(double * rxnProb,
+	const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Calculate probability of absorption reaction for specified time step
+double calculateAbsorptionProb(const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 #endif // CHEM_RXN_H

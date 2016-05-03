@@ -16,7 +16,10 @@
  *
  * Revision LATEST_VERSION
  * - updated first order reaction functions to account for surface reactions that
- * release products from the surface. Includes new function to find destination region
+ * release products from the surface. This is done in a common function (for both old
+ * and recent molecules). Placement of products depends on user configuration
+ * - added calls to new functions to determine adsorption/desorption probabilities
+ * for recent molecules
  * - corrected how molecules are locked to region boundary when they cross regions
  * - updating reaction probabilities for surface reactions so that user has
  * choices for what calculation to use.
@@ -393,9 +396,11 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
 	unsigned short curMolType,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	NodeMol3D * curNode = p_list[curRegion][curMolType];
+	NodeMolRecent3D * curNodeRecent = pRecentList[curRegion][curMolType]; // Just used as a placeholder here
 	NodeMol3D * prevNode = NULL;
 	NodeMol3D * nextNode;
 	double curRand;
@@ -407,6 +412,53 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	double point[3];
 	bool bRemove;
 	
+	if(regionArray[curRegion].bUseRxnOutProb[curMolType])
+	{ // This molecule has an independently-calculated desorption-type reaction
+		curRxn = regionArray[curRegion].rxnOutID[curMolType];
+		while(curNode != NULL)
+		{
+			nextNode = curNode->next;
+			bRemove = false;
+			
+			// Generate RV to see which/whether first order reaction occurred
+			curRand = mt_drand();
+			if(curRand < regionArray[curRegion].surfRxnOutProb[curMolType])
+			{				
+				// Generate products (if necessary)
+				// TODO: May need to consider associating a separation distance with
+				// reactions that have more than one product.
+				if(regionArray[curRegion].numRxnProducts[curRxn] > 0)
+				{
+					rxnFirstOrderProductPlacement(curNode, curNodeRecent,
+						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, false);
+				}
+				
+				// Remove current molecule from list
+				removeItem(prevNode, curNode);
+				bRemove = true;
+			}
+		
+			if(prevNode == NULL && bRemove)
+			{	// prevNode does not change, but we removed first molecule in list.
+				// nextNode is now the start of the list
+				// (i.e., we must update pointer to list)
+				p_list[curRegion][curMolType] = nextNode;
+			} else if(!bRemove){
+				prevNode = curNode;
+			}
+			curNode = nextNode;
+		}
+		
+		// Reset molecule list parameters if there are other 1st order reactions
+		if(regionArray[curRegion].numFirstCurReactant[curMolType] > 1)
+		{
+			curNode = p_list[curRegion][curMolType];
+			prevNode = NULL;
+		} else
+			return; // No need to scan again
+	}
+		
 	while(curNode != NULL)
 	{
 		nextNode = curNode->next;
@@ -416,7 +468,7 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 		curRand = mt_drand();
 		
 		for(i = 0; i < regionArray[curRegion].numFirstCurReactant[curMolType]; i++)
-		{
+		{			
 			if(curRand < regionArray[curRegion].uniCumProb[curMolType][i])
 			{
 				// Reaction i took place
@@ -426,49 +478,10 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 				// TODO: May need to consider associating a separation distance with
 				// reactions that have more than one product.
 				if(regionArray[curRegion].numRxnProducts[curRxn] > 0)
-				{
-					// If there are any products, then we need to generate a
-					// corresponding reaction time so we know when the products
-					// were generated
-					curTime =
-						-log((1.-regionArray[curRegion].minRxnTimeRV[curMolType])*mt_drand()
-						+ regionArray[curRegion].minRxnTimeRV[curMolType])
-						/ regionArray[curRegion].uniSumRate[curMolType];
-					for(curProd = 0;
-						curProd < regionArray[curRegion].numRxnProducts[curRxn];
-						curProd++)
-					{
-						// Add the (curProd)th product to the corresponding molecule list
-						curProdID = regionArray[curRegion].productID[curRxn][curProd];
-						if(regionArray[curRegion].bReleaseProduct[curRxn][curProd])
-						{ // Region is a surface and molecule must be released
-							point[0] = curNode->item.x;
-							point[1] = curNode->item.y;
-							point[2] = curNode->item.z;
-							destRegion = findDestRegion(point, curRegion, regionArray);
-							// TEMP diffusion after desorption
-							curRand = mt_drand();
-							curNode->item.x = curNode->item.x +
-								sqrt(2*5e-12*(regionArray[curRegion].spec.dt))*
-								(0.729614*curRand - 0.70252*curRand*curRand)/
-								(1 - 1.47494*curRand + 0.484371*curRand*curRand);
-							//curNode->item.x += 2*fabs(rd_normal(0,
-							//	sqrt(2*(regionArray[curRegion].spec.dt-curTime)*5e-12)));
-							curTime = regionArray[curRegion].spec.dt;
-						} else
-						{ // Place product molecule in current region
-							destRegion = curRegion;
-						}
-						if(!addMoleculeRecent(
-							&pRecentList[destRegion][curProdID],
-							curNode->item.x, curNode->item.y, curNode->item.z,
-							regionArray[curRegion].spec.dt-curTime))
-						{ // Creation of molecule failed
-							fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
-								regionArray[curRegion].productID[curRxn][curProd], curRxn);
-							exit(EXIT_FAILURE);						
-						}
-					}
+				{					
+					rxnFirstOrderProductPlacement(curNode, curNodeRecent,
+						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, false);
 				}
 				
 				// Remove current molecule from list
@@ -500,15 +513,18 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	unsigned short curRegion,
 	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
 	unsigned short curMolType,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	bool bCheckCount,
 	uint32_t numMolCheck[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	NodeMolRecent3D * curNode = pRecentList[curRegion][curMolType];
+	NodeMol3D * curNodeOld = p_list[curRegion][curMolType];
 	NodeMolRecent3D * prevNode = NULL;
 	NodeMolRecent3D * nextNode;
-	double curRand;
+	double curRand, curProb;
 	double curTime;
 	int i; // Reaction loop index
 	unsigned short curProd;
@@ -517,14 +533,76 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 	double uniCumProb[regionArray[curRegion].numFirstCurReactant[curMolType]];
 	double minRxnTimeRV;
 	uint32_t numMolOrig = numMolCheck[curRegion][curMolType];
+	// Number of molecules to check in second while loop
+	uint32_t numMolReCheck = numMolCheck[curRegion][curMolType];
 	uint32_t curMol = 0;
 	unsigned short prodID;
 	unsigned short destRegion;
 	double point[3];
 	
+	if(regionArray[curRegion].bUseRxnOutProb[curMolType])
+	{ // This molecule has an independently-calculated desorption-type reaction
+		curRxn = regionArray[curRegion].rxnOutID[curMolType];
+		while(curNode != NULL)
+		{			
+			if(bCheckCount && ++curMol > numMolOrig)
+			{ // We only need to check the first numMolOrig molecules in this list
+			  // and we have already done so.
+				break;
+			}
+			
+			nextNode = curNode->next;
+			bRemove = false;
+			
+			// Generate RV and reaction probability to see whether
+			// desorption reaction occurred
+			calculateDesorptionProb(&curProb, curRegion, curMolType,
+				regionArray[curRegion].rxnOutID[curMolType],
+				curNode->item.dt_partial, NUM_REGIONS,
+				regionArray, NUM_MOL_TYPES, DIFF_COEF);
+			curRand = mt_drand();
+			if(curRand < curProb)
+			{				
+				// Generate products (if necessary)
+				// TODO: May need to consider associating a separation distance with
+				// reactions that have more than one product.
+				if(regionArray[curRegion].numRxnProducts[curRxn] > 0)
+				{
+					rxnFirstOrderProductPlacement(curNodeOld, curNode,
+						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true);
+				}
+				
+				// Remove current molecule from list
+				numMolReCheck--; // One less molecule to check for regular reactions
+				removeItemRecent(prevNode, curNode);
+				bRemove = true;
+			}
+		
+			if(prevNode == NULL && bRemove)
+			{	// prevNode does not change, but we removed first molecule in list.
+				// nextNode is now the start of the list
+				// (i.e., we must update pointer to list)
+				pRecentList[curRegion][curMolType] = nextNode;
+			} else if(!bRemove){
+				prevNode = curNode;
+			}
+			curNode = nextNode;
+		}
+		
+		// Reset molecule list parameters if there are other 1st order reactions
+		if(regionArray[curRegion].numFirstCurReactant[curMolType] > 1)
+		{
+			curNode = pRecentList[curRegion][curMolType];
+			prevNode = NULL;
+		} else
+			return; // No need to scan again
+	}
+	
+	curMol = 0;
 	while(curNode != NULL)
 	{
-		if(bCheckCount && ++curMol > numMolOrig)
+		if(bCheckCount && ++curMol > numMolReCheck)
 		{ // We only need to check the first numMolOrig molecules in this list
 		  // and we have already done so.
 			break;
@@ -560,54 +638,10 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 				// TODO: May need to consider associating a separation distance with
 				// reactions that have more than one product.
 				if(regionArray[curRegion].numRxnProducts[curRxn] > 0)
-				{
-					// minRxnTimeRV = exp(-curNode->item.dt_partial*regionArray[curRegion].rxnRate[curRxn]);
-					minRxnTimeRV = exp(-curNode->item.dt_partial*regionArray[curRegion].uniSumRate[curMolType]);
-					curTime =
-						-log((1.-minRxnTimeRV)*mt_drand()
-						+ minRxnTimeRV)
-						/ regionArray[curRegion].uniSumRate[curMolType];
-					for(curProd = 0;
-						curProd < regionArray[curRegion].numRxnProducts[curRxn];
-						curProd++)
-					{
-						prodID = regionArray[curRegion].productID[curRxn][curProd];
-						// Add the (curProd)th product to the corresponding molecule list
-						if(regionArray[curRegion].bReleaseProduct[curRxn][curProd])
-						{ // Region is a surface and molecule must be released
-							point[0] = curNode->item.x;
-							point[1] = curNode->item.y;
-							point[2] = curNode->item.z;
-							destRegion = findDestRegion(point, curRegion, regionArray);
-						} else
-						{ // Place product molecule in current region
-							destRegion = curRegion;
-						}
-						if(!addMoleculeRecent(
-							&pRecentList[destRegion][prodID],
-							curNode->item.x, curNode->item.y, curNode->item.z,
-							curNode->item.dt_partial-curTime))
-						{ // Creation of molecule failed
-							fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n", regionArray[curRegion].productID[curRxn][curProd], curRxn);
-							exit(EXIT_FAILURE);						
-						}
-						if(prevNode == NULL
-							&& prodID == curMolType
-							&& destRegion == curRegion)
-						{ // We've just added a molecule to the start of the current
-							// molecule list. Update prevNode
-							prevNode = pRecentList[curRegion][curMolType];
-						}
-						// Update the number of molecules that need to be checked
-						// in the next round
-						// NOTE: We don't need to check more reactions if this product
-						// isn't the reactant for any first-order reactions, but it's
-						// somewhat inefficient to check for that here
-						if(bCheckCount || prodID <= curMolType)
-						{
-							numMolCheck[destRegion][prodID]++;
-						}
-					}
+				{					
+					rxnFirstOrderProductPlacement(curNodeOld, curNode,
+						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true);
 				}
 				
 				// Remove current molecule from list
@@ -631,6 +665,192 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 	if(bCheckCount)
 	{ // Correct the number of molecules to check in next round
 		numMolCheck[curRegion][curMolType] -= numMolOrig;
+	}
+}
+
+// Place products of 1st order reaction
+void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
+	const NodeMolRecent3D * curMolRecent,
+	const unsigned short curRxn,
+	const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	unsigned short curRegion,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	unsigned short curMolType,	
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	const bool bRecent)
+{
+	double curTime, timeLeft; // Time of reaction and time remaining in time step
+	double curRand, dist;
+	double minRxnTimeRV;
+	unsigned short curProd, curProdID;
+	unsigned short destRegion;
+	double point[3];
+	double newPoint[3];
+	double lineVector[3];
+	double lineLength;
+	int reflectFace, reflectDim;
+	
+	if(bRecent)
+	{
+		point[0] = curMolRecent->item.x;
+		point[1] = curMolRecent->item.y;
+		point[2] = curMolRecent->item.z;
+	} else
+	{
+		point[0] = curMol->item.x;
+		point[1] = curMol->item.y;
+		point[2] = curMol->item.z;
+	}
+	
+	if(regionArray[curRegion].bUseRxnOutProb[curMolType])
+	{
+		timeLeft = 0;
+		if(bRecent)
+			curTime = curMolRecent->item.dt_partial;
+		else
+			curTime = regionArray[curRegion].spec.dt;
+	} else
+	{
+		if(bRecent)
+		{
+			minRxnTimeRV = exp(-curMolRecent->item.dt_partial*regionArray[curRegion].uniSumRate[curMolType]);
+			curTime =
+				-log((1.-minRxnTimeRV)*mt_drand() + minRxnTimeRV)
+				/ regionArray[curRegion].uniSumRate[curMolType];
+			timeLeft = curMolRecent->item.dt_partial - curTime;
+		} else
+		{
+			curTime =
+				-log((1.-regionArray[curRegion].minRxnTimeRV[curMolType])*mt_drand()
+				+ regionArray[curRegion].minRxnTimeRV[curMolType])
+				/ regionArray[curRegion].uniSumRate[curMolType];
+			timeLeft = regionArray[curRegion].spec.dt - curTime;
+		}
+	}
+	
+	for(curProd = 0; curProd < regionArray[curRegion].numRxnProducts[curRxn];
+		curProd++)
+	{
+		// Find actual ID of current product molecule
+		curProdID = regionArray[curRegion].productID[curRxn][curProd];
+		
+		// Reset location of new product
+		newPoint[0] = point[0];
+		newPoint[1] = point[1];
+		newPoint[2] = point[2];
+		
+		if(regionArray[curRegion].bReleaseProduct[curRxn][curProd])
+		{ // Region is a surface and molecule must be released
+			switch(regionArray[curRegion].releaseType[curRxn])
+			{
+				case PROD_PLACEMENT_LEAVE:
+					// Molecule doesn't move. Can diffuse normally for timeLeft
+					dist = 0.;
+					break;
+				case PROD_PLACEMENT_FORCE:
+					// Force diffusion of time timeLeft away from surface
+					dist = 2*fabs(rd_normal(0,
+						sqrt(2*(timeLeft)*DIFF_COEF[curRegion][curProdID])));
+					break;
+				case PROD_PLACEMENT_STEADY_STATE:
+					// Force diffusion of time timeLeft assuming steady state
+					// with reverse reaction
+					curRand = mt_drand();
+					dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
+						(0.729614*curRand - 0.70252*curRand*curRand)/
+						(1 - 1.47494*curRand + 0.484371*curRand*curRand);
+					break;
+			}
+			
+			if(dist > 0.)
+			{ // Need to determine new point in direction away from surface
+				switch(regionArray[curRegion].spec.shape)
+				{
+					case RECTANGLE:
+						switch(regionArray[curRegion].plane)
+						{
+							case PLANE_XY:
+								reflectDim = 2; // Push off along z-axis
+							case PLANE_XZ:
+								reflectDim = 1; // Push off along y-axis
+							case PLANE_YZ:
+								reflectDim = 0; // Push off along x-axis
+						}
+						if(regionArray[curRegion].spec.surfaceType
+							== SURFACE_INNER)
+						{ // Move molecule in positive direction
+							newPoint[reflectDim] += dist;
+						} else
+							newPoint[reflectDim] -= dist;
+						break;
+					case RECTANGULAR_BOX:
+						// We need to know exactly what face we're on
+						reflectFace = closestFace(point, RECTANGULAR_BOX,
+							regionArray[curRegion].boundary);
+							
+						// Record dimension of face
+						if(reflectFace == LEFT || reflectFace == RIGHT)
+							reflectDim = 0;
+						else if(reflectFace == DOWN || reflectFace == UP)
+							reflectDim = 1;
+						else if(reflectFace == IN || reflectFace == OUT)
+							reflectDim = 2;
+						
+						// Push away from face in correct direction
+						if(reflectFace == LEFT || reflectFace == DOWN
+							|| reflectFace == IN)
+						{
+							if(regionArray[curRegion].spec.surfaceType
+								== SURFACE_INNER)
+							{ // Move molecule in positive direction
+								newPoint[reflectDim] += dist;
+							} else
+								newPoint[reflectDim] -= dist;							
+						} else
+						{
+							if(regionArray[curRegion].spec.surfaceType
+								== SURFACE_INNER)
+							{ // Move molecule in positive direction
+								newPoint[reflectDim] -= dist;
+							} else
+								newPoint[reflectDim] += dist;	
+						}
+						break;
+					case SPHERE:
+						// Define line from center of sphere to current point
+						if(regionArray[curRegion].spec.surfaceType
+							== SURFACE_INNER)
+						{ // "Starting point" for vector is on sphere
+							defineLine(regionArray[curRegion].boundary, point,
+								lineVector, &lineLength);
+						} else
+						{ // "Starting point" for vector is center of sphere
+							defineLine(point, regionArray[curRegion].boundary,
+								lineVector, &lineLength);
+						}
+						
+						// Now follow line by specified distance
+						pushPoint(point, newPoint, dist, lineVector);
+						break;
+					default:
+						break;
+				}
+			}	
+			destRegion = findDestRegion(newPoint, curRegion, regionArray);
+		} else
+		{ // Leave product molecule in current region
+			destRegion = curRegion;
+		}
+		if(!addMoleculeRecent(&pRecentList[destRegion][curProdID],
+			newPoint[0], newPoint[1], newPoint[2], timeLeft))
+		{ // Creation of molecule failed
+			fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+				regionArray[curRegion].productID[curRxn][curProd], curRxn);
+			exit(EXIT_FAILURE);						
+		}
 	}
 }
 
@@ -887,7 +1107,7 @@ bool followMolecule(const double startPoint[3],
 			nearestFace =  regionArray[*endRegion].regionNeighDir[startRegion];
 		}
 		lockPointToRegion(nearestIntersectPoint, startRegion, *endRegion, regionArray,
-			nearestFace);		
+			nearestFace);
 		
 		if(regionArray[*endRegion].spec.type != REGION_NORMAL)
 		{ // Closest region is some kind of surface
@@ -908,6 +1128,42 @@ bool followMolecule(const double startPoint[3],
 				return false;
 			}
 			
+			switch(regionArray[*endRegion].spec.surfaceType)
+			{
+				case SURFACE_INNER:
+				case SURFACE_OUTER:
+					// Need to check for surface absorption
+					if(regionArray[*endRegion].bSurfRxnIn[molType])
+					{ // Absorption is possible
+						curRand = mt_drand();
+						*curRxn = regionArray[*endRegion].rxnInID[molType];
+						if(bRecent)
+						{
+							// Need to calculate absorption probability
+							rxnProb = calculateAbsorptionProb(*endRegion,
+								molType, *curRxn,
+								dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+								DIFF_COEF);
+						} else
+						{ // Use pre-calculated probability
+							rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
+						}
+					}
+					break;
+				case SURFACE_MEMBRANE:
+					// Need to check relative direction so that correct probability
+					// is used
+					*curRxn = 0;
+					rxnProb = 0.;
+					break;
+			}
+			
+			if(curRand < rxnProb)
+			{
+				// Reaction curRxn took place
+				*bReaction = true;
+			}
+			/*
 			if(regionArray[*endRegion].numFirstRxn > 0)
 			{ // There is at least 1 possible reaction
 				curRand = mt_drand();
@@ -933,7 +1189,7 @@ bool followMolecule(const double startPoint[3],
 						}
 					}
 					else
-						rxnProb = regionArray[*endRegion].uniCumProb[molType][i];
+						rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
 					
 					if(curRand < rxnProb)
 					{
@@ -944,6 +1200,7 @@ bool followMolecule(const double startPoint[3],
 					}
 				}
 			}
+			*/
 			if(*bReaction)
 			{
 				switch(regionArray[*endRegion].spec.surfaceType)

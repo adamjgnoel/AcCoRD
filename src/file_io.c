@@ -15,7 +15,12 @@
  *
  * Revision LATEST_VERSION
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
- * - shortened string used to indicate how actor location is defined
+ * - added chemical reaction properties to define coupled reversible reactions
+ * - added chemical reaction properties to configure absorbing and desorbing reactions,
+ * including how transition probabilities are calculated and where desorbed molecules
+ * are placed.
+ * - shortened string used to indicate how actor location is defined. This avoids
+ * a MATLAB warning when loaded simulation configuration files
  *
  * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions
@@ -471,6 +476,47 @@ void loadConfig(const char * CONFIG_NAME,
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
 						}
 						free(tempString);
+						
+						switch(curSpec->chem_rxn[curArrayItem].surfRxnType)
+						{
+							case RXN_ABSORBING:
+							case RXN_DESORBING:
+							case RXN_MEMBRANE:
+								// These surface reactions have choices in how reaction
+								// probability is calculated
+								if(!cJSON_bItemValid(curObj,"Surface Transition Probability", cJSON_String))
+								{ // Reaction does not have a defined Surface Transition Probability
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d does not have a defined \"Surface Transition Probability\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+									tempString =
+										stringWrite("Normal");
+								} else{
+									tempString =
+										stringWrite(cJSON_GetObjectItem(curObj,
+										"Surface Transition Probability")->valuestring);
+								}
+								
+								if(strcmp(tempString,"Normal") == 0)
+									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_NORMAL;
+								else if(strcmp(tempString,"Mixed") == 0)
+									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_MIXED;
+								else if(strcmp(tempString,"Steady State") == 0)
+									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_STEADY_STATE;
+								else
+								{
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d has an invalid \"Surface Transition Probability\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_NORMAL;
+								}
+								free(tempString);
+								break;
+							default:
+								if(cJSON_bItemValid(curObj,"Surface Reaction Probability", cJSON_String))
+								{ // Reaction does not have a defined Surface Transition Probability
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d does not need a \"Surface Transition Probability\". Ignoring.\n", numWarn++, curArrayItem);
+								}
+						}
 						
 						// Check for whether bReleaseProduct array is defined
 						bNeedReleaseType = false; // By default, we don't need to define release type

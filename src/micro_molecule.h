@@ -16,8 +16,13 @@
  *
  * Revision LATEST_VERSION
  * - updated first order reaction functions to account for surface reactions that
- * release products from the surface. Includes new function to find destination region
+ * release products from the surface. This is done in a common function (for both old
+ * and recent molecules). Placement of products depends on user configuration
+ * - added calls to new functions to determine adsorption/desorption probabilities
+ * for recent molecules
  * - corrected how molecules are locked to region boundary when they cross regions
+ * - updating reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use.
  *
  * Revision v0.5 (2016-04-15)
  * - added surface reactions, including membrane transitions
@@ -128,16 +133,33 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
 	unsigned short curMolType,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	unsigned short curRegion,
 	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
 	unsigned short curMolType,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	bool bCheckCount,
 	uint32_t numMolCheck[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Place products of 1st order reaction
+void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
+	const NodeMolRecent3D * curMolRecent,
+	const unsigned short curRxn,
+	const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	unsigned short curRegion,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	unsigned short curMolType,	
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	const bool bRecent);
 
 // If a molecule is the product of a surface reaction and it is supposed
 // to be released from the surface, find the destination region

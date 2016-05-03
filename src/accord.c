@@ -735,8 +735,9 @@ int main(int argc, char *argv[])
 						if(!isListMol3DEmpty(&microMolList[i][j])
 							&& regionArray[i].numFirstCurReactant[j] > 0)
 						{ // Check 1st order reactions of "old" molecules
-							rxnFirstOrder(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, i, microMolList,
-								regionArray, j, microMolListRecent);
+							rxnFirstOrder(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, i,
+								microMolList, regionArray, j,
+								DIFF_COEF, microMolListRecent);
 						}
 						numMicroMolCheck[i][j] = 0;
 					}
@@ -759,7 +760,8 @@ int main(int argc, char *argv[])
 							{ // Check 1st order reactions of "old" molecules
 								rxnFirstOrderRecent(spec.NUM_REGIONS,
 									spec.NUM_MOL_TYPES, i, microMolListRecent,
-									regionArray, j, bCheckCount, numMicroMolCheck);
+									microMolList, regionArray, j, DIFF_COEF,
+									bCheckCount, numMicroMolCheck);
 							}
 						}
 						

@@ -17,6 +17,8 @@
  * Revision LATEST_VERSION
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
  * since definition of faces are for the 3D case
+ * - added closestFace and distanceToFace functions to find closest boundary face
+ * to point (in direction of face normal only)
  * - updated check on a line hitting an infinite plane where acceptance of the distance = 0
  * case is passed as an argument
  *
@@ -1095,6 +1097,84 @@ double distanceToBoundary(const double point[3],
 		default:
 			fprintf(stderr,"ERROR: Cannot determine the distance from a point to a %s.\n", boundaryString(boundary1Type));
 			return 0.;
+	}
+}
+
+// Determine closest boundary face from point
+// Distance is checked along face normals only (i.e., we assume that we're already
+// at one of the faces)
+int closestFace(const double point[3],
+	const int boundary1Type,
+	const double boundary1[])
+{
+	int curFace;
+	int minFace = UNDEFINED;
+	double curDist;
+	double minDist = INFINITY;
+	
+	switch(boundary1Type)
+	{
+		case RECTANGLE:
+		case RECTANGULAR_BOX:
+			for(curFace = 0; curFace < 6; curFace++)
+			{
+				curDist = distanceToFace(point, boundary1Type, boundary1, curFace);
+				if(curDist < minDist)
+				{
+					minDist = curDist;
+					minFace = curFace;
+				}
+			}
+			return minFace;
+		default:
+			fprintf(stderr,"ERROR: Cannot determine the distance from a %s.\n",
+				boundaryString(boundary1Type));
+			return UNDEFINED;
+	}
+}
+
+// Determine distance from point to a boundary face
+// Distance is along the face normal direction only
+double distanceToFace(const double point[3],
+	const int boundary1Type,
+	const double boundary1[],
+	const int faceID)
+{
+	double dist;
+	
+	switch(boundary1Type)
+	{
+		case RECTANGULAR_BOX:
+			switch(faceID)
+			{
+				case LEFT:
+					return fabs(point[0] - boundary1[0]);
+				case RIGHT:
+					return fabs(point[0] - boundary1[1]);
+				case DOWN:
+					return fabs(point[1] - boundary1[2]);
+				case UP:
+					return fabs(point[1] - boundary1[3]);
+				case IN:
+					return fabs(point[2] - boundary1[4]);
+				case OUT:
+					return fabs(point[2] - boundary1[5]);
+				default:
+				fprintf(stderr,"ERROR: Cannot determine the distance to face %d of a %s.\n",
+					faceID, boundaryString(boundary1Type));
+				return INFINITY;
+			}
+			break;
+		case SPHERE:
+			dist = pointDistance(point, boundary1);
+			if(dist > boundary1[3])
+				return dist - boundary1[3];
+			else
+				return dist;
+		default:
+			fprintf(stderr,"ERROR: Cannot determine the distance from a %s.\n",
+				boundaryString(boundary1Type));
+			return INFINITY;
 	}
 }
 

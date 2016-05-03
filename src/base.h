@@ -17,6 +17,10 @@
  * Revision LATEST_VERSION
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
  * since definition of faces are for the 3D case
+ * - added closestFace and distanceToFace functions to find closest boundary face
+ * to point (in direction of face normal only)
+ * - updated check on a line hitting an infinite plane where acceptance of the distance = 0
+ * case is passed as an argument
  *
  * Revision v0.5 (2016-04-15)
  * - filling in cases for 2D Rectangles
@@ -178,6 +182,20 @@ void pushPoint(double p1[3],
 double distanceToBoundary(const double point[3],
 	const int boundary1Type,
 	const double boundary1[]);
+
+// Determine closest boundary face from point
+// Distance is checked along face normals only (i.e., we assume that we're already
+// at one of the faces)
+int closestFace(const double point[3],
+	const int boundary1Type,
+	const double boundary1[]);
+
+// Determine distance from point to a boundary face
+// Distance is along the face normal direction only
+double distanceToFace(const double point[3],
+	const int boundary1Type,
+	const double boundary1[],
+	const int faceID);
 
 // Determine boundary of intersection of two boundaries
 //  Only valid for rectangular boundaries (rectangles or boxes) or spherical intersections.

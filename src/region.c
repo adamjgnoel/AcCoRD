@@ -19,6 +19,8 @@
  * whether to ignore children regions that are surfaces
  * - added bReleaseProduct for surface reactions to indicate whether products are
  * released from the surface
+ * - added members to store unique properties needed for absorbing and
+ * desorbing reactions
  *
  * Revision v0.5 (2016-04-15)
  * - re-structured region array initialization to nest more code in functions

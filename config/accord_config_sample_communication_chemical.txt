@@ -27,8 +27,12 @@
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur at the receiver.",
+				"Label": "Conversion",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Reverse",
 				"Surface Reaction?": true,
 				"Surface Reaction Type": "Absorbing",
+				"Surface Transition Probability": "Steady State",
 				"Default Everywhere?": false,
 				"Exception Regions": ["Receiver"],
 				"Reactants": [1, 0],
@@ -38,13 +42,18 @@
 			},
 			{							
 				"Notes": "Reverse reaction. Can only occur at the receiver.",
+				"Label": "Reverse",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Conversion",
 				"Surface Reaction?": true,
-				"Surface Reaction Type": "Normal",
+				"Surface Reaction Type": "Desorbing",
+				"Surface Transition Probability": "Steady State",
 				"Default Everywhere?": false,
 				"Exception Regions": ["Receiver"],
 				"Reactants": [0, 1],
 				"Products": [1, 0],
 				"Products Released?": [true, false],
+				"Release Placement Type": "Steady State Diffusion",
 				"Reaction Rate": 200
 			}
 		]

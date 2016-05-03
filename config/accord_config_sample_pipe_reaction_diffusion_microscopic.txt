@@ -19,6 +19,8 @@
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur in the destination region.",
+				"Label": "Conversion",
+				"Is Reaction Reversible?": false,
 				"Surface Reaction?": false,
 				"Default Everywhere?": false,
 				"Exception Regions": ["Destination"],

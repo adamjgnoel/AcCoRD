@@ -306,7 +306,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].bSurfRxnOut[j] = false;
 			regionArray[i].rxnOutID[j] = USHRT_MAX;
 			regionArray[i].surfRxnOutProb[j] = 0.;
-			regionArray[i].surfRxnOutProb[j] = false;
+			regionArray[i].bUseRxnOutProb[j] = false;
 		}
 	}
 	

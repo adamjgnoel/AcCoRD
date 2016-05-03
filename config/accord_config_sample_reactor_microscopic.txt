@@ -23,6 +23,9 @@
 			{							
 				"Notes": "Creation. This reaction rate results in one molecule being created
 					every second, on average (because reactor has volume 1e-12 m^3)",
+				"Label": "Creation",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Death",
 				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],
@@ -33,6 +36,9 @@
 			{							
 				"Notes": "Death. This reaction rate means that a molecule has an expected
 					lifetime of 1/0.01 = 100 seconds.",
+				"Label": "Death",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Creation",
 				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],

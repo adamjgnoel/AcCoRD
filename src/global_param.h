@@ -102,15 +102,21 @@
 #define RXN_DESORBING 2
 #define RXN_RECEPTOR 3
 #define RXN_MEMBRANE 4
+#define RXN_MEMBRANE_IN 5
+#define RXN_MEMBRANE_OUT 6
 
 // Types of reaction probability calculations
+// NOTE: Changes to list of names must be reflected in file_io.c
 #define RXN_PROB_NORMAL 0
 #define RXN_PROB_MIXED 1
 #define RXN_PROB_STEADY_STATE 2
 
 // Types of molecule placement strategies when leaving surface
+// NOTE: Changes to list of names must be reflected in file_io.c
 #define PROD_PLACEMENT_LEAVE 0 // Leave molecule next to surface
 #define PROD_PLACEMENT_FORCE 1 // Force diffusion away from surface
-#define PROD_PLACEMENT_STEADY_STATE 2 // Force diffuse based on steady-state values
+#define PROD_PLACEMENT_IRREVERSIBLE 2 // Force diffusion away from surface based on unknown
+									  // desorption time
+#define PROD_PLACEMENT_STEADY_STATE 3 // Force diffuse based on steady-state values
 
 #endif // GLOBAL_PARAM_H

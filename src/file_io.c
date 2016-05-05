@@ -574,6 +574,8 @@ void loadConfig(const char * CONFIG_NAME,
 										PROD_PLACEMENT_LEAVE;
 								else if(strcmp(tempString,"Full Diffusion") == 0)
 									curSpec->chem_rxn[curArrayItem].releaseType = PROD_PLACEMENT_FORCE;
+								else if(strcmp(tempString,"Irreversible Diffusion") == 0)
+									curSpec->chem_rxn[curArrayItem].releaseType = PROD_PLACEMENT_IRREVERSIBLE;
 								else if(strcmp(tempString,"Steady State Diffusion") == 0)
 									curSpec->chem_rxn[curArrayItem].releaseType = PROD_PLACEMENT_STEADY_STATE;
 								else

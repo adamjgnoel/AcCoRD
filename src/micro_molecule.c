@@ -755,6 +755,13 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 					dist = 2*fabs(rd_normal(0,
 						sqrt(2*(timeLeft)*DIFF_COEF[curRegion][curProdID])));
 					break;
+				case PROD_PLACEMENT_IRREVERSIBLE:
+					// Force diffusion of unknown time away from surface
+					curRand = mt_drand();
+					dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
+						(0.571825*curRand - 0.552246*curRand*curRand)/
+						(1 - 1.53908*curRand + 0.546424*curRand*curRand);
+					break;
 				case PROD_PLACEMENT_STEADY_STATE:
 					// Force diffusion of time timeLeft assuming steady state
 					// with reverse reaction
@@ -824,11 +831,11 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 						if(regionArray[curRegion].spec.surfaceType
 							== SURFACE_INNER)
 						{ // "Starting point" for vector is on sphere
-							defineLine(regionArray[curRegion].boundary, point,
+							defineLine(point, regionArray[curRegion].boundary,
 								lineVector, &lineLength);
 						} else
 						{ // "Starting point" for vector is center of sphere
-							defineLine(point, regionArray[curRegion].boundary,
+							defineLine(regionArray[curRegion].boundary, point,
 								lineVector, &lineLength);
 						}
 						

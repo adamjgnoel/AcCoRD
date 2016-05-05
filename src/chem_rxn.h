@@ -9,9 +9,23 @@
  *
  * chem_rxn.h - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added label, bReversible, and labelCoupled so that reactions can be named
+ * and coupled together
+ * - added bReleaseProduct for surface reactions to indicate which products are
+ * released from the surface
+ * - updated reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use. Added types to store user choices
+ * - adsorption and desorption probability calculations are mostly based on
+ * S.S. Andrews, "Accurate particle-based simulation of adsorption, desorption
+ * and partial transmission" Physical Biology, vol. 6, p.046015, 2009
+ * - constrained absorbing and desorbing reactions to one per type of molecule
+ * at a given region. In many cases these reactions are now treated separately
+ * from other types of 1st order reactions
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -39,9 +53,13 @@
 #define CHEM_RXN_H
 
 #include <math.h> // for exp()
+#include <complex.h> // for complex error function
+#include <limits.h> // For USHRT_MAX
 
 #include "region.h"
 #include "global_param.h"
+#include "cerf.h" // for complex error function
+#include "defs.h" // definitions for cerf.h
 
 /*
 * Data Type Declarations
@@ -52,10 +70,24 @@
  * firing of a single chemical reaction
 */
 struct chem_rxn_struct { // Used to define a single chemical reaction
+	// label is an optional string to name the reaction.
+	// Needed if reaction is reversible so that we can identify the coupled reaction
+	char * label;
+	
+	// Is reaction reversible?
+	// Reversibility impacts the calculation of the reaction rates, especially
+	// for surface transition reactions
+	bool bReversible;
+	
+	// If reversible, what is the name of the coupled reaction?
+	char * labelCoupled;
+	
 	// Indicate the indices of the reactants and the number of each
+	// Length is the number of molecule types
 	uint32_t * reactants;
 	
 	// Indicate the indices of the products and the number of each
+	// Length is the number of molecule types
 	uint32_t * products;
 	
 	// Base reaction rate k (units depends on order of reaction)
@@ -65,6 +97,18 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// This will affect where a reaction will take place by default,
 	// as indicated by bEverywhere
 	bool bSurface;
+	
+	// Are products of a surface reaction released from surface?
+	// If true for given product, then the product molecule is placed in closest neighboring
+	// region when it is created.
+	// Length is the number of molecule types
+	bool * bReleaseProduct;
+	
+	// Type of product release from surface
+	// Default is PROD_PLACEMENT_LEAVE, which will leave the molecule next to
+	// the surface.
+	// Defined only for desorbing reactions
+	short releaseType;
 	
 	// Can the reaction take place anywhere by default?
 	// Actual regions will depend on value of bSurface and whether a given
@@ -78,14 +122,16 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Length is numRegionExceptions
 	char ** regionExceptionLabel;
 	
-	// TODO: Add parameters for reactions that take place across multiple
-	// regions (i.e., surface interactions)
-	
 	// Type of surface reaction.
 	// Affects how the reaction probability is calculated
+	// Constraints are imposed on the number of surface transition reactions
 	// Default is RXN_NORMAL, which determines reaction probability from
 	// reaction rate as if it were a solution reaction
 	short surfRxnType;
+	
+	// Type of surface reaction probability calculation
+	// Default is RXN_PROB_NORMAL, which is inaccurate for surface transition reactions
+	short rxnProbType;
 };
 
 //
@@ -106,5 +152,26 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 void deleteRegionChemRxn(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	struct region regionArray[]);
+
+// Calculate probability of desorption reaction for specified time step
+bool calculateDesorptionProb(double * rxnProb,
+	const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Calculate probability of absorption reaction for specified time step
+double calculateAbsorptionProb(const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 #endif // CHEM_RXN_H

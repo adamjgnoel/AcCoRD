@@ -9,9 +9,18 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added bReleaseProduct to chemical reaction. Applies to surface reactions
+ * - added chemical reaction properties to define coupled reversible reactions
+ * - added chemical reaction properties to configure absorbing and desorbing reactions,
+ * including how transition probabilities are calculated and where desorbed molecules
+ * are placed.
+ * - shortened string used to indicate how actor location is defined. This avoids
+ * a MATLAB warning when loaded simulation configuration files
  *
  * Revision v0.5 (2016-04-15)
  * - added ability to define location of actor by a list of regions

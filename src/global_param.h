@@ -9,9 +9,14 @@
  *
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ *
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added types of chemical reaction probability calculations
+ * - removed MAX_MOL_TYPES, MAX_RXN_PRODUCTS
  *
  * Revision v0.5 (2016-04-15)
  * - removed use of MAX_MOL_TYPES
@@ -28,13 +33,6 @@
 // simulation.
 
 #define PI 3.14159265359
-
-// Maximum number of types of molecules in a single simulation.
-// Used to initialize the structure defining chemical reactions.
-#define MAX_MOL_TYPES 20
-
-// Maximum number of products that a single chemical reaction can have
-#define MAX_RXN_PRODUCTS 4
 
 // Dimensions
 #define DIM_X 0
@@ -101,7 +99,24 @@
 // NOTE: Changes to list of names must be reflected in file_io.c
 #define RXN_NORMAL 0
 #define RXN_ABSORBING 1
-#define RXN_RECEPTOR 2
-#define RXN_MEMBRANE 3
+#define RXN_DESORBING 2
+#define RXN_RECEPTOR 3
+#define RXN_MEMBRANE 4
+#define RXN_MEMBRANE_IN 5
+#define RXN_MEMBRANE_OUT 6
+
+// Types of reaction probability calculations
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define RXN_PROB_NORMAL 0
+#define RXN_PROB_MIXED 1
+#define RXN_PROB_STEADY_STATE 2
+
+// Types of molecule placement strategies when leaving surface
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define PROD_PLACEMENT_LEAVE 0 // Leave molecule next to surface
+#define PROD_PLACEMENT_FORCE 1 // Force diffusion away from surface
+#define PROD_PLACEMENT_IRREVERSIBLE 2 // Force diffusion away from surface based on unknown
+									  // desorption time
+#define PROD_PLACEMENT_STEADY_STATE 3 // Force diffuse based on steady-state values
 
 #endif // GLOBAL_PARAM_H

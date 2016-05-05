@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v0.5 (public beta, 2016-04-15)
+This document is the README for AcCoRD LATEST_VERSION (public beta)
 
 # Introduction
 
@@ -64,6 +64,7 @@ A complete version history can be found in CHANGELOG.txt
 # Known Issues
 
 This list is current as of v0.5. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
+* Full 2D simulations are mostly untested
 * Simplified algorithms are used to handle molecule placement when transitioning between mesoscopic and microscopic regions
 * Chemical reactions in microscopic regions must be 0th or 1st order.
 * There is an option to set whether actor is independent but the value is ignored since dependent actors have not yet been implemented

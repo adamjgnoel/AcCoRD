@@ -10,9 +10,19 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated first order reaction functions to account for surface reactions that
+ * release products from the surface. This is done in a common function (for both old
+ * and recent molecules). Placement of products depends on user configuration
+ * - added calls to new functions to determine adsorption/desorption probabilities
+ * for recent molecules
+ * - corrected how molecules are locked to region boundary when they cross regions
+ * - updating reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use.
  *
  * Revision v0.5 (2016-04-15)
  * - added surface reactions, including membrane transitions
@@ -50,11 +60,16 @@
 #include <stdbool.h> // for C++ bool naming, requires C99
 #include <limits.h> // For SHRT_MAX
 #include <math.h> // For sqrt()
+#include <complex.h> // for complex error function
+
 #include "randistrs.h" // For PRNGs
 #include "region.h"
 #include "meso.h"
 #include "subvolume.h"
+#include "chem_rxn.h"
 #include "global_param.h" // for common global parameters
+#include "cerf.h" // for complex error function
+#include "defs.h" // definitions for cerf.h
 
 // micro_molecule specific declarations
 
@@ -105,36 +120,69 @@ void diffuseMolecules(const short NUM_REGIONS,
 	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
 
 void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF);
 
-void rxnFirstOrder(ListMol3D * p_list,
-	const struct region regionArray,
-	unsigned short curMolType,
+void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
-	ListMolRecent3D pRecentList[NUM_MOL_TYPES]);
-
-void rxnFirstOrderRecent(const unsigned short NUM_MOL_TYPES,
-	ListMolRecent3D pRecentList[NUM_MOL_TYPES],
-	const struct region regionArray,
+	unsigned short curRegion,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
 	unsigned short curMolType,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES]);
+
+void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	unsigned short curRegion,
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	unsigned short curMolType,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	bool bCheckCount,
-	uint32_t numMolCheck[NUM_MOL_TYPES]);
+	uint32_t numMolCheck[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Place products of 1st order reaction
+void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
+	const NodeMolRecent3D * curMolRecent,
+	const unsigned short curRxn,
+	const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	unsigned short curRegion,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	unsigned short curMolType,	
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	const bool bRecent);
+
+// If a molecule is the product of a surface reaction and it is supposed
+// to be released from the surface, find the destination region
+unsigned short findDestRegion(const double point[3],
+	const unsigned short curRegion,
+	const struct region regionArray[]);
 
 void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList);
 
 bool validateMolecule(double newPoint[3],
 	double oldPoint[3],
 	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
+	bool bRecent,
+	double dt,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned short * curRxn);
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
@@ -147,10 +195,16 @@ bool followMolecule(const double startPoint[3],
 	const short startRegion,
 	short * endRegion,
 	short * transRegion,
+	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
 	unsigned short * curRxn,
+	bool bRecent,
+	double dt,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned int depth);
 
 uint64_t countMolecules(ListMol3D * p_list,

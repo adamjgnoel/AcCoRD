@@ -10,9 +10,17 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated function bPointInRegionNotChild to take an extra input to indicate
+ * whether to ignore children regions that are surfaces
+ * - added bReleaseProduct for surface reactions to indicate whether products are
+ * released from the surface
+ * - added members to store unique properties needed for absorbing and
+ * desorbing reactions
  *
  * Revision v0.5 (2016-04-15)
  * - re-structured region array initialization to nest more code in functions
@@ -72,14 +80,6 @@ struct spec_region3D { // Used to define a region of subvolumes
 	// that this region is nested in.
 	char * label;
 	char * parent;
-	
-	// Is the region actually a surface?
-	// Surfaces are hollow regions with a number of unique properties
-	// The primary characteristic is that they control transitions
-	// between regions that are on each side of the surface.
-	// Surfaces can have parents if they are embedded within a region(s)
-	// Surfaces can have children if their shape is 3D
-	bool bSurface;
 	
 	// Is the region microscopic?
 	bool bMicro;
@@ -304,6 +304,14 @@ struct region { // Region boundary parameters
 	unsigned short numFirstRxn;
 	unsigned short numSecondRxn;
 	
+	// Is reaction reversible?
+	// Size is numChemRxn
+	bool * bReversible;
+	
+	// ID of reverse reaction if applicable
+	// Size is numChemRxn
+	unsigned short * reverseRxnID;
+	
 	// Magnitude of stoichiometry changes associated with each possible chemical reaction
 	// Size is numChemRxn x NUM_MOL_TYPES
 	uint64_t ** numMolChange;
@@ -319,6 +327,17 @@ struct region { // Region boundary parameters
 	// Molecule ID of each product associated with each chemical reaction
 	// Size is numChemRxn x numRxnProducts
 	unsigned short ** productID;
+	
+	// Bool indicating whether each product is released from region surface
+	// Size is numChemRxn x numRxnProducts
+	bool ** bReleaseProduct;
+	
+	// Type of product release from surface
+	// Default is PROD_PLACEMENT_LEAVE, which will leave the molecule next to
+	// the surface.
+	// Used only when bReleaseProduct is true
+	// Size is numChemRxn
+	short * releaseType;
 	
 	// Indicator of what molecule number changes mean that a reaction propensity
 	// must be updated.
@@ -372,6 +391,11 @@ struct region { // Region boundary parameters
 	// TODO: Improve member name
 	unsigned short ** firstRxnID; // Length NUM_MOL_TYPES x numChemRxn
 	
+	// For bimolecular reactions, what are the indices of the two reactants?
+	// Undefined for reactions that are not bimolecular.
+	// Size is numChemRxn x 2
+	unsigned short (* biReactants)[2];
+	
 	// Used in micro regions only	
 	double * uniSumRate; // Length NUM_MOL_TYPES
 	double ** uniCumProb; // Length NUM_MOL_TYPES x numChemRxn
@@ -380,11 +404,45 @@ struct region { // Region boundary parameters
 						 // in order to correspond to a reaction time that is less than
 						 // the region's micro time step.
 						 // Length NUM_MOL_TYPES
+						 
+	// Type of surface reaction probability calculation
+	// Default is RXN_PROB_NORMAL, which is inaccurate for surface transition reactions
+	// Length numChemRxn
+	short * rxnProbType;
 	
-	// For bimolecular reactions, what are the indices of the two reactants?
-	// Undefined for reactions that are not bimolecular.
-	// Size is numChemRxn x 2
-	unsigned short (* biReactants)[2];
+	// Does an absorbing or membrane reaction exist for a given molecule?
+	// Membrane reaction is for passing from the "inner" direction
+	// Length NUM_MOL_TYPES
+	bool * bSurfRxnIn;
+	
+	// ID of absorbing-type reaction if bSurfRxnIn == true
+	// Length NUM_MOL_TYPES
+	unsigned short * rxnInID;
+	
+	// Probability of absorbing or membrane reaction for a given molecule
+	// Membrane reaction is for passing from the "inner" direction
+	// Length NUM_MOL_TYPES
+	double * surfRxnInProb;
+	
+	// Does a desorbing or membrane reaction exist for a given molecule?
+	// Membrane reaction is for passing from the "outer" direction
+	// Length NUM_MOL_TYPES
+	bool * bSurfRxnOut;
+	
+	// ID of desorbing-type reaction if bSurfRxnIn == true
+	// Length NUM_MOL_TYPES
+	unsigned short * rxnOutID;
+	
+	// Probability of desorbing or membrane reaction for a given molecule
+	// Membrane reaction is for passing from the "outer" direction
+	// Length NUM_MOL_TYPES
+	double * surfRxnOutProb;
+	
+	// Do we use the independently-calculated desorption probability in surfRxnOutProb?
+	// surfRxnOutProb is only needed for reversible steady-state desorption
+	// Membrane reaction is for passing from the "outer" direction
+	// Length NUM_MOL_TYPES
+	bool * bUseRxnOutProb;
 };
 
 /*
@@ -483,7 +541,8 @@ bool bLineHitRegion(const double p1[3],
 // Is point inside region and not one of its children?
 bool bPointInRegionNotChild(const short curRegion,
 	const struct region regionArray[],
-	const double point[3]);
+	const double point[3],
+	bool bIgnoreSurfaceChildren);
 
 // Is point in a region or any of its nested children?
 // If true, actualRegion will be the ID of the region with the point

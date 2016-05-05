@@ -9,9 +9,23 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added label, bReversible, and labelCoupled so that reactions can be named
+ * and coupled together
+ * - added bReleaseProduct for surface reactions to indicate which products are
+ * released from the surface
+ * - updated reaction probabilities for surface reactions so that user has
+ * choices for what calculation to use. Added types to store user choices
+ * - adsorption and desorption probability calculations are mostly based on
+ * S.S. Andrews, "Accurate particle-based simulation of adsorption, desorption
+ * and partial transmission" Physical Biology, vol. 6, p.046015, 2009
+ * - constrained absorbing and desorbing reactions to one per type of molecule
+ * at a given region. In many cases these reactions are now treated separately
+ * from other types of 1st order reactions
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -73,14 +87,17 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	uint32_t numTotalProd; // Total number of products in a reaction
 	
 	bool bFoundReactant; // Have we found the first reactant yet?
-	bool bHasExclusiveRxn; // Does the current combination of region type and reaction type
-							// permit only one reaction for reactant(s)?
 	
 	unsigned short numInfRxn; // Number of 1st order reactions for current reactant that have infinite
 								// reaction rates
 	
 	bool (* bRxnInRegion)[NUM_REGIONS]; // Which reactions can occur in which regions?
 	unsigned short (* rxnInRegionID)[NUM_REGIONS]; // IDs of reactions that can occur in each region
+	
+	double kPrime; // Normalized reaction rate for surface reactions
+	double kminus1Prime;
+	double complex c1, c2;
+	bool bDesorptionSS = false; // Is a desorption probability based on steay state?
 	
 	// Build arrays to indicate where each reaction can take place
 	bRxnInRegion = malloc(MAX_RXNS * sizeof(bool [NUM_REGIONS]));
@@ -131,7 +148,11 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		
 		if(regionArray[i].numChemRxn == 0)
 			continue; // No reactions in this region; no need to allocate memory
-				
+		
+		regionArray[i].bReversible =
+			malloc(regionArray[i].numChemRxn*sizeof(bool));
+		regionArray[i].reverseRxnID =
+			malloc(regionArray[i].numChemRxn*sizeof(unsigned short));
 		regionArray[i].numMolChange =
 			malloc(regionArray[i].numChemRxn * sizeof(uint64_t *));
 		regionArray[i].bMolAdd =
@@ -140,6 +161,10 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			malloc(regionArray[i].numChemRxn*sizeof(uint32_t));
 		regionArray[i].productID =
 			malloc(regionArray[i].numChemRxn * sizeof(unsigned short *));
+		regionArray[i].bReleaseProduct =
+			malloc(regionArray[i].numChemRxn * sizeof(bool *));
+		regionArray[i].releaseType =
+			malloc(regionArray[i].numChemRxn * sizeof(short));
 		regionArray[i].bUpdateProp =
 			malloc(regionArray[i].numChemRxn * sizeof(bool *));
 		regionArray[i].rxnOrder =
@@ -172,11 +197,31 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			malloc(NUM_MOL_TYPES*sizeof(double));
 		regionArray[i].biReactants =
 			malloc(regionArray[i].numChemRxn*sizeof(unsigned short [2]));
+		regionArray[i].rxnProbType =
+			malloc(regionArray[i].numChemRxn*sizeof(short));
+		regionArray[i].bSurfRxnIn =
+			malloc(NUM_MOL_TYPES*sizeof(bool));
+		regionArray[i].rxnInID =
+			malloc(NUM_MOL_TYPES*sizeof(unsigned short));
+		regionArray[i].surfRxnInProb =
+			malloc(NUM_MOL_TYPES*sizeof(double));
+		regionArray[i].bSurfRxnOut =
+			malloc(NUM_MOL_TYPES*sizeof(bool));
+		regionArray[i].rxnOutID =
+			malloc(NUM_MOL_TYPES*sizeof(unsigned short));
+		regionArray[i].surfRxnOutProb =
+			malloc(NUM_MOL_TYPES*sizeof(double));
+		regionArray[i].bUseRxnOutProb =
+			malloc(NUM_MOL_TYPES*sizeof(bool));
 		
-		if(regionArray[i].numMolChange == NULL
+		if(regionArray[i].bReversible == NULL
+			|| regionArray[i].reverseRxnID == NULL
+			|| regionArray[i].numMolChange == NULL
 			|| regionArray[i].bMolAdd == NULL
 			|| regionArray[i].numRxnProducts == NULL
 			|| regionArray[i].productID == NULL
+			|| regionArray[i].bReleaseProduct == NULL
+			|| regionArray[i].releaseType == NULL
 			|| regionArray[i].bUpdateProp == NULL
 			|| regionArray[i].rxnOrder == NULL
 			|| regionArray[i].rxnRate == NULL
@@ -192,7 +237,15 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			|| regionArray[i].uniCumProb == NULL
 			|| regionArray[i].uniRelativeRate == NULL
 			|| regionArray[i].minRxnTimeRV == NULL
-			|| regionArray[i].biReactants == NULL)
+			|| regionArray[i].biReactants == NULL
+			|| regionArray[i].rxnProbType == NULL
+			|| regionArray[i].bSurfRxnIn == NULL
+			|| regionArray[i].rxnInID == NULL
+			|| regionArray[i].surfRxnInProb == NULL
+			|| regionArray[i].bSurfRxnOut == NULL
+			|| regionArray[i].rxnOutID == NULL
+			|| regionArray[i].surfRxnOutProb == NULL
+			|| regionArray[i].bUseRxnOutProb == NULL)
 		{
 			fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 			exit(EXIT_FAILURE);
@@ -216,11 +269,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			regionArray[i].productID[j] =
 				malloc(numTotalProd * sizeof(unsigned short));
+			regionArray[i].bReleaseProduct[j] =
+				malloc(numTotalProd * sizeof(bool));
 			regionArray[i].bUpdateProp[j] =
 				malloc(NUM_MOL_TYPES * sizeof(bool));
 			if(regionArray[i].numMolChange[j] == NULL
 				|| regionArray[i].bMolAdd[j] == NULL
 				|| regionArray[i].productID[j] == NULL
+				|| regionArray[i].bReleaseProduct[j] == NULL
 				|| regionArray[i].bUpdateProp[j] == NULL)
 			{
 				fprintf(stderr, "ERROR: Memory allocation for chemical reaction %u in region %u (label: \"%s\").\n", j, i, regionArray[i].spec.label);
@@ -243,6 +299,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				fprintf(stderr, "ERROR: Memory allocation for chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
+			
+			regionArray[i].bSurfRxnIn[j] = false;
+			regionArray[i].rxnInID[j] = USHRT_MAX;
+			regionArray[i].surfRxnInProb[j] = 0.;
+			regionArray[i].bSurfRxnOut[j] = false;
+			regionArray[i].rxnOutID[j] = USHRT_MAX;
+			regionArray[i].surfRxnOutProb[j] = 0.;
+			regionArray[i].bUseRxnOutProb[j] = false;
 		}
 	}
 	
@@ -250,7 +314,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	for(i = 0; i < NUM_REGIONS; i++)
 	{	
 		if(regionArray[i].numChemRxn == 0)
-			continue; // No reactions in this region; no need to allocate memory
+			continue; // No reactions in this region; no need to proceed
 		
 		// Initialize elements that are indexed by reaction
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
@@ -260,16 +324,19 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].numRxnProducts[j] = 0;
 			curRxn = rxnInRegionID[j][i]; // Current reaction in chem_rxn array
 			
+			regionArray[i].rxnProbType[j] = chem_rxn[curRxn].rxnProbType;
+			regionArray[i].releaseType[j] = chem_rxn[curRxn].releaseType;
+			
 			if(chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE
 				&& regionArray[i].spec.surfaceType != SURFACE_MEMBRANE)
 			{
-				fprintf(stderr, "ERROR: Chemical reaction %u is a membrane reaction but is defined for region %u (label:\"%s\"), which is not a membrane region.\n",
+				fprintf(stderr, "ERROR: Chemical reaction %u is a membrane reaction but is defined for region %u (Label: \"%s\"), which is not a membrane region.\n",
 					j, i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			} else if(chem_rxn[curRxn].surfRxnType != RXN_MEMBRANE
 				&& regionArray[i].spec.surfaceType == SURFACE_MEMBRANE)
 			{
-				fprintf(stderr, "ERROR: Chemical reaction %u is not a membrane reaction but is defined for membrane region %u (label:\"%s\").\n",
+				fprintf(stderr, "ERROR: Chemical reaction %u is not a membrane reaction but is defined for membrane region %u (Label: \"%s\").\n",
 					j, i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
 			}
@@ -277,8 +344,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			for(k = 0; k < NUM_MOL_TYPES; k++)
 			{
 				num_reactants += chem_rxn[curRxn].reactants[k];
-				
-				
+								
 				switch(chem_rxn[curRxn].reactants[k])
 				{
 					case 1:
@@ -319,8 +385,11 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				// Is molecule k a product?
 				// If it is, then we must list it in the listing of reaction products
 				// for the current reaction
+				// We also check for whether product must be released from surface regions
 				for(curProd = 0; curProd < chem_rxn[curRxn].products[k]; curProd++)
 				{
+					regionArray[i].bReleaseProduct[j][regionArray[i].numRxnProducts[j]] =
+						chem_rxn[curRxn].bReleaseProduct[k];
 					regionArray[i].productID[j][regionArray[i].numRxnProducts[j]++] = k;
 				}
 			}
@@ -354,21 +423,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 					regionArray[i].zerothRxn[regionArray[i].numZerothRxn++] = j;
 					break;
 				case 1:
-					switch(chem_rxn[curRxn].surfRxnType)
-					{
-						case RXN_RECEPTOR:
-						case RXN_MEMBRANE:
-						case RXN_NORMAL:
-							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k;
-							break;
-						case RXN_ABSORBING:
-							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k *
-								sqrt(PI*regionArray[i].spec.dt/DIFF_COEF[i][j]);
-							break;
-						default:
-							fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", j, chem_rxn[curRxn].surfRxnType);
-							exit(EXIT_FAILURE);
-					}
+					regionArray[i].rxnRate[j] = chem_rxn[curRxn].k;
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
@@ -396,6 +451,35 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			}
 		}
 		
+		// Identify reversible reactions where needed
+		for(j = 0; j < regionArray[i].numChemRxn; j++)
+		{
+			// Check for reaction being reversible and if so then find reverse reaction
+			regionArray[i].bReversible[j] = chem_rxn[curRxn].bReversible;
+			if(regionArray[i].bReversible[j])
+			{
+				curRxn = rxnInRegionID[j][i]; // Current reaction in chem_rxn array
+				regionArray[i].reverseRxnID[j] = j;
+				for(k = 0; k < regionArray[i].numChemRxn; k++)
+				{
+					if(!strcmp(chem_rxn[curRxn].labelCoupled, chem_rxn[rxnInRegionID[k][i]].label)
+					&& j != k)
+					{
+						// Reaction rxnInRegionID[k][i] is the reverse
+						regionArray[i].reverseRxnID[j] = k;
+						break;
+					}
+				}
+				if(regionArray[i].reverseRxnID[j] == j)
+				{ // Reverse reaction was not found
+					fprintf(stderr, "ERROR: Reaction %u (Label: \"%s\") in region %u (Label: \"%s\") has non-existent reverse reaction \"%s\".\n",
+					j, chem_rxn[curRxn].label, i, regionArray[i].spec.label,
+					chem_rxn[curRxn].labelCoupled);
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+		
 		// Initialize elements that are sorted by reactant
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
@@ -403,8 +487,6 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].uniSumRate[j] = 0.;
 			regionArray[i].uniCumProb[j][0] = 0.;
 			numInfRxn = 0;
-			
-			bHasExclusiveRxn = false;
 		
 			// Scan reactions to see which have current molecule as a reactant
 			for(k = 0; k < regionArray[i].numChemRxn; k++)
@@ -414,18 +496,63 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 					case 1:
 						if(chem_rxn[k].reactants[j] > 0)
 						{
+							
 							regionArray[i].firstRxnID[j][regionArray[i].numFirstCurReactant[j]] = k;
-							regionArray[i].uniSumRate[j] += regionArray[i].rxnRate[k];		
+							curRxn = rxnInRegionID[k][i]; // Reaction ID in chem_rxn	
 							
 							regionArray[i].numFirstCurReactant[j]++;
 							
-							if(regionArray[i].rxnRate[k] == INFINITY)
-								numInfRxn++;
-							
-							if(chem_rxn[k].surfRxnType != RXN_NORMAL)
+							switch(chem_rxn[curRxn].surfRxnType)
 							{
-								bHasExclusiveRxn = true;
+								case RXN_ABSORBING:
+									if(regionArray[i].bSurfRxnIn[j])
+									{ // Molecule already has an absorbing reaction
+										fprintf(stderr, "ERROR: Molecule type %u in region %u (Label: \"%s\") has more than one absorbing reaction specified.\n",
+											j, i, regionArray[i].spec.label);
+										exit(EXIT_FAILURE);
+									}
+									regionArray[i].bSurfRxnIn[j] = true;
+									regionArray[i].rxnInID[j] = k;
+									
+									// Determine reaction probability given full time step
+									regionArray[i].surfRxnInProb[j] =
+										calculateAbsorptionProb(i, j, k,
+										regionArray[i].spec.dt, NUM_REGIONS,
+										regionArray, NUM_MOL_TYPES, DIFF_COEF);
+									break;
+								case RXN_DESORBING:
+									if(regionArray[i].bSurfRxnOut[j])
+									{ // Molecule already has a desorbing reaction
+										fprintf(stderr, "ERROR: Molecule type %u in region %u (Label: \"%s\") has more than one desorbing reaction specified.\n",
+											j, i, regionArray[i].spec.label);
+										exit(EXIT_FAILURE);
+									}
+									regionArray[i].bSurfRxnOut[j] = true;
+									regionArray[i].rxnOutID[j] = k;
+									
+									// Determine reaction probability given full time step
+									regionArray[i].bUseRxnOutProb[j] =
+										calculateDesorptionProb(&regionArray[i].surfRxnOutProb[j],
+										i, j, k, regionArray[i].spec.dt,
+										NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+										DIFF_COEF);
+									if(regionArray[i].bUseRxnOutProb[j])
+										continue;
+									// No break here because most desorbing cases have
+									// reaction probability treated as a regular 1st order reaction
+								case RXN_RECEPTOR:
+								case RXN_MEMBRANE:
+								case RXN_NORMAL:
+									regionArray[i].uniSumRate[j] += chem_rxn[curRxn].k;
+									
+									if(chem_rxn[curRxn].k == INFINITY)
+										numInfRxn++;
+									break;
+								default:
+									fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", curRxn, chem_rxn[curRxn].surfRxnType);
+									exit(EXIT_FAILURE);
 							}
+							
 						}
 						break;
 					case 2:
@@ -433,27 +560,20 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				}
 			}
 			
-			if(bHasExclusiveRxn && regionArray[i].numFirstCurReactant[j] > 1)
-			{ // This reactant has an exclusive reaction but it is supposed to participate
-				// in more than one reaction
-				fprintf(stderr, "ERROR: Molecule type %u in region %u can participate in %d chemical reactions but at least one reaction is exclusive.\n",
-					j, i, regionArray[i].numFirstCurReactant[j]);
-				fprintf(stderr, "Generally, non-normal reactions are exclusive.\n");
-				exit(EXIT_FAILURE);
-			}
-			
 			// Scan reactions with current molecule as reactant to determine the
 			// cumulative reaction probabilities
 			for(k = 0; k < regionArray[i].numFirstCurReactant[j]; k++)
 			{
-				switch(chem_rxn[regionArray[i].firstRxnID[j][k]].surfRxnType)
+				curRxn = rxnInRegionID[regionArray[i].firstRxnID[j][k]][i];
+				switch(chem_rxn[curRxn].surfRxnType)
 				{
 					case RXN_RECEPTOR:
 					case RXN_MEMBRANE:
 					case RXN_NORMAL:
+					case RXN_DESORBING:
 						if(k > 0)
 							regionArray[i].uniCumProb[j][k] = regionArray[i].uniCumProb[j][k-1];
-				
+								
 						// Relative rate will be used when we need to recalculate the probabilities
 						// due to smaller time step size
 						if(regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]] == INFINITY)
@@ -463,9 +583,20 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						}
 						else
 						{
-							regionArray[i].uniRelativeRate[j][k] =
+							
+							if(chem_rxn[curRxn].surfRxnType == RXN_DESORBING
+								&& regionArray[i].rxnProbType[regionArray[i].firstRxnID[j][k]] == RXN_PROB_STEADY_STATE
+								&& regionArray[i].bReversible[regionArray[i].firstRxnID[j][k]])
+							{ // This reaction is reversible steady state desorption
+							 // It was excluding from calculation of uniSumRate
+							 // Ignore its reaction probability
+								regionArray[i].uniRelativeRate[j][k] = 0.;
+							} else
+							{
+								regionArray[i].uniRelativeRate[j][k] =
 								regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]]
 								/ regionArray[i].uniSumRate[j];
+							}							
 								
 							// The following cumulative probability calculation is valid for when
 							// a molecule existed from the end of the last region time step
@@ -476,10 +607,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						
 						break;
 					case RXN_ABSORBING:
-						regionArray[i].uniRelativeRate[j][0] =
-							regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]];
-						regionArray[i].uniCumProb[j][0] =
-							regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]];						
+						// Absorbing reactions aren't included in calculation of cumulative
+						// reaction probabilities						
 						break;
 					default:
 						fprintf(stderr, "ERROR: Chemical reaction %u has invalid 1st order reaction type %u.\n", j, chem_rxn[curRxn].surfRxnType);
@@ -524,6 +653,8 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 				free(regionArray[i].bMolAdd[j]);
 			if(regionArray[i].productID[j] != NULL)
 				free(regionArray[i].productID[j]);
+			if(regionArray[i].bReleaseProduct[j] != NULL)
+				free(regionArray[i].bReleaseProduct[j]);
 			if(regionArray[i].bUpdateProp[j] != NULL)
 				free(regionArray[i].bUpdateProp[j]);
 		}
@@ -538,10 +669,14 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 				free(regionArray[i].uniRelativeRate[j]);
 		}
 		
+		if(regionArray[i].bReversible != NULL) free(regionArray[i].bReversible);
+		if(regionArray[i].reverseRxnID != NULL) free(regionArray[i].reverseRxnID);
 		if(regionArray[i].numMolChange != NULL) free(regionArray[i].numMolChange);
 		if(regionArray[i].bMolAdd != NULL) free(regionArray[i].bMolAdd);
 		if(regionArray[i].numRxnProducts != NULL) free(regionArray[i].numRxnProducts);
 		if(regionArray[i].productID != NULL) free(regionArray[i].productID);
+		if(regionArray[i].bReleaseProduct != NULL) free(regionArray[i].bReleaseProduct);
+		if(regionArray[i].releaseType != NULL) free(regionArray[i].releaseType);
 		if(regionArray[i].bUpdateProp != NULL) free(regionArray[i].bUpdateProp);
 		if(regionArray[i].rxnOrder != NULL) free(regionArray[i].rxnOrder);
 		if(regionArray[i].rxnRate != NULL) free(regionArray[i].rxnRate);
@@ -558,5 +693,121 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		if(regionArray[i].uniRelativeRate != NULL) free(regionArray[i].uniRelativeRate);
 		if(regionArray[i].minRxnTimeRV != NULL) free(regionArray[i].minRxnTimeRV);
 		if(regionArray[i].biReactants != NULL) free(regionArray[i].biReactants);
+		if(regionArray[i].rxnProbType != NULL) free(regionArray[i].rxnProbType);
+		if(regionArray[i].bSurfRxnIn != NULL) free(regionArray[i].bSurfRxnIn);
+		if(regionArray[i].rxnInID != NULL) free(regionArray[i].rxnInID);
+		if(regionArray[i].surfRxnInProb != NULL) free(regionArray[i].surfRxnInProb);
+		if(regionArray[i].bSurfRxnOut != NULL) free(regionArray[i].bSurfRxnOut);
+		if(regionArray[i].rxnOutID != NULL) free(regionArray[i].rxnOutID);
+		if(regionArray[i].surfRxnOutProb != NULL) free(regionArray[i].surfRxnOutProb);
+		if(regionArray[i].bUseRxnOutProb != NULL) free(regionArray[i].bUseRxnOutProb);
+	}
+}
+
+// Calculate probability of absorption reaction for specified time step
+double calculateAbsorptionProb(const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+{
+	double kPrime, kminus1Prime;
+	complex double c1, c2;
+	double rxnProb;
+	
+	switch(regionArray[curRegion].rxnProbType[curRegionRxn])
+	{
+		case RXN_PROB_NORMAL:
+			// Use independent 1st order reaction rate probability
+			// Not accurate for surface transitions
+			rxnProb = (1 - exp(-dt
+				*regionArray[curRegion].rxnRate[curRegionRxn]));
+			break;
+		case RXN_PROB_MIXED:
+			// Use well-mixed reaction probability
+			// S.S. Andrews Physical Biology 2009 Eq. 1
+			rxnProb = regionArray[curRegion].rxnRate[curRegionRxn] *
+				sqrt(PI*dt/DIFF_COEF[curRegion][curMolType]);
+			break;
+		case RXN_PROB_STEADY_STATE:
+			// Use steady state reaction probabilities
+			kPrime = regionArray[curRegion].rxnRate[curRegionRxn]*
+				sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
+			if(regionArray[curRegion].bReversible[curRegionRxn])
+			{ // S.S. Andrews Physical Biology 2009 Eq. 37
+				kminus1Prime =
+					regionArray[curRegion].
+					rxnRate[regionArray[curRegion].reverseRxnID[curRegionRxn]]
+					*dt;
+				c1 = (kPrime - csqrt(C(kPrime*kPrime -2*kminus1Prime,0)))/sqrt(2);
+				c2 = (kPrime + csqrt(C(kPrime*kPrime -2*kminus1Prime,0)))/sqrt(2);
+				rxnProb = cabs(kPrime*sqrt(2*PI)*
+					(c2-c1 - c2*cerfcx(c1) + c1*cerfcx(c2))/(c1*c2*(c2-c1)));
+			} else
+			{ // S.S. Andrews Physical Biology 2009 Eq. 21
+				rxnProb =
+					kPrime*sqrt(2*PI) - 3.33321*kPrime*kPrime
+					+ 3.35669*kPrime*kPrime*kPrime
+					- 1.52092*kPrime*kPrime*kPrime*kPrime;
+			}
+			break;
+		default:
+			fprintf(stderr, "ERROR: Chemical reaction %u of region %u (Label: \"%s\") has invalid absorbing reaction probability type %u.\n",
+				curRegionRxn, curRegion, regionArray[curRegion].spec.label,
+				regionArray[curRegion].rxnProbType[curRegionRxn]);
+			exit(EXIT_FAILURE);
+	}
+	
+	return rxnProb;
+}
+
+// Calculate probability of desorption reaction for specified time step
+bool calculateDesorptionProb(double * rxnProb,
+	const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+{
+	unsigned short curProd;
+	double kPrime, kminus1Prime;
+	complex double c1, c2;
+	
+	switch(regionArray[curRegion].rxnProbType[curRegionRxn])
+	{
+		case RXN_PROB_NORMAL:
+		case RXN_PROB_MIXED:
+			// No need to calculate this probability separately
+			* rxnProb = 0.;
+			return false;
+		case RXN_PROB_STEADY_STATE:
+			// Use steady state reaction probabilities
+			if(regionArray[curRegion].bReversible[curRegionRxn])
+			{ // S.S. Andrews Physical Biology 2009 Eq. 37
+				curProd = regionArray[curRegion].productID[curRegionRxn][0];
+				
+				* rxnProb = calculateAbsorptionProb(curRegion,
+					curProd, regionArray[curRegion].reverseRxnID[curRegionRxn],
+					dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES, DIFF_COEF)
+					* regionArray[curRegion].rxnRate[curRegionRxn]
+					/ regionArray[curRegion].rxnRate[regionArray[curRegion].reverseRxnID[curRegionRxn]]
+					*sqrt(DIFF_COEF[curRegion][curProd]*dt/PI);
+				return true;
+			} else
+			{ // No need to calculate this probability separately
+				* rxnProb = 0.;
+				return false;
+			}
+		default:
+			fprintf(stderr, "ERROR: Chemical reaction %u of region %u (Label: \"%s\") has invalid desorbing reaction probability type %u.\n",
+				curRegionRxn, curRegion, regionArray[curRegion].spec.label,
+				regionArray[curRegion].rxnProbType[curRegionRxn]);
+			exit(EXIT_FAILURE);
 	}
 }

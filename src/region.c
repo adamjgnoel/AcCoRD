@@ -10,9 +10,17 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated function bPointInRegionNotChild to take an extra input to indicate
+ * whether to ignore children regions that are surfaces
+ * - added bReleaseProduct for surface reactions to indicate whether products are
+ * released from the surface
+ * - added members to store unique properties needed for absorbing and
+ * desorbing reactions
  *
  * Revision v0.5 (2016-04-15)
  * - re-structured region array initialization to nest more code in functions
@@ -913,7 +921,7 @@ unsigned short findNearestValidRegion(const double point[],
 	{
 		if((regionArray[sourceRegion].isRegionNeigh[curRegion]
 			|| curRegion == sourceRegion)
-			&& bPointInRegionNotChild(curRegion, regionArray, point))
+			&& bPointInRegionNotChild(curRegion, regionArray, point, false))
 		{
 			// TODO: Check whether reaching this region from source is valid
 			// (e.g., is destination reachable from source in one "jump"?)
@@ -1138,7 +1146,7 @@ bool bLineHitRegion(const double p1[3],
 				if(bLineHitInfinitePlane(p1, L, length, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[endRegion][curPlane],
 					regionArray[startRegion].regionNeighFaceDir[endRegion][curPlane],
-					false, d, intersectPoint)
+					false, d, intersectPoint, false)
 					&& bPointOnFace(intersectPoint, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[endRegion][curPlane], regionArray[startRegion].regionNeighFaceDir[endRegion][curPlane])
 					&& *d < minDist)
@@ -1162,16 +1170,20 @@ bool bLineHitRegion(const double p1[3],
 		case SPHERE:
 			return bLineHitInfinitePlane(p1, L, length, SPHERE,
 				regionArray[startRegion].boundRegionFaceCoor[endRegion][0],
-				regionArray[startRegion].regionNeighFaceDir[endRegion][0], bInside, d, intersectPoint);
+				regionArray[startRegion].regionNeighFaceDir[endRegion][0], bInside,
+				d, intersectPoint, false);
 		default:
 			fprintf(stderr,"ERROR: Boundary type %d invalid for boundary intersection between regions %u and %u.\n", boundary1Type, startRegion, endRegion);
 			return false;		
 	}
 }
 
+// Is point in a region and not in any of its children?
+// Includes a check to ignore surface regions
 bool bPointInRegionNotChild(const short curRegion,
 	const struct region regionArray[],
-	const double point[3])
+	const double point[3],
+	bool bIgnoreSurfaceChildren)
 {
 	short curChild;
 	
@@ -1180,6 +1192,10 @@ bool bPointInRegionNotChild(const short curRegion,
 	{ // Point is within the region's outer boundary
 		for(curChild = 0; curChild < regionArray[curRegion].numChildren; curChild++)
 		{
+			if(bIgnoreSurfaceChildren &&
+				regionArray[regionArray[curRegion].childrenID[curChild]].spec.type !=
+				REGION_NORMAL)
+				continue; // Child is a surface and we are ignoring surfaces
 			if(bPointInBoundary(point, regionArray[regionArray[curRegion].childrenID[curChild]].spec.shape,
 				regionArray[regionArray[curRegion].childrenID[curChild]].boundary))
 				return false;
@@ -1272,10 +1288,10 @@ void lockPointToRegion(double point[3],
 	double coorSq[3];
 	double rSq;
 	if (regionArray[startRegion].isRegionNeigh[endRegion]
-		&& regionArray[startRegion].regionNeighDir[endRegion] == CHILD)
-		boundRegion = endRegion;
-	else
+		&& regionArray[startRegion].regionNeighDir[endRegion] == PARENT)
 		boundRegion = startRegion;
+	else
+		boundRegion = endRegion;
 	
 	switch(regionArray[boundRegion].spec.shape)
 	{
@@ -1326,7 +1342,7 @@ void generatePointInRegion(const short curRegion,
 		uniformPointVolume(point, regionArray[curRegion].spec.shape,
 			regionArray[curRegion].boundary, regionArray[curRegion].dimension ==
 			regionArray[curRegion].effectiveDim, regionArray[curRegion].plane);
-		if(bPointInRegionNotChild(curRegion, regionArray, point))
+		if(bPointInRegionNotChild(curRegion, regionArray, point, false))
 			bNeedPoint = false;
 	}
 }
@@ -1340,7 +1356,7 @@ short findRegionNotChild(const short NUM_REGIONS,
 	
 	for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
 	{
-		if(bPointInRegionNotChild(curRegion, regionArray, point))
+		if(bPointInRegionNotChild(curRegion, regionArray, point, false))
 			return curRegion;
 	}
 	
@@ -1369,14 +1385,14 @@ bool bSubFaceRegion(struct region regionArray[],
 	
 	// Check to see if point just to "left" is within neighbor
 	neighPoint[0] = curSubBound[0] - boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint, false))
 	{
 		dirArray[(*numFace)++] = LEFT;
 	}
 	
 	// Check to see if point just to "right" is within neighbor
 	neighPoint[0] = curSubBound[1] + boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint, false))
 	{
 		dirArray[(*numFace)++] = RIGHT;
 	}
@@ -1384,14 +1400,14 @@ bool bSubFaceRegion(struct region regionArray[],
 	
 	// Check to see if point just to "down" is within neighbor
 	neighPoint[1] = curSubBound[2] - boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint, false))
 	{
 		dirArray[(*numFace)++] = DOWN;
 	}
 	
 	// Check to see if point just to "up" is within neighbor
 	neighPoint[1] = curSubBound[3] + boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint, false))
 	{
 		dirArray[(*numFace)++] = UP;
 	}
@@ -1399,14 +1415,14 @@ bool bSubFaceRegion(struct region regionArray[],
 	
 	// Check to see if point just to "in" is within neighbor
 	neighPoint[2] = curSubBound[4] - boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint, false))
 	{
 		dirArray[(*numFace)++] = IN;
 	}
 	
 	// Check to see if point just to "out" is within neighbor
 	neighPoint[2] = curSubBound[5] + boundAdjError;
-	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint))
+	if(bPointInRegionNotChild(neighRegion, regionArray, neighPoint, false))
 	{
 		dirArray[(*numFace)++] = OUT;
 	}

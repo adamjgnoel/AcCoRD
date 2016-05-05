@@ -9,9 +9,15 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD v0.5 (2016-04-15)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated placement of molecules created by 0th order reactions when they are
+ * created at a surface reaction
+ * - re-structured how microscopic 1st order reactions are iteratively performed to
+ * account for release of products from microscopic regions
  *
  * Revision v0.5 (2016-04-15)
  * - corrected display of simulation end time
@@ -88,7 +94,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v0.5 (2016-04-15) (public beta)\n");
+	printf("Version LATEST_VERSION\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	
@@ -160,7 +166,7 @@ int main(int argc, char *argv[])
 	uint64_t numMol;
 	unsigned short curZerothRxn, curFirstRxn, curSecondRxn;
 	bool bCheckCount;
-	uint32_t numMicroMolCheck[spec.NUM_MOL_TYPES];
+	uint32_t numMicroMolCheck[spec.NUM_REGIONS][spec.NUM_MOL_TYPES];
 	uint32_t sumMicroMolCheck;
 	
 	// Hybrid parameters
@@ -692,13 +698,20 @@ int main(int argc, char *argv[])
 								for(k = 0; k < regionArray[i].numMolChange[curRxn][j]; k++)
 								{
 									generatePointInRegion(i, regionArray, point);
-									if(!addMoleculeRecent(&microMolListRecent[i][j], point[0],
+									if(regionArray[i].bReleaseProduct[curRxn][j])
+									{ // Region is a surface and molecule must be released
+										destRegion = findDestRegion(point, i, regionArray);
+									} else
+									{ // Place product molecule in current region
+										destRegion = i;
+									}
+									if(!addMoleculeRecent(&microMolListRecent[destRegion][j], point[0],
 										point[1], point[2],
 										tMicro - regionArray[i].tZeroth[curZerothRxn]))
 									{ // Creation of molecule failed
 										fprintf(stderr,"ERROR: Memory allocation to create molecule %"
-											PRIu64 " of %" PRIu64" of type %u being created by reaction %u in region %u.\n",
-											k, regionArray[i].numMolChange[curRxn][j], j, curRxn, i);
+											PRIu64 " of %" PRIu64" of type %u being created by reaction %u in region %u and destination region %u.\n",
+											k, regionArray[i].numMolChange[curRxn][j], j, curRxn, i, destRegion);
 									}
 								}									
 							}
@@ -722,25 +735,33 @@ int main(int argc, char *argv[])
 						if(!isListMol3DEmpty(&microMolList[i][j])
 							&& regionArray[i].numFirstCurReactant[j] > 0)
 						{ // Check 1st order reactions of "old" molecules
-							rxnFirstOrder(&microMolList[i][j], regionArray[i], j,
-								spec.NUM_MOL_TYPES, microMolListRecent[i]);
+							rxnFirstOrder(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, i,
+								microMolList, regionArray, j,
+								DIFF_COEF, microMolListRecent);
 						}
-						numMicroMolCheck[j] = 0;
+						numMicroMolCheck[i][j] = 0;
 					}
+				}
 					
-					sumMicroMolCheck = 1;
-					bCheckCount = false;
-					while(sumMicroMolCheck > 0)
+				sumMicroMolCheck = 1;
+				bCheckCount = false;
+				while(sumMicroMolCheck > 0)
+				{
+					for(i = 0; i < spec.NUM_REGIONS; i++)
 					{
+						if(!regionArray[i].spec.bMicro || regionArray[i].numFirstRxn < 1)
+							continue;
+						
 						for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 						{ // For current molecule type in this region
 						
 							if(!isListMol3DRecentEmpty(&microMolListRecent[i][j])
 								&& regionArray[i].numFirstCurReactant[j] > 0)
 							{ // Check 1st order reactions of "old" molecules
-								rxnFirstOrderRecent(spec.NUM_MOL_TYPES,
-									microMolListRecent[i],
-									regionArray[i], j, bCheckCount, numMicroMolCheck);
+								rxnFirstOrderRecent(spec.NUM_REGIONS,
+									spec.NUM_MOL_TYPES, i, microMolListRecent,
+									microMolList, regionArray, j, DIFF_COEF,
+									bCheckCount, numMicroMolCheck);
 							}
 						}
 						
@@ -749,27 +770,32 @@ int main(int argc, char *argv[])
 						
 							if(regionArray[i].numFirstCurReactant[j] < 1)
 							{ 
-								numMicroMolCheck[j] = 0;
+								numMicroMolCheck[i][j] = 0;
 							}
 						}
+					}
 						
-						// Find total number of molecules to re-check.
-						// We do this in a new for-loop because numMicroMolCheck
-						// of any element could change within rxnFirstOrderRecent
-						sumMicroMolCheck = 0;
+					// Find total number of molecules to re-check.
+					// We do this in a new for-loop because numMicroMolCheck
+					// of any element could change within rxnFirstOrderRecent
+					sumMicroMolCheck = 0;
+					for(i = 0; i < spec.NUM_REGIONS; i++)
+					{
+						if(!regionArray[i].spec.bMicro || regionArray[i].numFirstRxn < 1)
+							continue;
 						for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 						{
-							sumMicroMolCheck += numMicroMolCheck[j];
+							sumMicroMolCheck += numMicroMolCheck[i][j];
 						}
-						bCheckCount = true;
 					}
+					bCheckCount = true;
 				}
 				
 				// Diffuse all microscopic molecules to valid locations and merge
 				// 2 sets of molecule lists into 1
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
 					microMolListRecent, regionArray, mesoSubArray, subvolArray,
-					micro_sigma, DIFF_COEF);
+					micro_sigma, spec.chem_rxn, DIFF_COEF);
 				
 				
 				if(numMesoSub > 0)

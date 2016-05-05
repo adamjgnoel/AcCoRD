@@ -27,22 +27,33 @@
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur at the receiver.",
+				"Label": "Conversion",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Reverse",
 				"Surface Reaction?": true,
 				"Surface Reaction Type": "Absorbing",
+				"Surface Transition Probability": "Steady State",
 				"Default Everywhere?": false,
 				"Exception Regions": ["Receiver"],
 				"Reactants": [1, 0],
 				"Products": [0, 1],
+				"Products Released?": [false, false],
 				"Reaction Rate": 40
 			},
 			{							
 				"Notes": "Reverse reaction. Can only occur at the receiver.",
+				"Label": "Reverse",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Conversion",
 				"Surface Reaction?": true,
-				"Surface Reaction Type": "Normal",
+				"Surface Reaction Type": "Desorbing",
+				"Surface Transition Probability": "Steady State",
 				"Default Everywhere?": false,
 				"Exception Regions": ["Receiver"],
 				"Reactants": [0, 1],
 				"Products": [1, 0],
+				"Products Released?": [true, false],
+				"Release Placement Type": "Steady State Diffusion",
 				"Reaction Rate": 200
 			}
 		]
@@ -81,7 +92,7 @@
 		{
 				"Notes": "Point Transmitter at origin with 10ms symbol length. Molecules are
 					generated at random times at an expected rate that depends on the current symbol.",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
 				"Is Actor Active?": true,
@@ -106,7 +117,7 @@
 					leave the source. Observations here are much lower than in the
 					non-chemical version of this simulation because molecules get created
 					at any time and are able to diffuse away between observations",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e-7],
 				"Is Actor Active?": false,
@@ -123,7 +134,7 @@
 		{
 				"Notes": "Spherical observer. Its location must match that of the receiver region
 					in order for the reversible receiver reaction to occur",
-				"Is Actor Location Defined by Regions?": true,
+				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["Receiver"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
@@ -138,7 +149,7 @@
 		},
 		{
 				"Notes": "Global observer.",
-				"Is Actor Location Defined by Regions?": false,
+				"Is Location Defined by Regions?": false,
 				"Shape": "Sphere",
 				"Outer Boundary": [0, 0, 0, 1e9999],
 				"Is Actor Active?": false,

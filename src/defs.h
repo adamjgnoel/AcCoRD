@@ -20,6 +20,8 @@
  * Website:
  *   http://apps.jcns.fz-juelich.de/libcerf
  */
+#ifndef CERF_DEFS_H
+#define CERF_DEFS_H
 
 
 typedef double _Complex cmplx;
@@ -55,3 +57,5 @@ typedef double _Complex cmplx;
 #  define Inf (1./0.) 
 #  define NaN (0./0.) 
 #endif
+
+#endif // CERF_DEFS_H

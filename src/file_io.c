@@ -1621,6 +1621,13 @@ void deleteConfig(struct simSpec3D curSpec)
 	{
 		for(curRxn = 0; curRxn < curSpec.MAX_RXNS; curRxn++)
 		{
+			
+			if(curSpec.chem_rxn[curRxn].label != NULL)
+				free(curSpec.chem_rxn[curRxn].label);
+			if(curSpec.chem_rxn[curRxn].bReversible
+				&& curSpec.chem_rxn[curRxn].labelCoupled != NULL)
+				free(curSpec.chem_rxn[curRxn].labelCoupled);
+			
 			if(curSpec.chem_rxn[curRxn].reactants != NULL)
 				free(curSpec.chem_rxn[curRxn].reactants);
 			if(curSpec.chem_rxn[curRxn].products != NULL)

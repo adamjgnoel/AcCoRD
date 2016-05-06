@@ -20,12 +20,14 @@
  * released from the surface
  * - updated reaction probabilities for surface reactions so that user has
  * choices for what calculation to use. Added types to store user choices
- * - adsorption and desorption probability calculations are mostly based on
+ * - adsorption, desorption, and membrane probability calculations are mostly based on
  * S.S. Andrews, "Accurate particle-based simulation of adsorption, desorption
  * and partial transmission" Physical Biology, vol. 6, p.046015, 2009
  * - constrained absorbing and desorbing reactions to one per type of molecule
  * at a given region. In many cases these reactions are now treated separately
  * from other types of 1st order reactions
+ * - constrained membrane reactions to one inner and one outer reaction per type of
+ * molecule at a given membrane region.
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -327,14 +329,16 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].rxnProbType[j] = chem_rxn[curRxn].rxnProbType;
 			regionArray[i].releaseType[j] = chem_rxn[curRxn].releaseType;
 			
-			if(chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE
+			if((chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE_IN
+				|| chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE_OUT)
 				&& regionArray[i].spec.surfaceType != SURFACE_MEMBRANE)
 			{
 				fprintf(stderr, "ERROR: Chemical reaction %u is a membrane reaction but is defined for region %u (Label: \"%s\"), which is not a membrane region.\n",
 					j, i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
-			} else if(chem_rxn[curRxn].surfRxnType != RXN_MEMBRANE
-				&& regionArray[i].spec.surfaceType == SURFACE_MEMBRANE)
+			} else if(regionArray[i].spec.surfaceType == SURFACE_MEMBRANE
+				&& !(chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE_IN
+				|| chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE_OUT))
 			{
 				fprintf(stderr, "ERROR: Chemical reaction %u is not a membrane reaction but is defined for membrane region %u (Label: \"%s\").\n",
 					j, i, regionArray[i].spec.label);
@@ -520,6 +524,38 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 										regionArray[i].spec.dt, NUM_REGIONS,
 										regionArray, NUM_MOL_TYPES, DIFF_COEF);
 									break;
+								case RXN_MEMBRANE_IN:
+									if(regionArray[i].bSurfRxnIn[j])
+									{ // Molecule already has a membrane reaction
+										fprintf(stderr, "ERROR: Molecule type %u in region %u (Label: \"%s\") has more than one inner membrane reaction specified.\n",
+											j, i, regionArray[i].spec.label);
+										exit(EXIT_FAILURE);
+									}
+									regionArray[i].bSurfRxnIn[j] = true;
+									regionArray[i].rxnInID[j] = k;
+									
+									// Determine reaction probability given full time step
+									regionArray[i].surfRxnInProb[j] =
+										calculateMembraneProb(i, j, k,
+										regionArray[i].spec.dt, NUM_REGIONS,
+										regionArray, NUM_MOL_TYPES, DIFF_COEF);
+									break;
+								case RXN_MEMBRANE_OUT:
+									if(regionArray[i].bSurfRxnOut[j])
+									{ // Molecule already has a membrane reaction
+										fprintf(stderr, "ERROR: Molecule type %u in region %u (Label: \"%s\") has more than one outer membrane reaction specified.\n",
+											j, i, regionArray[i].spec.label);
+										exit(EXIT_FAILURE);
+									}
+									regionArray[i].bSurfRxnOut[j] = true;
+									regionArray[i].rxnOutID[j] = k;
+									
+									// Determine reaction probability given full time step
+									regionArray[i].surfRxnOutProb[j] =
+										calculateMembraneProb(i, j, k,
+										regionArray[i].spec.dt, NUM_REGIONS,
+										regionArray, NUM_MOL_TYPES, DIFF_COEF);
+									break;
 								case RXN_DESORBING:
 									if(regionArray[i].bSurfRxnOut[j])
 									{ // Molecule already has a desorbing reaction
@@ -541,7 +577,6 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 									// No break here because most desorbing cases have
 									// reaction probability treated as a regular 1st order reaction
 								case RXN_RECEPTOR:
-								case RXN_MEMBRANE:
 								case RXN_NORMAL:
 									regionArray[i].uniSumRate[j] += chem_rxn[curRxn].k;
 									
@@ -568,7 +603,6 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				switch(chem_rxn[curRxn].surfRxnType)
 				{
 					case RXN_RECEPTOR:
-					case RXN_MEMBRANE:
 					case RXN_NORMAL:
 					case RXN_DESORBING:
 						if(k > 0)
@@ -607,6 +641,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						
 						break;
 					case RXN_ABSORBING:
+					case RXN_MEMBRANE_IN:
+					case RXN_MEMBRANE_OUT:
 						// Absorbing reactions aren't included in calculation of cumulative
 						// reaction probabilities						
 						break;
@@ -810,4 +846,61 @@ bool calculateDesorptionProb(double * rxnProb,
 				regionArray[curRegion].rxnProbType[curRegionRxn]);
 			exit(EXIT_FAILURE);
 	}
+}
+
+// Calculate probability of membrane transition for specified time step
+double calculateMembraneProb(const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+{
+	double kFor, kBack, kSum;
+	double rxnProb;
+	
+	switch(regionArray[curRegion].rxnProbType[curRegionRxn])
+	{
+		case RXN_PROB_NORMAL:
+			// Use independent 1st order reaction rate probability
+			// Not accurate for surface transitions
+			rxnProb = (1 - exp(-dt
+				*regionArray[curRegion].rxnRate[curRegionRxn]));
+			break;
+		case RXN_PROB_MIXED:
+			// Use well-mixed reaction probability
+			// S.S. Andrews Physical Biology 2009 Eq. 1
+			rxnProb = regionArray[curRegion].rxnRate[curRegionRxn] *
+				sqrt(PI*dt/DIFF_COEF[curRegion][curMolType]);
+			break;
+		case RXN_PROB_STEADY_STATE:
+			// Use steady state reaction probabilities
+			kFor = regionArray[curRegion].rxnRate[curRegionRxn]*
+				sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
+			if(regionArray[curRegion].bReversible[curRegionRxn])
+			{ // S.S. Andrews Physical Biology 2009 Eq. 37
+				kBack =
+					regionArray[curRegion].rxnRate[regionArray[curRegion].reverseRxnID[curRegionRxn]]*
+					sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
+				kSum = kFor + kBack;
+				rxnProb = kFor/kSum/kSum*(2*kSum - sqrt(PI/2)
+					+ sqrt(PI/2)*erfcx(sqrt(2)*kSum));
+			} else
+			{ // S.S. Andrews Physical Biology 2009 Eq. 21
+				rxnProb =
+					kFor*sqrt(2*PI) - 3.33321*kFor*kFor
+					+ 3.35669*kFor*kFor*kFor
+					- 1.52092*kFor*kFor*kFor*kFor;
+			}
+			break;
+		default:
+			fprintf(stderr, "ERROR: Chemical reaction %u of region %u (Label: \"%s\") has invalid membrane reaction probability type %u.\n",
+				curRegionRxn, curRegion, regionArray[curRegion].spec.label,
+				regionArray[curRegion].rxnProbType[curRegionRxn]);
+			exit(EXIT_FAILURE);
+	}
+	
+	return rxnProb;
 }

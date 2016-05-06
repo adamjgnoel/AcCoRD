@@ -20,12 +20,14 @@
  * released from the surface
  * - updated reaction probabilities for surface reactions so that user has
  * choices for what calculation to use. Added types to store user choices
- * - adsorption and desorption probability calculations are mostly based on
+ * - adsorption, desorption, and membrane probability calculations are mostly based on
  * S.S. Andrews, "Accurate particle-based simulation of adsorption, desorption
  * and partial transmission" Physical Biology, vol. 6, p.046015, 2009
  * - constrained absorbing and desorbing reactions to one per type of molecule
  * at a given region. In many cases these reactions are now treated separately
  * from other types of 1st order reactions
+ * - constrained membrane reactions to one inner and one outer reaction per type of
+ * molecule at a given membrane region.
  *
  * Revision v0.5 (2016-04-15)
  * - removed limit on number of molecule types
@@ -166,6 +168,16 @@ bool calculateDesorptionProb(double * rxnProb,
 
 // Calculate probability of absorption reaction for specified time step
 double calculateAbsorptionProb(const short curRegion,
+	const unsigned short curMolType,
+	const unsigned short curRegionRxn,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Calculate probability of membrane transition for specified time step
+double calculateMembraneProb(const short curRegion,
 	const unsigned short curMolType,
 	const unsigned short curRegionRxn,
 	const double dt,

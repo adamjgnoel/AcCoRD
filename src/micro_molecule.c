@@ -18,6 +18,8 @@
  * - updated first order reaction functions to account for surface reactions that
  * release products from the surface. This is done in a common function (for both old
  * and recent molecules). Placement of products depends on user configuration
+ * - fixed membrane transition reactions. They can be reversible and should not have
+ * product molecules explicitly defined.
  * - added calls to new functions to determine adsorption/desorption probabilities
  * for recent molecules
  * - corrected how molecules are locked to region boundary when they cross regions
@@ -755,20 +757,21 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 					dist = 2*fabs(rd_normal(0,
 						sqrt(2*(timeLeft)*DIFF_COEF[curRegion][curProdID])));
 					break;
-				case PROD_PLACEMENT_IRREVERSIBLE:
-					// Force diffusion of unknown time away from surface
-					curRand = mt_drand();
-					dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
-						(0.571825*curRand - 0.552246*curRand*curRand)/
-						(1 - 1.53908*curRand + 0.546424*curRand*curRand);
-					break;
 				case PROD_PLACEMENT_STEADY_STATE:
 					// Force diffusion of time timeLeft assuming steady state
 					// with reverse reaction
 					curRand = mt_drand();
-					dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
-						(0.729614*curRand - 0.70252*curRand*curRand)/
-						(1 - 1.47494*curRand + 0.484371*curRand*curRand);
+					if(regionArray[curRegion].bReversible[curRxn])
+					{
+						dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
+							(0.729614*curRand - 0.70252*curRand*curRand)/
+							(1 - 1.47494*curRand + 0.484371*curRand*curRand);
+					} else
+					{
+						dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
+							(0.571825*curRand - 0.552246*curRand*curRand)/
+							(1 - 1.53908*curRand + 0.546424*curRand*curRand);
+					}
 					break;
 			}
 			
@@ -1142,7 +1145,6 @@ bool followMolecule(const double startPoint[3],
 					// Need to check for surface absorption
 					if(regionArray[*endRegion].bSurfRxnIn[molType])
 					{ // Absorption is possible
-						curRand = mt_drand();
 						*curRxn = regionArray[*endRegion].rxnInID[molType];
 						if(bRecent)
 						{
@@ -1155,59 +1157,58 @@ bool followMolecule(const double startPoint[3],
 						{ // Use pre-calculated probability
 							rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
 						}
-					}
+					} else
+						rxnProb = 0.;
 					break;
 				case SURFACE_MEMBRANE:
 					// Need to check relative direction so that correct probability
 					// is used
-					*curRxn = 0;
-					rxnProb = 0.;
+					switch(regionArray[startRegion].regionNeighDir[curRegion])
+					{
+						case LEFT:
+						case DOWN:
+						case IN:
+						case CHILD:
+							// Use "Inner" membrane transition probability
+							if(regionArray[*endRegion].bSurfRxnIn[molType])
+							{
+								*curRxn = regionArray[*endRegion].rxnInID[molType];
+								if(bRecent)
+									rxnProb = calculateMembraneProb(*endRegion,
+										molType, *curRxn,
+										dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+										DIFF_COEF);
+								else
+									rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
+							} else
+								rxnProb = 0.;
+							break;
+						default:
+							// Use "Outer" membrane transition probability
+							if(regionArray[*endRegion].bSurfRxnOut[molType])
+							{
+								*curRxn = regionArray[*endRegion].rxnOutID[molType];
+								if(bRecent)
+									rxnProb = calculateMembraneProb(*endRegion,
+										molType, *curRxn,
+										dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+										DIFF_COEF);
+								else
+									rxnProb = regionArray[*endRegion].surfRxnOutProb[molType];
+							} else
+								rxnProb = 0.;
+							break;
+					}
 					break;
 			}
 			
+			curRand = mt_drand();
 			if(curRand < rxnProb)
 			{
 				// Reaction curRxn took place
 				*bReaction = true;
 			}
-			/*
-			if(regionArray[*endRegion].numFirstRxn > 0)
-			{ // There is at least 1 possible reaction
-				curRand = mt_drand();
-				for(i = 0; i < regionArray[*endRegion].numFirstCurReactant[molType]; i++)
-				{
-					// TEMP Need better way to do this
-					if(bRecent)
-					{
-						// TEMP: Need to fix this line
-						rxnID = regionArray[*endRegion].firstRxnID[molType][i];
-						switch(chem_rxn[rxnID].surfRxnType)
-						{
-							case RXN_MEMBRANE:
-								rxnProb = 1 - exp(-dt*chem_rxn[rxnID].k);
-								break;
-							case RXN_ABSORBING:
-								kPrime = chem_rxn[rxnID].k*sqrt(dt/DIFF_COEF[startRegion][molType]/2);
-								kminus1Prime = chem_rxn[rxnID].k*dt;
-								c1 = (kPrime - csqrt(C(kPrime*kPrime-2*kminus1Prime,0)))/sqrt(2);
-								c2 = (kPrime + csqrt(C(kPrime*kPrime-2*kminus1Prime,0)))/sqrt(2);
-								rxnProb = cabs(kPrime*sqrt(2*PI)*
-									(c2-c1 - c2*cerfcx(c1) + c1*cerfcx(c2))/c1/c2/(c2-c1));
-						}
-					}
-					else
-						rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
-					
-					if(curRand < rxnProb)
-					{
-						// Reaction i took place
-						*curRxn = regionArray[*endRegion].firstRxnID[molType][i];
-						*bReaction = true;
-						continue;
-					}
-				}
-			}
-			*/
+			
 			if(*bReaction)
 			{
 				switch(regionArray[*endRegion].spec.surfaceType)

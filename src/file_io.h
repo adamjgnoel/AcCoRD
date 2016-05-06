@@ -16,9 +16,10 @@
  * Revision LATEST_VERSION
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
  * - added chemical reaction properties to define coupled reversible reactions
- * - added chemical reaction properties to configure absorbing and desorbing reactions,
- * including how transition probabilities are calculated and where desorbed molecules
- * are placed.
+ * - added chemical reaction properties to configure absorbing, desorbing, and membrane
+ * reactions, including how transition probabilities are calculated and how
+ * desorbed molecules are placed. Membrane reactions must have no product molecules
+ * specified (product is always the same as the reactant)
  * - shortened string used to indicate how actor location is defined. This avoids
  * a MATLAB warning when loaded simulation configuration files
  *

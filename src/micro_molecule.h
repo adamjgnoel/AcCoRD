@@ -18,6 +18,8 @@
  * - updated first order reaction functions to account for surface reactions that
  * release products from the surface. This is done in a common function (for both old
  * and recent molecules). Placement of products depends on user configuration
+ * - fixed membrane transition reactions. They can be reversible and should not have
+ * product molecules explicitly defined.
  * - added calls to new functions to determine adsorption/desorption probabilities
  * for recent molecules
  * - corrected how molecules are locked to region boundary when they cross regions

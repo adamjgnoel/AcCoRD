@@ -10,11 +10,11 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - updated function bPointInRegionNotChild to take an extra input to indicate
  * whether to ignore children regions that are surfaces
  * - added bReleaseProduct for surface reactions to indicate whether products are

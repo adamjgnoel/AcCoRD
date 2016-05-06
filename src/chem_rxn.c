@@ -9,11 +9,11 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - added label, bReversible, and labelCoupled so that reactions can be named
  * and coupled together
  * - added bReleaseProduct for surface reactions to indicate which products are

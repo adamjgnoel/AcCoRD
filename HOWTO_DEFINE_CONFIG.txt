@@ -9,9 +9,12 @@
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
 //
-// Last revised for AcCoRD v0.5 (2016-04-15)
+// Last revised for AcCoRD v0.5.1 (2016-05-06)
 //
 // Revision history:
+//
+// Revision v0.5.1 (2016-05-06)
+// - describe new properties for chemical reactions (particularly surface reactions)
 //
 // Revision v0.5 (2016-04-15)
 // - noted importance of passive actor time step shifts from microscopic time steps
@@ -37,15 +40,15 @@
 // With that out of the way, welcome to this "tutorial" for preparing proper
 // AcCoRD configuration files.
 //
-// This document is current as of v0.5 (2016-04-15).
+// This document is current as of v0.5.1 (2016-05-06).
 //
 // Please note that valid configuration files cannot have these comments
 // preceded by "//". If you remove these comments and place a copy of
 // this file where AcCoRD can "see" it, then you can run it in AcCoRD.
-// AcCoRD looks for config files first in the current directory, then
-// in a "config" subdirectory, then in a "../config/" directory.
 // However, this should be unnecessary since the config folder includes
 // a number of sample valid configuration files.
+// AcCoRD looks for config files first in the current directory, then
+// in a "config" subdirectory, then in a "../config/" directory.
 // Please refer to README.txt for instructions on running a simulation.
 //
 // AcCoRD input and summary output files use the JSON format. JSON stands for
@@ -146,24 +149,69 @@
 			// reactants or products are defined. See sample configurations for actual reactions
 			
 				"Notes": "",
+				
+				"Label": "Reaction 1",
+				// The reaction's label is an optional ID that is only needed
+				// if reaction is reversible and we need to indicate which reaction
+				// is coupled to which
+				
+				"Is Reaction Reversible?": false,
+				// Reversibility influences how reaction probabilities are calculated
+				// when steady state calculations are used for surface reactions
+				
+				"Reverse Reaction Label": "Reaction 2",
+				// Label of the reverse reaction. Only define if reaction is reversible.
+				// Reversibility influences how reaction probabilities are calculated
+				// when steady state calculations are used for surface reactions.
+				// If 2 reactions are coupled, then each must list the other as its
+				// reverse in order for these reaction probabilities to be determined
+				// correctly.
+				
 				"Surface Reaction?": false,
 				// A chemical reaction can either occur in "normal" regions or in "surface regions"
 				
 				"Surface Reaction Type": "Normal",
 				// Type of surface reaction. Only checked if "Surface Reaction?" is true.
-				// Implemented values are "Normal", "Absorbing", and "Membrane".
-				// If a reaction is "Membrane", then it should only be assigned to
-				// regions that are membranes, it should be first order, and it
-				// should be the only reaction associated with this molecule at
-				// those regions.
-				// If a reaction is "Absorbing", then it should only be assigned
-				// to surface regions that aren't membranes, it should be first
-				// order, and all first-order reactions associated with this
-				// reactant should also be absorbing (this last constraint might
-				// be fixed in a future release). To avoid issues due to the last
-				// constraint, an absorption reaction should have a product that
-				// is a different type of molecule. Reaction must be defined as
-				// "Absorbing" for the correct absorption probability to be calculated.
+				// Implemented values are "Normal", "Absorbing", "Desorbing",
+				// "Membrane Inner", and "Membrane Outer".
+				// If reaction is not "Normal", then it should be first order and
+				// it should be the only reaction associated with the reactant
+				// in the surface regions where it is active.
+				
+				// If a reaction is "Membrane Inner" or "Membrane Outer", then it should
+				// only be assigned to regions that are membranes, and no product
+				// molecules should be specified. The "Membrane Inner" reaction is
+				// for molecules that transition from the side of the membrane where
+				// the surface is considered to be "Inner" to the region, i.e., 2D
+				// surfaces that are to the left, down, or in directions relative to
+				// the normal region, OR if the surface is the normal region's parent.
+				// Analogously, the "Membrane Outer" reaction is for molecules that
+				// transition from a normal region through a surface that is to the
+				// right, up, or out directions relative to the normal region, OR
+				// if the the surface is the normal region's child.
+				
+				// If a reaction is "Absorbing" or "Desorbing", then it should only be
+				// assigned to surface regions that aren't membranes. These reactions
+				// are needed for molecules to be transfered to/from a surface region
+				// from a normal region. Note that an absorbed molecules will diffuse
+				// even if it is "absorbed", and this can be avoided by setting a
+				// different molecule type (with 0 diffusion coefficient) as the
+				// product of the absorbing reaction
+				
+				"Surface Transition Probability": "Normal",
+				// Selection for algorithm for how a surface transition probability
+				// is calculated. Neeed for "Absorbing", "Desorbing", "Membrane
+				// Inner", and "Membrane Outer" reactions. Values are "Normal",
+				// "Mixed", and "Steady State". "Normal" treats the reaction as a
+				// regular 1st order reaction. "Mixed" gives the transition probability
+				// assuming that the system is in the well-mixed state. "Steady state"
+				// assumes that the system is in the steady state, but has been shown
+				// to be accurate for transient states as well. The "Steady State"
+				// probabilties were derived under the assumption that the surface is
+				// flat and the system is 1-dimensional. Derivations are in S.S.
+				// Andrews, "Accurate particle-based simulation of adsorption,
+				// desorption and partial transmission" Physical Biology, vol. 6,
+				// p.046015, 2009.
 				
 				"Default Everywhere?": true,
 				// A chemical reaction can by default take place everywhere or nowhere.
@@ -185,6 +233,28 @@
 				// An array of length "Number of Molecule Types". Indicates how many of each
 				// type of molecule are products. There is no limit to the number of products.
 				// Will be converted to integers.
+				// Non-zero values are ignoted for membrane reactions.
+				
+				"Products Released?": [false],
+				// Boolean array of length "Number of Molecule Types". Defined for
+				// non-membrane surface reactions. Indicates whether products are
+				// detached from the surface.
+				
+				"Release Placement Type": "Leave",
+				// Define how molecules are placed if they are released from a surface.
+				// Defined only if at least one value in the "Products Released?"
+				// array is true. Values are "Leave", "Full Diffusion", and "Steady
+				// State Diffusion". For "Leave", molecules are left at the surface
+				// and can diffuse/react as normal in the remainder of the time slot.
+				// For "Full Diffusion" and "Steady State Diffusion", molecules are
+				// forcibly placed some distance away from the surface and left there
+				// until the end of the time slot. "Full Diffusion" assumes regular 1D
+				// diffusion away from a reflective surface. "Steady State Diffusion"
+				// assumes system is at steady state and determines distance based
+				// on that calculated in
+				// S.S. Andrews, "Accurate particle-based simulation of adsorption,
+				// desorption and partial transmission" Physical Biology, vol. 6,
+				// p.046015, 2009.
 												
 				"Reaction Rate": 1
 				// Chemical reaction rate. Units depend on the order of the reaction.

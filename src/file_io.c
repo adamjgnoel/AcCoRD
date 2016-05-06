@@ -9,11 +9,11 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
  * - added chemical reaction properties to define coupled reversible reactions
  * - added chemical reaction properties to configure absorbing, desorbing, and membrane
@@ -468,9 +468,9 @@ void loadConfig(const char * CONFIG_NAME,
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_DESORBING;
 						else if(strcmp(tempString,"Receptor Binding") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_RECEPTOR;
-						else if(strcmp(tempString,"Membrane In") == 0)
+						else if(strcmp(tempString,"Membrane Inner") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_MEMBRANE_IN;
-						else if(strcmp(tempString,"Membrane Out") == 0)
+						else if(strcmp(tempString,"Membrane Outer") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_MEMBRANE_OUT;
 						else
 						{
@@ -600,6 +600,7 @@ void loadConfig(const char * CONFIG_NAME,
 										}
 									}
 								}
+								break;
 							default:
 								// Reaction should not have bReleaseProduct array defined
 								if(cJSON_bItemValid(curObj,"Products Released?", cJSON_Array))

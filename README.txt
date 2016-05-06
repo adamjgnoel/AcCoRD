@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD LATEST_VERSION (public beta)
+This document is the README for AcCoRD v0.5.1 (2016-05-06) (public beta)
 
 # Introduction
 
@@ -52,8 +52,8 @@ AcCoRD currently has the following "mature" features:
 * Molecule observers record number of specified types of molecules (and optionally their positions) over a subset of the simulation environment.
 * Even in the microscopic regime, molecule creation and chemical reactions can occur on a time scale smaller than the microscopic time step.
 
-The following features have not been extensively tested and are considered in "beta":
-* Surfaces can surround all or part of 3D regions and be sites for local chemical reactions, such as molecule generation or absorption.
+The following features have not been as extensively tested and are considered in "beta":
+* Surfaces can surround all or part of 3D regions and be sites for local chemical reactions, such as molecule generation or absorption. User can choose how reaction probabilities are determined for these reactions.
 * Membrane surfaces control transitions between neighboring 3D regions
 
 The following features have had very limited testing and are considered "alpha":
@@ -67,12 +67,12 @@ This list is current as of v0.5. See https://github.com/adamjgnoel/AcCoRD/issues
 * Full 2D simulations are mostly untested
 * Simplified algorithms are used to handle molecule placement when transitioning between mesoscopic and microscopic regions
 * Chemical reactions in microscopic regions must be 0th or 1st order.
+* molecules keep diffusing at same rate when they are "bound" to a surface region
 * There is an option to set whether actor is independent but the value is ignored since dependent actors have not yet been implemented
 * There is an option to set whether active actor has a message of random bits but the value is ignored so that the bits are always random (though they can be set to all 1s or all 0s by setting probability to 1 or 0, respectively)
 * Active actor modulation scheme is presented as a configuration option but the only current valid choice is "CSK" (concentration shift keying)
 * The bit stream of active actors will always be written to the output file, independent of the setting of "Is Actor Activity Recorded?". This is because active actor emission is currently always random.
 * Point sources are not accommodated
-* All first-order reactions in a non-membrane surface region are treated as absorption reactions when a molecule of the corresponding reactant type collides with the surface. However, the "correct" absorption probability is only calculated for reactions that are explicitly defined as "Absorbing"
 * 2 regions must share an outer face in order to be classified as neighbors, unless one region is the parent of the other. So, if a child region is up against a face of its parent, and that parent also has a parent but doesn't share the same face with its parent, then the parent's parent will not be recognized as a neighbor of the child. In such a case molecule transitions between the child and the "grandparent" are not possible.
 * A child region is always assumed to be a neighbor of its parent, which is not strictly true but should not create a problem during a simulation
 * microscopic molecules in a spherical region may go a very small distance beyond the region boundary but are still believe to be inside the sphere. This is due to numerical underflow, and might mean that the potential chemical reactions for the molecule are inconsistent with its location.

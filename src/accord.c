@@ -9,11 +9,11 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - updated placement of molecules created by 0th order reactions when they are
  * created at a surface reaction
  * - re-structured how microscopic 1st order reactions are iteratively performed to
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version LATEST_VERSION\n");
+	printf("Version v0.5.1 (2016-05-06)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	

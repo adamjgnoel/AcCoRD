@@ -10,11 +10,11 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - updated first order reaction functions to account for surface reactions that
  * release products from the surface. This is done in a common function (for both old
  * and recent molecules). Placement of products depends on user configuration

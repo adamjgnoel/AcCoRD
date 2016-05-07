@@ -16,7 +16,6 @@ This document is the CHANGELOG for AcCoRD v0.5.1 (public beta, 2016-05-06)
 - [FIX] corrected how molecules can be placed when they are created at a surface by a 0th order chemical reaction
 - [FIX] updated point reflection to accommodate rectangle surface regions
 - [FIX] fixed bug where all 1st order reactions for a given molecule type were assumed to be absorbing reactions if any one of them were absorbing
-- [UPDATE]
 
 Changes introduced in v0.5 (public beta, 2016-04-15)
 - [NEW] added surface regions, which can be defined on the border(s) of normal regions. Surface regions can be used to control transitions between regions, or to be chemical reaction sites. Surface regions and the "Normal" regions that they touch must currently be defined as microscopic (and not mesoscopic).

@@ -9,11 +9,11 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
  * - added chemical reaction properties to define coupled reversible reactions
  * - added chemical reaction properties to configure absorbing, desorbing, and membrane

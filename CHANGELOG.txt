@@ -2,7 +2,23 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.5 (public beta, 2016-04-15)
+This document is the CHANGELOG for AcCoRD v0.5.1 (public beta, 2016-05-06)
+- [NEW] chemical reactions have labels
+- [NEW] chemical reactions can be defined as reversible, where the coupled reaction is specified. The reaction probabilities of coupled surface reactions are determined differently from those that are uncoupled
+- [NEW] added "Desorbing" as a distinct surface reaction type. It is generally the reverse of "Absorbing"
+- [NEW] algorithms for calculating surface reaction probabilities (adsorption, desorption, and membrane transition) can be specified by the user. This implementation is based on the options presented in S.S. Andrews, "Accurate particle-based simulation of adsorption, desorption and partial transmission" Physical Biology, vol. 6, p.046015, 2009. These surface reactions can have "Normal", "Mixed", or "Steady State" reaction probabilities, where the steady state calculation depends on whether reaction is reversible.
+- [NEW] user can specify whether products of surface reactions are released from the surface. Not needed for membrane reactions, where the product is always released from the surface.
+- [ENHANCEMENT] improved transitions to and from surface regions, whether via adsorption, desorption, or membrane transitions
+- [ENHANCEMENT] constrain number of "special" surface reactions to one per class per molecule type per region. An inner or outer surface can only have 1 desorbing and 1 adsorbing reaction per molecule type. A membrance surface can only have 1 inner membrane and 1 outer membrane reaction per molecule type. These limits facilitate calculation of transition probabilities and determining whether a given molecule is able to react with a surface.
+- [ENHANCEMENT] the product of a membrane reaction is assumed to be the same as its reactant. Any specified products are ignored.
+- [FIX] corrected how molecules are locked to the boundary of a new region when they diffuse from one region to another
+- [FIX] re-organized execution of 1st order microscopic reactions to account for release of products from microscopic surfaces. Also, more code is recycled (when considering desorption vs normal reactions, and recent vs "old" molecules)
+- [FIX] corrected how molecules can be placed when they are created at a surface by a 0th order chemical reaction
+- [FIX] updated point reflection to accommodate rectangle surface regions
+- [FIX] fixed bug where all 1st order reactions for a given molecule type were assumed to be absorbing reactions if any one of them were absorbing
+- [UPDATE]
+
+Changes introduced in v0.5 (public beta, 2016-04-15)
 - [NEW] added surface regions, which can be defined on the border(s) of normal regions. Surface regions can be used to control transitions between regions, or to be chemical reaction sites. Surface regions and the "Normal" regions that they touch must currently be defined as microscopic (and not mesoscopic).
 - [NEW] added some surface chemical reactions, including properties to declare whether a given reaction occurs at a surface. "Membrane" surfaces should have a reaction that defines whether a molecule crosses the membrane or is reflected
 - [NEW] added normal 2D regions. Implementation is at alpha stage. "Normal" 2D regions cannot be neighbors of normal 3D regions

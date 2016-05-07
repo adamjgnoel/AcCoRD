@@ -9,11 +9,11 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - added label, bReversible, and labelCoupled so that reactions can be named
  * and coupled together
  * - added bReleaseProduct for surface reactions to indicate which products are
@@ -459,10 +459,10 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
 		{
 			// Check for reaction being reversible and if so then find reverse reaction
+			curRxn = rxnInRegionID[j][i]; // Current reaction in chem_rxn array
 			regionArray[i].bReversible[j] = chem_rxn[curRxn].bReversible;
 			if(regionArray[i].bReversible[j])
 			{
-				curRxn = rxnInRegionID[j][i]; // Current reaction in chem_rxn array
 				regionArray[i].reverseRxnID[j] = j;
 				for(k = 0; k < regionArray[i].numChemRxn; k++)
 				{
@@ -495,14 +495,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			// Scan reactions to see which have current molecule as a reactant
 			for(k = 0; k < regionArray[i].numChemRxn; k++)
 			{
+				curRxn = rxnInRegionID[k][i]; // Reaction ID in chem_rxn	
 				switch(regionArray[i].rxnOrder[k])
 				{
 					case 1:
-						if(chem_rxn[k].reactants[j] > 0)
+						if(chem_rxn[curRxn].reactants[j] > 0)
 						{
 							
 							regionArray[i].firstRxnID[j][regionArray[i].numFirstCurReactant[j]] = k;
-							curRxn = rxnInRegionID[k][i]; // Reaction ID in chem_rxn	
 							
 							regionArray[i].numFirstCurReactant[j]++;
 							

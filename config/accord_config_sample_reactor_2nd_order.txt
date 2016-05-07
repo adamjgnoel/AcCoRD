@@ -21,6 +21,9 @@
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Enzyme binding.",
+				"Label": "Binding",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Unbinding",
 				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],
@@ -30,6 +33,9 @@
 			},
 			{							
 				"Notes": "Enzyme unbinding.",
+				"Label": "Unbinding",
+				"Is Reaction Reversible?": true,
+				"Reverse Reaction Label": "Binding",
 				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],
@@ -39,6 +45,8 @@
 			},
 			{							
 				"Notes": "Degradation",
+				"Label": "Degradation",
+				"Is Reaction Reversible?": false,
 				"Surface Reaction?": false,
 				"Default Everywhere?": true,
 				"Exception Regions": [],

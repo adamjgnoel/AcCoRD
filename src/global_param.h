@@ -10,11 +10,11 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - added types of chemical reaction probability calculations
  * - removed MAX_MOL_TYPES, MAX_RXN_PRODUCTS
  *

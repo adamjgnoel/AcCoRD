@@ -10,11 +10,11 @@
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
  * since definition of faces are for the 3D case
  * - added closestFace and distanceToFace functions to find closest boundary face

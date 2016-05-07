@@ -10,11 +10,11 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - updated first order reaction functions to account for surface reactions that
  * release products from the surface. This is done in a common function (for both old
  * and recent molecules). Placement of products depends on user configuration
@@ -1163,12 +1163,12 @@ bool followMolecule(const double startPoint[3],
 				case SURFACE_MEMBRANE:
 					// Need to check relative direction so that correct probability
 					// is used
-					switch(regionArray[startRegion].regionNeighDir[curRegion])
+					switch(regionArray[startRegion].regionNeighDir[* endRegion])
 					{
 						case LEFT:
 						case DOWN:
 						case IN:
-						case CHILD:
+						case PARENT:
 							// Use "Inner" membrane transition probability
 							if(regionArray[*endRegion].bSurfRxnIn[molType])
 							{

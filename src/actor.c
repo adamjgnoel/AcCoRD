@@ -9,11 +9,11 @@
  *
  * actor.c - operations on array of actors and its elements
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.5.1 (2016-05-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions
  *
  * Revision v0.5 (2016-04-15)

@@ -531,7 +531,7 @@ bool bLineHitInfinitePlane(const double p1[3],
 	switch(boundary1Type)
 	{
 		case RECTANGLE:
-			switch(planeID)
+		/*	switch(planeID)
 			{
 				case PLANE_XY:
 					*d = (boundary1[4]-p1[2])/L[2];
@@ -542,11 +542,14 @@ bool bLineHitInfinitePlane(const double p1[3],
 				case PLANE_YZ:
 					*d = (boundary1[0]-p1[0])/L[0];
 					break;
+				default:
+					fprintf(stderr,"ERROR: Plane ID %d invalid for rectangle.\n", planeID);
+					return false;	
 			}
 			intersectPoint[0] = (*d)*L[0] + p1[0];
 			intersectPoint[1] = (*d)*L[1] + p1[1];
 			intersectPoint[2] = (*d)*L[2] + p1[2];
-			break;
+			break;*/
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{
@@ -568,6 +571,9 @@ bool bLineHitInfinitePlane(const double p1[3],
 				case 5:
 					*d = (boundary1[5]-p1[2])/L[2];
 					break;
+				default:
+					fprintf(stderr,"ERROR: Plane ID %d invalid for rectangular box.\n", planeID);
+					return false;					
 			}
 			intersectPoint[0] = (*d)*L[0] + p1[0];
 			intersectPoint[1] = (*d)*L[1] + p1[1];
@@ -617,7 +623,7 @@ bool bPointOnFace(const double p1[3],
 	switch(boundary1Type)
 	{
 		case RECTANGLE:
-			switch(planeID)
+		/*	switch(planeID)
 			{
 				case PLANE_XY:
 					return (p1[1] >= boundary1[2]
@@ -634,7 +640,7 @@ bool bPointOnFace(const double p1[3],
 						&& p1[1] <= boundary1[3]
 						&& p1[2] >= boundary1[4]
 						&& p1[2] <= boundary1[5]);					
-			}
+			}*/
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{

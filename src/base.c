@@ -10,9 +10,12 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
@@ -1358,7 +1361,7 @@ double boundarySurfaceArea(const int boundary1Type,
 double uniformPoint(double rangeMin,
 	double rangeMax)
 {
-	return (rangeMin + (rangeMax-rangeMin)*mt_drand());
+	return (rangeMin + (rangeMax-rangeMin)*generateUniform());
 }
 
 // Find a random coordinate within the specified boundary
@@ -1377,7 +1380,7 @@ void uniformPointVolume(double point[3],
 		case RECTANGLE:
 			if(bSurface)
 			{
-				curFace = (short) floor(4*mt_drand());
+				curFace = (short) floor(4*generateUniform());
 				switch(planeID)
 				{
 					case PLANE_XY:
@@ -1460,7 +1463,7 @@ void uniformPointVolume(double point[3],
 		case RECTANGULAR_BOX:
 			if(bSurface)
 			{
-				curFace = (short) floor(6*mt_drand());
+				curFace = (short) floor(6*generateUniform());
 				switch(curFace)
 				{
 					case 0:
@@ -1495,9 +1498,9 @@ void uniformPointVolume(double point[3],
 			bNeedPoint = true;
 			while(bNeedPoint)
 			{
-				point[0] = mt_drand();
-				point[1] = mt_drand();
-				point[2] = mt_drand();
+				point[0] = generateUniform();
+				point[1] = generateUniform();
+				point[2] = generateUniform();
 				
 				rSq = squareDBL(point[0]) + squareDBL(point[1])
 					+ squareDBL(point[2]);
@@ -1505,11 +1508,11 @@ void uniformPointVolume(double point[3],
 				if (rSq < 1.)
 				{
 					// Found valid point. Scale as needed and randomize sign
-					if(mt_drand() > 0.5)
+					if(generateUniform() > 0.5)
 						point[0] = -point[0];
-					if(mt_drand() > 0.5)
+					if(generateUniform() > 0.5)
 						point[1] = -point[1];
-					if(mt_drand() > 0.5)
+					if(generateUniform() > 0.5)
 						point[2] = -point[2];
 					
 					if(bSurface)

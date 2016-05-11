@@ -10,9 +10,12 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated first order reaction functions to account for surface reactions that
@@ -64,7 +67,7 @@
 #include <math.h> // For sqrt()
 #include <complex.h> // for complex error function
 
-#include "randistrs.h" // For PRNGs
+#include "rand_accord.h" // For PRNGs
 #include "region.h"
 #include "meso.h"
 #include "subvolume.h"

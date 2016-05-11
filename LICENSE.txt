@@ -2,8 +2,8 @@ This license files lists multiple licenses.
 Unless otherwise noted in the individual source files, all AcCoRD source code is copyrighted by Adam Noel under the "New BSD" license.
 
 The exceptions (and their corresonding source files) are as follows:
-- mtwist.c and randistrs.c are licensed by Geoff Kuenning under LGPL (see gpl.txt and lgpl-3.0.txt for complete LGPL). Minor modifications were made to randistrs.c by Adam Noel and there are corresponding comments tagged with "AcCoRD"
-- cJSON.c is licensed by Dave Gamble under the MIT license
+- pcg_basic.c and pcg_basic.h are licensed by Melissa O'Neill under the Apache License, Version 2.0
+- cJSON.c and cJSON.h are licensed by Dave Gamble under the MIT license
 - cerf.h, defs.h, erfcx.c, err_fcts.c, im_w_of_x.c, and w_of_z.c (hereafter referred to as complex error functions) are licensed by Massachusetts Institute of Technology and Forschungszentrum Jülich GmbH under the MIT license. Authors are Steven G. Johnson and Joachim Wuttke
 - JSONLab is licensed by Qianqian Fang under the BSD 2-Clause license (applies to files in the matlab\JSONlab directory)
 
@@ -24,47 +24,21 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY ADAM NOEL "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-License for mtwist.c by Geoff Kuenning:
----------------------------------------
-This library is free software; you can redistribute it and/or modify it under the terms of the GNU Library General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+License for pcg_basic.c by Melissa O'Neill:
+-------------------------------------------
+Copyright 2014 Melissa O'Neill <oneill@pcg-random.org>
 
-This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Library General Public License for more details.  You should have received a copy of the GNU Library General Public License along with this library; if not, write to the Free Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
+http://www.apache.org/licenses/LICENSE-2.0
 
-License for randistrs.c by by Geoff Kuenning:
----------------------------------------------
-
-Copyright 2001, 2002, 2010, Geoffrey H. Kuenning, Claremont, CA.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-3. All modifications to the source code must be clearly marked as
-   such.  Binary redistributions based on modified source code
-   must be clearly marked as modified versions in the documentation
-   and/or other materials provided with the distribution.
-4. The name of Geoff Kuenning may not be used to endorse or promote
-   products derived from this software without specific prior
-   written permission.
-
-THIS SOFTWARE IS PROVIDED BY GEOFF KUENNING AND CONTRIBUTORS ``AS IS'' AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED.  IN NO EVENT SHALL GEOFF KUENNING OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGE.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 License for cJSON.c by Dave Gamble:
 -----------------------------------

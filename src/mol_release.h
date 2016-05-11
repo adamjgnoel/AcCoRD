@@ -25,7 +25,6 @@
 #include <stdio.h> // to create and edit files
 #include <stdlib.h> // for exit(), malloc, free, NULL
 #include <stdbool.h> // for C++ bool naming, requires C99
-#include "randistrs.h" // For PRNGs
 #include "global_param.h" // For modulation scheme #define
 
 // release specific declarations

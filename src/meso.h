@@ -8,9 +8,13 @@
  * For user documentation, read README.txt in the root AcCoRD directory
  *
  * meso.h - heap of all mesoscopic subvolumes in simulation environment
- * Last revised for AcCoRD v0.4.1
+ *
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.4.1
  * - improved use and format of error messages
@@ -29,7 +33,7 @@
 
 #include "region.h"
 #include "subvolume.h"
-#include "randistrs.h" // For PRNGs
+#include "rand_accord.h" // For PRNGs
 
 //
 // Constant definitions

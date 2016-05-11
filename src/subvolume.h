@@ -37,7 +37,6 @@
 #define SUBVOLUME_H
 
 #include "region.h"
-#include "randistrs.h" // For PRNGs
 #include "base.h" // For subvolume adjacency
 #include "global_param.h" // For region adjacency
 

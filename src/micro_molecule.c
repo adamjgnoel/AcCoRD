@@ -10,9 +10,12 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated first order reaction functions to account for surface reactions that
@@ -377,18 +380,18 @@ void diffuseMolecules(const short NUM_REGIONS,
 // Move one molecule by some standard deviation
 void diffuseOneMolecule(ItemMol3D * molecule, double sigma)
 {
-	molecule->x = rd_normal(molecule->x, sigma);
-	molecule->y = rd_normal(molecule->y, sigma);
-	molecule->z = rd_normal(molecule->z, sigma);
+	molecule->x = generateNormal(molecule->x, sigma);
+	molecule->y = generateNormal(molecule->y, sigma);
+	molecule->z = generateNormal(molecule->z, sigma);
 }
 
 // Move one molecule by some standard deviation
 void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF)
 {
 	double sigma = sqrt(2*molecule->dt_partial*DIFF_COEF);
-	molecule->x = rd_normal(molecule->x, sigma);
-	molecule->y = rd_normal(molecule->y, sigma);
-	molecule->z = rd_normal(molecule->z, sigma);
+	molecule->x = generateNormal(molecule->x, sigma);
+	molecule->y = generateNormal(molecule->y, sigma);
+	molecule->z = generateNormal(molecule->z, sigma);
 }
 
 // Check first order reactions for all molecules in list
@@ -423,7 +426,7 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 			bRemove = false;
 			
 			// Generate RV to see which/whether first order reaction occurred
-			curRand = mt_drand();
+			curRand = generateUniform();
 			if(curRand < regionArray[curRegion].surfRxnOutProb[curMolType])
 			{				
 				// Generate products (if necessary)
@@ -467,7 +470,7 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 		bRemove = false;
 		
 		// Generate RV to see which/whether first order reaction occurred
-		curRand = mt_drand();
+		curRand = generateUniform();
 		
 		for(i = 0; i < regionArray[curRegion].numFirstCurReactant[curMolType]; i++)
 		{			
@@ -562,7 +565,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 				regionArray[curRegion].rxnOutID[curMolType],
 				curNode->item.dt_partial, NUM_REGIONS,
 				regionArray, NUM_MOL_TYPES, DIFF_COEF);
-			curRand = mt_drand();
+			curRand = generateUniform();
 			if(curRand < curProb)
 			{				
 				// Generate products (if necessary)
@@ -614,7 +617,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 		bRemove = false;
 		
 		// Generate RV to see which/whether first order reaction occurred
-		curRand = mt_drand();
+		curRand = generateUniform();
 		
 		// Need to generate probabilities for current molecule based on the partial
 		// time step size
@@ -720,13 +723,13 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 		{
 			minRxnTimeRV = exp(-curMolRecent->item.dt_partial*regionArray[curRegion].uniSumRate[curMolType]);
 			curTime =
-				-log((1.-minRxnTimeRV)*mt_drand() + minRxnTimeRV)
+				-log((1.-minRxnTimeRV)*generateUniform() + minRxnTimeRV)
 				/ regionArray[curRegion].uniSumRate[curMolType];
 			timeLeft = curMolRecent->item.dt_partial - curTime;
 		} else
 		{
 			curTime =
-				-log((1.-regionArray[curRegion].minRxnTimeRV[curMolType])*mt_drand()
+				-log((1.-regionArray[curRegion].minRxnTimeRV[curMolType])*generateUniform()
 				+ regionArray[curRegion].minRxnTimeRV[curMolType])
 				/ regionArray[curRegion].uniSumRate[curMolType];
 			timeLeft = regionArray[curRegion].spec.dt - curTime;
@@ -754,13 +757,13 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 					break;
 				case PROD_PLACEMENT_FORCE:
 					// Force diffusion of time timeLeft away from surface
-					dist = 2*fabs(rd_normal(0,
+					dist = 2*fabs(generateNormal(0,
 						sqrt(2*(timeLeft)*DIFF_COEF[curRegion][curProdID])));
 					break;
 				case PROD_PLACEMENT_STEADY_STATE:
 					// Force diffusion of time timeLeft assuming steady state
 					// with reverse reaction
-					curRand = mt_drand();
+					curRand = generateUniform();
 					if(regionArray[curRegion].bReversible[curRxn])
 					{
 						dist = sqrt(2*DIFF_COEF[curRegion][curProdID]*(curTime))*
@@ -1202,7 +1205,7 @@ bool followMolecule(const double startPoint[3],
 					break;
 			}
 			
-			curRand = mt_drand();
+			curRand = generateUniform();
 			if(curRand < rxnProb)
 			{
 				// Reaction curRxn took place

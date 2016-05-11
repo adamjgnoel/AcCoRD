@@ -9,9 +9,12 @@
  *
  * actor.c - operations on array of actors and its elements
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions
@@ -1004,7 +1007,7 @@ void newRelease(const struct actorStruct3D * actorCommon,
 	{
 		if (actorCommon->spec.bRandBits)
 		{
-			if(mt_drand() < actorCommon->spec.probOne)
+			if(generateUniform() < actorCommon->spec.probOne)
 			{ // Bit is "1"
 				if(!addData(&newData, true))
 				{
@@ -1040,7 +1043,7 @@ void newRelease(const struct actorStruct3D * actorCommon,
 			frequency = 0.;
 			if(actorCommon->spec.bTimeReleaseRand)
 			{ // Emission times are stochastic. First emission time must be generated.
-				startTime = -log(mt_drand())/strength;
+				startTime = -generateExponential(1)/strength;
 			} else
 			{ // Emission times are deterministic. First emission will be at start of interval
 				startTime = 0.;
@@ -1133,12 +1136,12 @@ void fireEmission(const struct actorStruct3D * actorCommon,
 		
 		// Next emission time must be generated
 		curRelease->item.nextTime +=
-			-log(mt_drand())/curRelease->item.strength;
+			-generateExponential(1)/curRelease->item.strength;
 	} else
 	{
 		if(actorCommon->spec.bNumReleaseRand)
 		{
-			numNewMol = rd_poisson(curRelease->item.strength);
+			numNewMol = generatePoisson(curRelease->item.strength);
 		} else
 		{
 			numNewMol = (uint64_t) curRelease->item.strength;
@@ -1200,7 +1203,7 @@ void placeMolecules(const struct actorStruct3D * actorCommon,
 			curMolecule < numNewMol;
 			curMolecule++)
 		{
-			uniRV = mt_drand();
+			uniRV = generateUniform();
 			for(curRegionInter = 0;
 				actorCommon->cumFracActorInRegion[curRegionInter] < uniRV;
 				curRegionInter++)
@@ -1305,7 +1308,7 @@ void placeMoleculesInRegion(const struct actorStruct3D * actorCommon,
 			curMolecule < numNewMol;
 			curMolecule++)
 			{
-				uniRV = mt_drand();
+				uniRV = generateUniform();
 				if(actorCommon->bRegionInside[curRegionInter])
 				{ // All subvolumes in the region are equally likely because entire region is in the actor
 					curSubInter = (uint32_t) floor(uniRV * actorCommon->numSub[curRegionInter]);

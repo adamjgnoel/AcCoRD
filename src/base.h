@@ -10,9 +10,12 @@
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
@@ -57,7 +60,7 @@
 #include <stdbool.h> // for C++ bool naming, requires C99
 #include <stdlib.h> // for exit(), malloc
 #include <math.h> // for fabs()
-#include "randistrs.h" // For PRNGs
+#include "rand_accord.h" // For PRNGs
 #include "global_param.h"
 
 //

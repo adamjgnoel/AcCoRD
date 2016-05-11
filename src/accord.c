@@ -9,9 +9,12 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated placement of molecules created by 0th order reactions when they are
@@ -50,7 +53,7 @@
 #include <time.h> // For time record keeping
 #include <limits.h> // For SHRT_MAX
 #include <math.h> // For ceil(), isfin()
-#include "randistrs.h" // For PRNGs
+#include "rand_accord.h" // For PRNGs
 #include "region.h" // for subvolume definitions, operations
 #include "subvolume.h" // for subvolume definitions, operations
 #include "meso.h" // for subvolume definitions, operations
@@ -352,7 +355,8 @@ int main(int argc, char *argv[])
 		
 	// Initialize random number generation
 	printf("Starting up random number generator with seed offset: %u\n", spec.SEED);
-	mt_seed32(spec.SEED + 5489UL); // Offset by mersenne twister default seed
+	rngInitialize(spec.SEED);
+	//mt_seed32(spec.SEED + 5489UL); // Offset by mersenne twister default seed
 	
 	//
 	// STEP 4: Run Simulation
@@ -422,7 +426,7 @@ int main(int argc, char *argv[])
 
 			for(curZerothRxn = 0; curZerothRxn < regionArray[curRegion].numZerothRxn; curZerothRxn++)
 				regionArray[curRegion].tZeroth[curZerothRxn] =
-					-log(mt_drand())/regionArray[curRegion].rxnRateZerothMicro[curZerothRxn];
+					-generateExponential(1)/regionArray[curRegion].rxnRateZerothMicro[curZerothRxn];
 		}
 		
 		//
@@ -588,7 +592,7 @@ int main(int argc, char *argv[])
 											curMol++)
 										{
 											// Roll die to see whether molecule is within actor
-											if(mt_drand() < actorPassiveArray[curPassive].fracSubInActor[curRegionID][curSubID])
+											if(generateUniform() < actorPassiveArray[curPassive].fracSubInActor[curRegionID][curSubID])
 											{
 												actorPassiveArray[curPassive].curMolObs[curMolPassive]++;
 												
@@ -717,7 +721,7 @@ int main(int argc, char *argv[])
 							}
 							
 							regionArray[i].tZeroth[curZerothRxn] +=
-								-log(mt_drand())/regionArray[i].rxnRateZerothMicro[curZerothRxn];
+								-generateExponential(1)/regionArray[i].rxnRateZerothMicro[curZerothRxn];
 						}
 					}
 				}
@@ -833,7 +837,7 @@ int main(int argc, char *argv[])
 				// Determine ID of next reaction
 				curRxn = 0;
 				prop_sum = mesoSubArray[curMeso].rxnProp[curRxn];
-				rand_prop = mt_drand()*mesoSubArray[curMeso].totalProp;
+				rand_prop = generateUniform()*mesoSubArray[curMeso].totalProp;
 				while (prop_sum < rand_prop)
 				{
 					prop_sum += mesoSubArray[curMeso].rxnProp[++curRxn];
@@ -886,17 +890,17 @@ int main(int argc, char *argv[])
 							if(regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub] > 0)
 							{
 								// More than one face of this subvolume faces this micro region
-								faceDir = (unsigned short) floor(mt_drand()*
+								faceDir = (unsigned short) floor(generateUniform()*
 									regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub]);
 							} else
 								faceDir = 0;
 							if(!addMoleculeRecent(&microMolListRecent[destRegion][curMolType],
 								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-								+regionArray[curRegion].actualSubSize*mt_drand(),
+								+regionArray[curRegion].actualSubSize*generateUniform(),
 								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-								+regionArray[curRegion].actualSubSize*mt_drand(),
+								+regionArray[curRegion].actualSubSize*generateUniform(),
 								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-								+regionArray[curRegion].actualSubSize*mt_drand(), tMicro - tCur))
+								+regionArray[curRegion].actualSubSize*generateUniform(), tMicro - tCur))
 							{ // Creation of molecule failed
 								fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
 									curMolType, curRegion, destRegion);

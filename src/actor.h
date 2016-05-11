@@ -9,9 +9,12 @@
  *
  * actor.h - operations on array of actors and its elements
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions

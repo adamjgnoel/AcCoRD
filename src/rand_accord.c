@@ -94,6 +94,6 @@ double generateExponential(double mean)
 	do
 	{
 		randVal = generateUniform();
-	} while(randVal == 0.0) // Avoid 0 case
+	} while(randVal == 0.0); // Avoid 0 case
 	return -mean * log(randVal);
 }

@@ -1043,7 +1043,7 @@ void newRelease(const struct actorStruct3D * actorCommon,
 			frequency = 0.;
 			if(actorCommon->spec.bTimeReleaseRand)
 			{ // Emission times are stochastic. First emission time must be generated.
-				startTime = -generateExponential(1)/strength;
+				startTime = generateExponential(1)/strength;
 			} else
 			{ // Emission times are deterministic. First emission will be at start of interval
 				startTime = 0.;
@@ -1136,7 +1136,7 @@ void fireEmission(const struct actorStruct3D * actorCommon,
 		
 		// Next emission time must be generated
 		curRelease->item.nextTime +=
-			-generateExponential(1)/curRelease->item.strength;
+			generateExponential(1)/curRelease->item.strength;
 	} else
 	{
 		if(actorCommon->spec.bNumReleaseRand)

@@ -426,7 +426,7 @@ int main(int argc, char *argv[])
 
 			for(curZerothRxn = 0; curZerothRxn < regionArray[curRegion].numZerothRxn; curZerothRxn++)
 				regionArray[curRegion].tZeroth[curZerothRxn] =
-					-generateExponential(1)/regionArray[curRegion].rxnRateZerothMicro[curZerothRxn];
+					generateExponential(1)/regionArray[curRegion].rxnRateZerothMicro[curZerothRxn];
 		}
 		
 		//
@@ -721,7 +721,7 @@ int main(int argc, char *argv[])
 							}
 							
 							regionArray[i].tZeroth[curZerothRxn] +=
-								-generateExponential(1)/regionArray[i].rxnRateZerothMicro[curZerothRxn];
+								generateExponential(1)/regionArray[i].rxnRateZerothMicro[curZerothRxn];
 						}
 					}
 				}

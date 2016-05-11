@@ -465,7 +465,7 @@ double updateTotalProp(const double rxnProp[],
 double mesoSubCalcTime(struct mesoSubvolume3D mesoSubArray[],
 	const uint32_t ID)
 {
-	return -generateExponential(1) / mesoSubArray[ID].totalProp;
+	return generateExponential(1) / mesoSubArray[ID].totalProp;
 }
 
 // Build 2D array listing children of heap elements

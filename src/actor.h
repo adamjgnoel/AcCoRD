@@ -15,6 +15,7 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - made output of active actor data sequence a user option
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions
@@ -379,9 +380,11 @@ void initializeActorCommon(const short NUM_ACTORS,
 	const struct region regionArray[],
 	const short NUM_REGIONS,
 	short * NUM_ACTORS_ACTIVE,
+	short * numActiveRecord,
+	short ** activeRecordID,
 	short * NUM_ACTORS_PASSIVE,
-	short * numActorRecord,
-	short ** actorRecordID,
+	short * numPassiveRecord,
+	short ** passiveRecordID,
 	uint32_t **** subID,
 	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE);
@@ -419,7 +422,8 @@ void deleteActor(const short NUM_ACTORS,
 	struct actorActiveStruct3D actorActiveArray[],
 	const short NUM_ACTORS_PASSIVE,
 	struct actorPassiveStruct3D actorPassiveArray[],
-	short actorRecordID[]);
+	short passiveRecordID[],
+	short activeRecordID[]);
 
 // TODO: Move these release functions into a "higher" level file
 	

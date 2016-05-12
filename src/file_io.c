@@ -9,9 +9,12 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - made output of active actor data sequence a user option
  *
  * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
@@ -1344,6 +1347,17 @@ void loadConfig(const char * CONFIG_NAME,
 				cJSON_GetObjectItem(curObj, "Action Interval")->valuedouble;
 		}
 		
+		if(!cJSON_bItemValid(curObj,"Is Actor Activity Recorded?", cJSON_True))
+		{ // Actor does not have a valid Is Actor Activity Recorded?
+			bWarn = true;
+			printf("WARNING %d: Actor %d does not have a valid \"Is Actor Activity Recorded?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
+			curSpec->actorSpec[curArrayItem].bWrite = true;
+		} else
+		{
+			curSpec->actorSpec[curArrayItem].bWrite = 
+				cJSON_GetObjectItem(curObj, "Is Actor Activity Recorded?")->valueint;
+		}
+		
 		if(curSpec->actorSpec[curArrayItem].bActive)
 		{ // Actor is active. Check for all active parameters
 			if(!cJSON_bItemValid(curObj,"Random Number of Molecules?", cJSON_True))
@@ -1501,17 +1515,6 @@ void loadConfig(const char * CONFIG_NAME,
 			}
 		} else
 		{ // Actor is passive. Check for all passive parameters
-		
-			if(!cJSON_bItemValid(curObj,"Is Actor Activity Recorded?", cJSON_True))
-			{ // Actor does not have a valid Is Actor Activity Recorded?
-				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Is Actor Activity Recorded?\". Assigning default value \"true\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].bWrite = true;
-			} else
-			{
-				curSpec->actorSpec[curArrayItem].bWrite = 
-					cJSON_GetObjectItem(curObj, "Is Actor Activity Recorded?")->valueint;
-			}
 			
 			if(!cJSON_bItemValid(curObj,"Is Time Recorded with Activity?", cJSON_True))
 			{ // Actor does not have a valid Is Time Recorded with Activity?
@@ -1832,9 +1835,10 @@ void printOneTextRealization(FILE * out,
 	const struct simSpec3D curSpec,
 	unsigned int curRepeat,
 	ListObs3D observationArray[],
-	short numActorRecord,
-	short * actorRecordID,
-	short NUM_ACTORS_ACTIVE,
+	short numPassiveRecord,
+	short * passiveRecordID,
+	short numActiveRecord,
+	short * activeRecordID,
 	const struct actorStruct3D actorCommonArray[],
 	const struct actorActiveStruct3D actorActiveArray[],
 	const struct actorPassiveStruct3D actorPassiveArray[],	
@@ -1853,11 +1857,12 @@ void printOneTextRealization(FILE * out,
 	fprintf(out, "Realization %u:\n", curRepeat);
 	
 	// Record active actor binary data
-	for(curActorActive = 0; curActorActive < NUM_ACTORS_ACTIVE;
-		curActorActive++)
+	for(curActorRecord = 0; curActorRecord < numActiveRecord;
+		curActorRecord++)
 	{
+		curActor = activeRecordID[curActorRecord];
+		curActorActive = actorCommonArray[curActor].activeID;
 		curData =  actorActiveArray[curActorActive].binaryData.head;
-		curActor = actorActiveArray[curActorActive].actorID;
 		curActiveBits = 0;
 		fprintf(out, "\tActiveActor %u:\n\t\t", curActor);
 		while(curData != NULL)
@@ -1873,10 +1878,10 @@ void printOneTextRealization(FILE * out,
 	}
 	
 	// Record observations by passive actors that are being recorded
-	for(curActorRecord = 0; curActorRecord < numActorRecord; curActorRecord++)
+	for(curActorRecord = 0; curActorRecord < numPassiveRecord; curActorRecord++)
 	{
-		// Actor in common actor list is actorRecordID[curActorRecord]
-		curActor = actorRecordID[curActorRecord];
+		// Actor in common actor list is passiveRecordID[curActorRecord]
+		curActor = passiveRecordID[curActorRecord];
 		curObs = (&observationArray[curActorRecord])->head;
 		fprintf(out, "\tPassiveActor %u:\n", curActor);
 		
@@ -1955,12 +1960,13 @@ void printOneTextRealization(FILE * out,
 
 // Print end of simulation data
 void printTextEnd(FILE * out,	
-	short NUM_ACTORS_ACTIVE,
-	short numActorRecord,
+	short numActiveRecord,
+	short numPassiveRecord,
 	const struct actorStruct3D actorCommonArray[],
 	const struct actorActiveStruct3D actorActiveArray[],
 	const struct actorPassiveStruct3D actorPassiveArray[],
-	short * actorRecordID,
+	short * passiveRecordID,
+	short * activeRecordID,
 	uint32_t maxActiveBits[],
 	uint32_t maxPassiveObs[])
 {
@@ -1981,10 +1987,11 @@ void printTextEnd(FILE * out,
 	root = cJSON_CreateObject();
 	
 	// Store information about the active actors
-	cJSON_AddNumberToObject(root, "NumberActiveActor", NUM_ACTORS_ACTIVE);
+	cJSON_AddNumberToObject(root, "NumberActiveRecord", numActiveRecord);
 	cJSON_AddItemToObject(root, "ActiveInfo", curArray=cJSON_CreateArray());
-	for(curActor = 0; curActor < NUM_ACTORS_ACTIVE; curActor++)
+	for(curActorRecord = 0; curActorRecord < numActiveRecord; curActorRecord++)
 	{
+		curActor = activeRecordID[curActorRecord];
 		newActor = cJSON_CreateObject();
 		cJSON_AddNumberToObject(newActor, "ID",
 			actorActiveArray[curActor].actorID);
@@ -1994,11 +2001,11 @@ void printTextEnd(FILE * out,
 	}
 	
 	// Store information about the passive actors that were recorded
-	cJSON_AddNumberToObject(root, "NumberPassiveRecord", numActorRecord);	
+	cJSON_AddNumberToObject(root, "NumberPassiveRecord", numPassiveRecord);	
 	cJSON_AddItemToObject(root, "RecordInfo", curArray=cJSON_CreateArray());
-	for(curActorRecord = 0; curActorRecord < numActorRecord; curActorRecord++)
+	for(curActorRecord = 0; curActorRecord < numPassiveRecord; curActorRecord++)
 	{
-		curActor = actorRecordID[curActorRecord];
+		curActor = passiveRecordID[curActorRecord];
 		curPassive = actorCommonArray[curActor].passiveID;
 		newActor = cJSON_CreateObject();
 		// Record Passive Actor IDs that are being recorded

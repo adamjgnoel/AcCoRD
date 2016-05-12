@@ -15,6 +15,7 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - made output of active actor data sequence a user option
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated placement of molecules created by 0th order reactions when they are
@@ -97,7 +98,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v0.5.1 (2016-05-06)\n");
+	printf("Version LATEST_VERSION\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	
@@ -179,9 +180,10 @@ int main(int argc, char *argv[])
 	short NUM_ACTORS_ACTIVE, NUM_ACTORS_PASSIVE;
 	short curActor, curPassive, curActive;
 	unsigned short curMolPassive;
-	short numActorRecord, curActorRecord;
-	short curActorRecordID;
-	short * actorRecordID; // Array of IDs of actors whose observations are recorded
+	short numPassiveRecord, curPassiveRecord;
+	short numActiveRecord, curActiveRecord;
+	short * passiveRecordID; // Array of IDs of passive actors whose observations are recorded
+	short * activeRecordID; // Array of IDs of active actors whose observations are recorded
 						   // TODO: Should these IDs be from actor list or passive list?
 	
 	clock_t startTime, endTime; // Time record keeping
@@ -273,8 +275,9 @@ int main(int argc, char *argv[])
 	allocateActorCommonArray(spec.NUM_ACTORS, &actorCommonArray);
 	initializeActorCommon(spec.NUM_ACTORS, actorCommonArray,
 		spec.actorSpec,
-		regionArray, spec.NUM_REGIONS, &NUM_ACTORS_ACTIVE,
-		&NUM_ACTORS_PASSIVE, &numActorRecord, &actorRecordID,
+		regionArray, spec.NUM_REGIONS,
+		&NUM_ACTORS_ACTIVE, &numActiveRecord, &activeRecordID,
+		&NUM_ACTORS_PASSIVE, &numPassiveRecord, &passiveRecordID,
 		subID, subCoorInd, spec.SUBVOL_BASE_SIZE);
 	allocateActorActivePassiveArray(NUM_ACTORS_ACTIVE, &actorActiveArray,
 		NUM_ACTORS_PASSIVE, &actorPassiveArray);
@@ -297,18 +300,18 @@ int main(int argc, char *argv[])
 	// Create arrays to store the maximum number of bits of each
 	// active actor and each recorded passive actor.
 	// Will be appended to output file to assist importing into Matlab
-	uint32_t maxActiveBits[NUM_ACTORS_ACTIVE];
-	uint32_t maxPassiveObs[numActorRecord];
+	uint32_t maxActiveBits[numActiveRecord];
+	uint32_t maxPassiveObs[numPassiveRecord];
 	
 	// Create array of linked lists for recording actor observations
-	ListObs3D observationArray[numActorRecord];
-	for(curActor = 0; curActor < numActorRecord; curActor++)
+	ListObs3D observationArray[numPassiveRecord];
+	for(curActor = 0; curActor < numPassiveRecord; curActor++)
 	{
 		maxPassiveObs[curActor] = 0;
 		initializeListObs(&observationArray[curActor],
-			actorPassiveArray[actorCommonArray[actorRecordID[curActor]].passiveID].numMolRecordID);
+			actorPassiveArray[actorCommonArray[passiveRecordID[curActor]].passiveID].numMolRecordID);
 	}
-	for(curActor = 0; curActor < NUM_ACTORS_ACTIVE; curActor++)
+	for(curActor = 0; curActor < numActiveRecord; curActor++)
 	{
 		maxActiveBits[curActor] = 0;
 	}
@@ -451,13 +454,13 @@ int main(int argc, char *argv[])
 			heapTimerChildID, b_heapTimerChildValid);
 	
 		// Reset observation lists
-		for(curActor = 0; curActor < numActorRecord; curActor++)
+		for(curActor = 0; curActor < numPassiveRecord; curActor++)
 		{
 			if(!isListEmptyObs(&observationArray[curActor]))
 			{
 				emptyListObs(&observationArray[curActor]);
 				initializeListObs(&observationArray[curActor],
-					actorPassiveArray[actorCommonArray[actorRecordID[curActor]].passiveID].numMolRecordID);				
+					actorPassiveArray[actorCommonArray[passiveRecordID[curActor]].passiveID].numMolRecordID);				
 			}
 		}
 		
@@ -551,7 +554,7 @@ int main(int argc, char *argv[])
 					}
 					
 					curPassive = actorCommonArray[heapTimer[0]].passiveID;
-					curActorRecord = actorPassiveArray[curPassive].recordID;
+					curPassiveRecord = actorPassiveArray[curPassive].recordID;
 					for(curMolPassive = 0;
 						curMolPassive < actorPassiveArray[curPassive].numMolRecordID;
 						curMolPassive++)
@@ -643,9 +646,9 @@ int main(int argc, char *argv[])
 						} // Search over regions in actor
 					}
 					
-					if(curActorRecord < SHRT_MAX)
+					if(curPassiveRecord < SHRT_MAX)
 					{ // Add observation data to the observation list
-						addObservation(&observationArray[curActorRecord],
+						addObservation(&observationArray[curPassiveRecord],
 							((actorCommonArray[heapTimer[0]].spec.bRecordTime)? 1 : 0),
 							actorPassiveArray[curPassive].numMolRecordID,
 							&actorCommonArray[heapTimer[0]].nextTime,
@@ -973,7 +976,7 @@ int main(int argc, char *argv[])
 		
 		// Write realization observations to output file
 		printOneTextRealization(out, spec, curRepeat, observationArray,
-			numActorRecord, actorRecordID, NUM_ACTORS_ACTIVE,
+			numPassiveRecord, passiveRecordID, numActiveRecord, activeRecordID,
 			actorCommonArray, actorActiveArray, actorPassiveArray,
 			maxActiveBits, maxPassiveObs);
 		
@@ -999,9 +1002,9 @@ int main(int argc, char *argv[])
 	printf("Writing simulation summary file ...\n");
 	
 	// Print end time and info used to help Matlab importing
-	printTextEnd(outSummary, NUM_ACTORS_ACTIVE, numActorRecord, actorCommonArray,
+	printTextEnd(outSummary, numActiveRecord, numPassiveRecord, actorCommonArray,
 		actorActiveArray, actorPassiveArray,
-		actorRecordID, maxActiveBits, maxPassiveObs);
+		passiveRecordID, activeRecordID, maxActiveBits, maxPassiveObs);
 		
 	//
 	// STEP 6: Free Memory
@@ -1013,7 +1016,7 @@ int main(int argc, char *argv[])
 	if (fclose(outSummary) != 0)
 		fprintf(stderr,"ERROR: Could not close output summary file \"%s_summary.txt\".\n", spec.OUTPUT_NAME);
 	
-	for(curActor = 0; curActor < numActorRecord; curActor++)
+	for(curActor = 0; curActor < numPassiveRecord; curActor++)
 	{
 		if(!isListEmptyObs(&observationArray[curActor]))
 		{
@@ -1030,7 +1033,7 @@ int main(int argc, char *argv[])
 	}
 	deleteActor(spec.NUM_ACTORS, actorCommonArray, regionArray,
 		NUM_ACTORS_ACTIVE, actorActiveArray, NUM_ACTORS_PASSIVE, actorPassiveArray,
-		actorRecordID);
+		passiveRecordID, activeRecordID);
 	heapMesoDelete(numSub, heap_subvolID, heap_childID, b_heap_childValid);
 	heapTimerDelete(heapTimer, heapTimerChildID, b_heapTimerChildValid);
 	deleteTimerHeapArray(timerArray);
@@ -1041,6 +1044,6 @@ int main(int argc, char *argv[])
 	
 	deleteConfig(spec);
 	
-	printf("Done!");
+	printf("Done!\n\n");
 	return 0;
 }

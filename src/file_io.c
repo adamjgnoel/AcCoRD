@@ -16,6 +16,8 @@
  * Revision LATEST_VERSION
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
+ * - added warnings for unnecessary active actor parameters depending on values
+ * of other active actor parameters
  *
  * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
@@ -1440,6 +1442,11 @@ void loadConfig(const char * CONFIG_NAME,
 				}
 				
 				// Actor should not have a defined bit sequence
+				if(cJSON_bItemValid(curObj,"Bit Sequence", cJSON_Array))
+				{
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not need \"Bit Sequence\" defined. Ignoring.\n", numWarn++, curArrayItem);
+				}
 			} else
 			{ // Need sequence of bits to use
 				if(!cJSON_bItemValid(curObj,"Bit Sequence", cJSON_Array))
@@ -1449,22 +1456,11 @@ void loadConfig(const char * CONFIG_NAME,
 					curSpec->actorSpec[curArrayItem].bBits = NULL;
 					curSpec->actorSpec[curArrayItem].numMaxAction = 0;
 					curSpec->actorSpec[curArrayItem].bMaxAction = true;
+					arrayLen = 0;
 				} else
 				{ // Compare length of bit sequence with maximum number of actions
 					arrayLen =
 						cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Bit Sequence"));
-					if(curSpec->actorSpec[curArrayItem].bMaxAction &&
-						curSpec->actorSpec[curArrayItem].numMaxAction != arrayLen)
-					{ // Maximum length was defined but does not equal that specifed
-						bWarn = true;
-						printf("WARNING %d: Actor %d has a \"Bit Sequence\" with length %d but specified maximum is %d. Overriding maximum length to equal sequence length.\n",
-							numWarn++, curArrayItem, arrayLen, curSpec->actorSpec[curArrayItem].numMaxAction);
-						curSpec->actorSpec[curArrayItem].numMaxAction = arrayLen;
-					} else
-					{
-						curSpec->actorSpec[curArrayItem].bMaxAction = true;
-						
-					}
 					curSpec->actorSpec[curArrayItem].bBits = 
 						malloc(arrayLen * sizeof(bool));
 					
@@ -1479,7 +1475,7 @@ void loadConfig(const char * CONFIG_NAME,
 					{
 						if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number) ||
 							(cJSON_GetArrayItem(curObjInner,i)->valueint != 0 &&
-							(cJSON_GetArrayItem(curObjInner,i)->valueint != 1))
+							cJSON_GetArrayItem(curObjInner,i)->valueint != 1))
 						{
 							bWarn = true;
 							printf("WARNING %d: Bit %d in the sequence of actor %d has an invalid value %d. Setting to default value of \"0\".\n", numWarn++, i, curArrayItem, cJSON_GetArrayItem(curObjInner,i)->valueint);
@@ -1491,10 +1487,14 @@ void loadConfig(const char * CONFIG_NAME,
 						}
 					}
 				}
-			}
-		
-			
 				
+				// Actor should not have a defined bit probability
+				if(cJSON_bItemValid(curObj,"Probability of Bit 1", cJSON_Number))
+				{
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not need \"Probability of Bit 1\" defined. Ignoring.\n", numWarn++, curArrayItem);
+				}
+			}				
 		
 			if(!cJSON_bItemValid(curObj,"Modulation Scheme", cJSON_String))
 			{ // Actor does not have a defined Modulation Scheme
@@ -1528,6 +1528,29 @@ void loadConfig(const char * CONFIG_NAME,
 			{
 				curSpec->actorSpec[curArrayItem].modBits = 
 					cJSON_GetObjectItem(curObj, "Modulation Bits")->valueint;
+			}
+			
+			if(!curSpec->actorSpec[curArrayItem].bRandBits)
+			{ // Compare defined sequence length with number of actions and bits
+				if(arrayLen % curSpec->actorSpec[curArrayItem].modBits != 0)
+				{ // Sequence length does not accommodate number of modulation bits
+					bWarn = true;
+					printf("WARNING %d: Actor %d has a \"Bit Sequence\" with length %d but number of modulation bits is %d. Sequence has an insufficient number of bits for the last symbol, which will not be released.\n",
+						numWarn++, curArrayItem, arrayLen, curSpec->actorSpec[curArrayItem].modBits);
+				}
+				if(curSpec->actorSpec[curArrayItem].bMaxAction
+					&& curSpec->actorSpec[curArrayItem].numMaxAction
+					!= arrayLen / curSpec->actorSpec[curArrayItem].modBits)
+				{ // Sequence length does not correspond to maximum number of actions
+					bWarn = true;
+					printf("WARNING %d: Actor %d has a \"Bit Sequence\" with length %d but specified maximum number of actions is %d. Overriding maximum number of actions to correspond to bit sequence.\n",
+						numWarn++, curArrayItem, arrayLen, curSpec->actorSpec[curArrayItem].numMaxAction);
+					curSpec->actorSpec[curArrayItem].numMaxAction =
+						arrayLen / curSpec->actorSpec[curArrayItem].modBits;
+				} else
+				{
+					curSpec->actorSpec[curArrayItem].bMaxAction = true;
+				}
 			}
 		
 			if(!cJSON_bItemValid(curObj,"Modulation Strength", cJSON_Number) ||

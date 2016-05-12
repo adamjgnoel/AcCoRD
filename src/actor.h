@@ -297,6 +297,9 @@ struct actorActiveStruct3D { // Active actor parameters
 	// "Simulation" parameters (Determined at simulation time)
 	//
 	
+	// Current actor bit when sequence is defined by user (i.e., bRandBits == false)
+	uint32_t curBit;
+	
 	// Time for start of next NEW release by the actor (i.e., start of next symbol interval)
 	double nextNewReleaseTime;
 	

@@ -1543,14 +1543,14 @@ void loadConfig(const char * CONFIG_NAME,
 					!= arrayLen / curSpec->actorSpec[curArrayItem].modBits)
 				{ // Sequence length does not correspond to maximum number of actions
 					bWarn = true;
-					printf("WARNING %d: Actor %d has a \"Bit Sequence\" with length %d but specified maximum number of actions is %d. Overriding maximum number of actions to correspond to bit sequence.\n",
-						numWarn++, curArrayItem, arrayLen, curSpec->actorSpec[curArrayItem].numMaxAction);
-					curSpec->actorSpec[curArrayItem].numMaxAction =
-						arrayLen / curSpec->actorSpec[curArrayItem].modBits;
+					printf("WARNING %d: Actor %d has a \"Bit Sequence\" with length %d but specified maximum number of actions is %d. Overriding maximum number of actions to \"%u\".\n",
+						numWarn++, curArrayItem, arrayLen, curSpec->actorSpec[curArrayItem].numMaxAction, arrayLen / curSpec->actorSpec[curArrayItem].modBits);
 				} else
 				{
 					curSpec->actorSpec[curArrayItem].bMaxAction = true;
 				}
+				curSpec->actorSpec[curArrayItem].numMaxAction =
+					arrayLen / curSpec->actorSpec[curArrayItem].modBits;
 			}
 		
 			if(!cJSON_bItemValid(curObj,"Modulation Strength", cJSON_Number) ||

@@ -1473,7 +1473,8 @@ void loadConfig(const char * CONFIG_NAME,
 					curObjInner = cJSON_GetObjectItem(curObj,"Bit Sequence");
 					for(i = 0; i < arrayLen; i++)
 					{
-						if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number) ||
+						if(!(cJSON_bArrayItemValid(curObjInner,i, cJSON_Number) ||
+							cJSON_bArrayItemValid(curObjInner,i, cJSON_True)) ||
 							(cJSON_GetArrayItem(curObjInner,i)->valueint != 0 &&
 							cJSON_GetArrayItem(curObjInner,i)->valueint != 1))
 						{

@@ -30,7 +30,12 @@ function [data, config] = accord_import(fileName, seedRange, bWrite)
 %
 % Revision history:
 %
-% Revision LATEST_RELEASE
+% Revision LATEST_VERSION
+% - made output of active actor data sequence a user option. Accounted for
+% by changing how data.numActive is written
+% - removed call to sprintf within call to warning
+%
+% Revision v0.5 (2016-04-15)
 % - added bWrite input argument to control whether output is saved to
 % mat-file
 %
@@ -80,7 +85,7 @@ elseif exist(['../../config' data.configName], 'file')
     configFile = ['../../config' data.configName];
 	bFoundConfig = true;
 else
-	warning(sprintf('The original configuration file %s used to run the simulation cannot be found', data.configName));
+	warning('The original configuration file %s used to run the simulation cannot be found', data.configName);
 end
 
 if bFoundConfig
@@ -95,7 +100,7 @@ data.endTime = summary{2}.EndTime;
 data.numRepeatSingle = summary{1}.NumRepeat;
 data.numRepeat = summary{1}.NumRepeat * data.numSeed;
 
-data.numActive = summary{2}.NumberActiveActor;
+data.numActive = summary{2}.NumberActiveRecord;
 data.activeID = zeros(1,data.numActive);
 data.activeMaxBits = zeros(1,data.numActive); % Max # of bits in any realization
 activeBitStr = cell(1,data.numActive);

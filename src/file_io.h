@@ -9,9 +9,12 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - made output of active actor data sequence a user option
  *
  * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
@@ -133,9 +136,10 @@ void printOneTextRealization(FILE * out,
 	const struct simSpec3D curSpec,
 	unsigned int curRepeat,
 	ListObs3D observationArray[],
-	short numActorRecord,
-	short * actorRecordID,
-	short NUM_ACTORS_ACTIVE,
+	short numPassiveRecord,
+	short * passiveRecordID,
+	short numActiveRecord,
+	short * activeRecordID,
 	const struct actorStruct3D actorCommonArray[],
 	const struct actorActiveStruct3D actorActiveArray[],
 	const struct actorPassiveStruct3D actorPassiveArray[],	
@@ -143,12 +147,13 @@ void printOneTextRealization(FILE * out,
 	uint32_t maxPassiveObs[]);
 	
 void printTextEnd(FILE * out,	
-	short NUM_ACTORS_ACTIVE,
+	short numActiveRecord,
 	short numActorRecord,
 	const struct actorStruct3D actorCommonArray[],
 	const struct actorActiveStruct3D actorActiveArray[],
 	const struct actorPassiveStruct3D actorPassiveArray[],
-	short * actorRecordID,
+	short * passiveRecordID,
+	short * activeRecordID,
 	uint32_t maxActiveBits[],
 	uint32_t maxPassiveObs[]);
 

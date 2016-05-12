@@ -15,6 +15,7 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - made output of active actor data sequence a user option
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions
@@ -78,9 +79,11 @@ void initializeActorCommon(const short NUM_ACTORS,
 	const struct region regionArray[],
 	const short NUM_REGIONS,
 	short * NUM_ACTORS_ACTIVE,
+	short * numActiveRecord,
+	short ** activeRecordID,
 	short * NUM_ACTORS_PASSIVE,
-	short * numActorRecord,
-	short ** actorRecordID,
+	short * numPassiveRecord,
+	short ** passiveRecordID,
 	uint32_t **** subID,
 	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE)
@@ -94,8 +97,9 @@ void initializeActorCommon(const short NUM_ACTORS,
 	* NUM_ACTORS_ACTIVE = 0;
 	* NUM_ACTORS_PASSIVE = 0;
 	
-	* numActorRecord = 0;
-	short curActorRecord;
+	* numActiveRecord = 0;
+	* numPassiveRecord = 0;
+	short curPassiveRecord, curActiveRecord;
 	
 	// Used to find subvolumes inside actor
 	uint32_t cur1, cur2, cur3, first1, first2, first3, last1, last2, last3;
@@ -130,10 +134,12 @@ void initializeActorCommon(const short NUM_ACTORS,
 		if(actorCommonArray[curActor].spec.bActive)
 		{
 			actorCommonArray[curActor].activeID = (*NUM_ACTORS_ACTIVE)++;
+			if (actorCommonArray[curActor].spec.bWrite)
+				(*numActiveRecord)++;
 		} else{
 			actorCommonArray[curActor].passiveID = (*NUM_ACTORS_PASSIVE)++;
 			if (actorCommonArray[curActor].spec.bWrite)
-				(*numActorRecord)++;
+				(*numPassiveRecord)++;
 		}
 		
 		// Find number of regions within actor space
@@ -497,18 +503,26 @@ void initializeActorCommon(const short NUM_ACTORS,
 	}
 	
 	// Allocate memory for list of actors that record observations
-	*actorRecordID =
-		malloc((*numActorRecord)*sizeof(short));
-	if(*numActorRecord > 0 && *actorRecordID == NULL){
+	*passiveRecordID =
+		malloc((*numPassiveRecord)*sizeof(short));
+	*activeRecordID =
+		malloc((*numActiveRecord)*sizeof(short));
+	if((*numPassiveRecord > 0 && *passiveRecordID == NULL)
+		|| (*numActiveRecord > 0 && *activeRecordID == NULL)){
 		fprintf(stderr, "ERROR: Memory allocation for IDs of actors that will be recorded in the output file.\n");
 		exit(EXIT_FAILURE);
 	} else{ // There is at least one (passive) actor recording observations
-		curActorRecord = 0;
+		curPassiveRecord = 0;
+		curActiveRecord = 0;
 		for(curActor = 0; curActor < NUM_ACTORS; curActor++)
 		{
-			if(!actorCommonArray[curActor].spec.bActive
-				&& actorCommonArray[curActor].spec.bWrite)
-				(*actorRecordID)[curActorRecord++] = curActor;
+			if(actorCommonArray[curActor].spec.bWrite)
+			{
+				if(actorCommonArray[curActor].spec.bActive)
+					(*activeRecordID)[curActiveRecord++] = curActor;
+				else
+					(*passiveRecordID)[curPassiveRecord++] = curActor;
+			}
 		}
 	}
 }
@@ -561,7 +575,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 	int i; // loop index
 	short curActor, curActive, curPassive;
 	short curRegion, curInterRegion;
-	short curActorRecord;
+	short curPassiveRecord, curActiveRecord;
 	uint32_t curSub, curInterSub, gamma;
 	double curSubBound[6];
 	double curInterSubBound[6];
@@ -579,9 +593,16 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 		}
 	}
 	
+	curActiveRecord = 0;
 	for(curActive = 0; curActive < NUM_ACTORS_ACTIVE; curActive++)
 	{
 		curActor = actorActiveArray[curActive].actorID;
+		
+		if (actorCommonArray[curActor].spec.bWrite)
+		{
+			actorPassiveArray[curActive].recordID = curActiveRecord++;
+		}
+		
 		actorActiveArray[curActive].cumFracActorInSub =
 			malloc(actorCommonArray[curActor].numRegion*sizeof(double *));
 		actorActiveArray[curActive].molType =
@@ -664,7 +685,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 		}
 	}
 	
-	curActorRecord = 0;
+	curPassiveRecord = 0;
 	for(curPassive = 0; curPassive < NUM_ACTORS_PASSIVE; curPassive++)
 	{
 		curActor = actorPassiveArray[curPassive].actorID;
@@ -674,7 +695,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 		
 		if (actorCommonArray[curActor].spec.bWrite)
 		{
-			actorPassiveArray[curPassive].recordID = curActorRecord++;
+			actorPassiveArray[curPassive].recordID = curPassiveRecord++;
 			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
 			{
 				if (actorCommonArray[curActor].spec.bRecordMol[curMolType])
@@ -879,12 +900,16 @@ void deleteActor(const short NUM_ACTORS,
 	struct actorActiveStruct3D actorActiveArray[],
 	const short NUM_ACTORS_PASSIVE,
 	struct actorPassiveStruct3D actorPassiveArray[],
-	short actorRecordID[])
+	short passiveRecordID[],
+	short activeRecordID[])
 {
 	short curActor, curActive, curPassive;
 	short curInterRegion, curRegion;
 	
-	free(actorRecordID);
+	if(passiveRecordID != NULL)
+		free(passiveRecordID);
+	if(activeRecordID != NULL)
+		free(activeRecordID);
 	
 	if(actorActiveArray != NULL)
 	{		

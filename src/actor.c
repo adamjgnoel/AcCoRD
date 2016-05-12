@@ -16,6 +16,7 @@
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
+ * - added bBits array for user to define a constant active actor bit sequence
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions
@@ -879,6 +880,7 @@ void resetActors(const short NUM_ACTORS,
 		}
 		
 		// First action will be defining a new release and not the actual release of molecules
+		actorActiveArray[curActor].curBit = 0;
 		actorActiveArray[curActor].nextNewReleaseTime =
 			actorCommonArray[actorActiveArray[curActor].actorID].spec.startTime;
 		actorActiveArray[curActor].bNextActionNewRelease = true;
@@ -1049,7 +1051,22 @@ void newRelease(const struct actorStruct3D * actorCommon,
 			}
 		} else
 		{
-			// Bits are not random. Read from pre-determined list. TODO
+			// Bits are not random. Read from pre-determined list
+			if(actorCommon->spec.bBits[actorActive->curBit++])
+			{ // Bit is "1"
+				if(!addData(&newData, true))
+				{
+					fprintf(stderr,"ERROR: Memory allocation for new bit.\n");
+					exit(EXIT_FAILURE);
+				}
+			} else
+			{ // Bit is "0"
+				if(!addData(&newData, false))
+				{
+					fprintf(stderr,"ERROR: Memory allocation for new bit.\n");
+					exit(EXIT_FAILURE);
+				}
+			}
 		}
 	}
 	

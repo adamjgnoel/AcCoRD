@@ -16,6 +16,7 @@
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
+ * - added bBits array for user to define a constant active actor bit sequence
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions
@@ -114,6 +115,9 @@ struct actorStructSpec3D { // Configuration parameters
 	// Frequency of independent behavior (if bIndependent == true)
 	double actionInterval;
 	
+	// Record observations of actor to output file
+	bool bWrite;
+	
 	/*
 	*  Parameters for Active Actors
 	*/
@@ -132,8 +136,11 @@ struct actorStructSpec3D { // Configuration parameters
 	double slotInterval;
 	
 	// Is the actor activity defined by independent random bits?
-	// TODO: Need array for defined bits if bRandBits == FALSE
 	bool bRandBits;
+	
+	// Array of pre-defined bits
+	// Defined if bRandBits == FALSE
+	bool * bBits;
 	
 	// If bRandBits, what is the probability of one bit having value 1
 	double probOne;
@@ -158,9 +165,6 @@ struct actorStructSpec3D { // Configuration parameters
 	/*
 	*  Parameters for Passive Actors
 	*/
-	
-	// Record observations of actor to output file
-	bool bWrite;
 	
 	// Log observation time (if bWrite == true)
 	bool bRecordTime;

@@ -16,6 +16,7 @@
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
+ * - added bBits array for user to define a constant active actor bit sequence
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated call to bPointInRegionNotChild to not exclude surface regions

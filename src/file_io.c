@@ -15,6 +15,7 @@
  *
  * Revision LATEST_VERSION
  * - made output of active actor data sequence a user option
+ * - added option for user to define a constant active actor bit sequence
  *
  * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions
@@ -1322,6 +1323,11 @@ void loadConfig(const char * CONFIG_NAME,
 		} else
 		{
 			curSpec->actorSpec[curArrayItem].numMaxAction = 0;
+			if(cJSON_bItemValid(curObj,"Max Number of Actions", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Max Number of Actions\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
 		}
 		
 		if(!cJSON_bItemValid(curObj,"Is Actor Independent?", cJSON_True))
@@ -1406,7 +1412,6 @@ void loadConfig(const char * CONFIG_NAME,
 					cJSON_GetObjectItem(curObj, "Slot Interval")->valuedouble;
 			}
 			
-			/*
 			if(!cJSON_bItemValid(curObj,"Bits Random?", cJSON_True))
 			{ // Actor does not have a valid value for Bits Random?
 				bWarn = true;
@@ -1416,21 +1421,79 @@ void loadConfig(const char * CONFIG_NAME,
 			{
 				curSpec->actorSpec[curArrayItem].bRandBits = 
 					cJSON_GetObjectItem(curObj, "Bits Random?")->valueint;
-			}*/
-			curSpec->actorSpec[curArrayItem].bRandBits = true; // NOTE: CURRENTLY MUST BE TRUE
-		
-			if(!cJSON_bItemValid(curObj,"Probability of Bit 1", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble < 0. ||
-				cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble > 1.)
-			{ // Actor does not have a valid Action Interval
-				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Probability of Bit 1\". Assigning default value \"0.5\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].probOne = 0.5;
-			} else
-			{
-				curSpec->actorSpec[curArrayItem].probOne = 
-					cJSON_GetObjectItem(curObj, "Probability of Bit 1")->valuedouble;
 			}
+			
+			if(curSpec->actorSpec[curArrayItem].bRandBits)
+			{ // Bits are random. Need probability of bit being 1.
+		
+				if(!cJSON_bItemValid(curObj,"Probability of Bit 1", cJSON_Number) ||
+					cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble < 0. ||
+					cJSON_GetObjectItem(curObj,"Probability of Bit 1")->valuedouble > 1.)
+				{ // Actor does not have a valid Probability of Bit 1
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not have a valid \"Probability of Bit 1\". Assigning default value \"0.5\".\n", numWarn++, curArrayItem);
+					curSpec->actorSpec[curArrayItem].probOne = 0.5;
+				} else
+				{
+					curSpec->actorSpec[curArrayItem].probOne = 
+						cJSON_GetObjectItem(curObj, "Probability of Bit 1")->valuedouble;
+				}
+				
+				// Actor should not have a defined bit sequence
+			} else
+			{ // Need sequence of bits to use
+				if(!cJSON_bItemValid(curObj,"Bit Sequence", cJSON_Array))
+				{ // Actor does not have a valid Bit Sequence
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not have a valid \"Bit Sequence\". Setting Max Number of Actions to \"0\".\n", numWarn++, curArrayItem);
+					curSpec->actorSpec[curArrayItem].bBits = NULL;
+					curSpec->actorSpec[curArrayItem].numMaxAction = 0;
+					curSpec->actorSpec[curArrayItem].bMaxAction = true;
+				} else
+				{ // Compare length of bit sequence with maximum number of actions
+					arrayLen =
+						cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Bit Sequence"));
+					if(curSpec->actorSpec[curArrayItem].bMaxAction &&
+						curSpec->actorSpec[curArrayItem].numMaxAction != arrayLen)
+					{ // Maximum length was defined but does not equal that specifed
+						bWarn = true;
+						printf("WARNING %d: Actor %d has a \"Bit Sequence\" with length %d but specified maximum is %d. Overriding maximum length to equal sequence length.\n",
+							numWarn++, curArrayItem, arrayLen, curSpec->actorSpec[curArrayItem].numMaxAction);
+						curSpec->actorSpec[curArrayItem].numMaxAction = arrayLen;
+					} else
+					{
+						curSpec->actorSpec[curArrayItem].bMaxAction = true;
+						
+					}
+					curSpec->actorSpec[curArrayItem].bBits = 
+						malloc(arrayLen * sizeof(bool));
+					
+					if(curSpec->actorSpec[curArrayItem].bBits == NULL)
+					{
+						fprintf(stderr,"ERROR: Memory could not be allocated to store bit sequence of actor %d\n", curArrayItem);
+						exit(EXIT_FAILURE);
+					}
+					
+					curObjInner = cJSON_GetObjectItem(curObj,"Bit Sequence");
+					for(i = 0; i < arrayLen; i++)
+					{
+						if(!cJSON_bArrayItemValid(curObjInner,i, cJSON_Number) ||
+							(cJSON_GetArrayItem(curObjInner,i)->valueint != 0 &&
+							(cJSON_GetArrayItem(curObjInner,i)->valueint != 1))
+						{
+							bWarn = true;
+							printf("WARNING %d: Bit %d in the sequence of actor %d has an invalid value %d. Setting to default value of \"0\".\n", numWarn++, i, curArrayItem, cJSON_GetArrayItem(curObjInner,i)->valueint);
+							curSpec->actorSpec[curArrayItem].bBits[i] = false;
+						} else
+						{
+							curSpec->actorSpec[curArrayItem].bBits[i] =
+								cJSON_GetArrayItem(curObjInner,i)->valueint;
+						}
+					}
+				}
+			}
+		
+			
 				
 		
 			if(!cJSON_bItemValid(curObj,"Modulation Scheme", cJSON_String))
@@ -1684,6 +1747,9 @@ void deleteConfig(struct simSpec3D curSpec)
 			{
 				if(curSpec.actorSpec[curActor].bReleaseMol != NULL)
 					free(curSpec.actorSpec[curActor].bReleaseMol);
+				if(curSpec.actorSpec[curActor].bRandBits
+					&& curSpec.actorSpec[curActor].bBits != NULL)
+					free(curSpec.actorSpec[curActor].bBits);
 			} else
 			{
 				if(curSpec.actorSpec[curActor].bRecordMol != NULL)

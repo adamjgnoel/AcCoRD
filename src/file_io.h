@@ -15,6 +15,7 @@
  *
  * Revision LATEST_VERSION
  * - made output of active actor data sequence a user option
+ * - added option for user to define a constant active actor bit sequence
  *
  * Revision v0.5.1 (2016-05-06)
  * - added bReleaseProduct to chemical reaction. Applies to surface reactions

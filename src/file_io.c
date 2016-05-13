@@ -1771,7 +1771,7 @@ void deleteConfig(struct simSpec3D curSpec)
 			{
 				if(curSpec.actorSpec[curActor].bReleaseMol != NULL)
 					free(curSpec.actorSpec[curActor].bReleaseMol);
-				if(curSpec.actorSpec[curActor].bRandBits
+				if(!curSpec.actorSpec[curActor].bRandBits
 					&& curSpec.actorSpec[curActor].bBits != NULL)
 					free(curSpec.actorSpec[curActor].bBits);
 			} else
@@ -2086,7 +2086,7 @@ void printTextEnd(FILE * out,
 		cJSON_AddNumberToObject(newActor, "ID",
 			actorActiveArray[curActor].actorID);
 		cJSON_AddNumberToObject(newActor, "MaxBitLength",
-			maxActiveBits[curActor]);
+			maxActiveBits[curActorRecord]);
 		cJSON_AddItemToArray(curArray, newActor);
 	}
 	

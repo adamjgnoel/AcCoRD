@@ -15,6 +15,8 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
+ * i.e., when molecule is in micro at start and end of diffusion step.
  * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
@@ -131,6 +133,18 @@ void diffuseMolecules(const short NUM_REGIONS,
 void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
 
 void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF);
+
+// Did molecule enter mesoscopic region while diffusing?
+bool bEnterMesoIndirect(const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	const struct region regionArray[],
+	const short curType,
+	const short curRegion,
+	short * mesoRegion,
+	const double oldPoint[3],
+	const double newPoint[3],
+	uint32_t * newSub,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,

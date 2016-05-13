@@ -204,6 +204,9 @@ struct region { // Region boundary parameters
 	// Number of other regions that are a neighbor of this region
 	short numRegionNeigh;
 	
+	// Does a microscopic region have at least 1 mesoscopic neighbor?
+	bool bHasMesoNeigh;
+	
 	// IDs of regions that are neighbors. Length is value of numRegionNeigh
 	// TODO: Might not need
 	short * regionNeighID;
@@ -274,6 +277,11 @@ struct region { // Region boundary parameters
 	// is microscopic.
 	// Size is NUM_REGIONS x numSubRegionNeigh x boundSubNumFace x 3
 	double (*** boundVirtualNeighCoor)[3];
+	
+	// 3D array of directions of virtual subvolumes that neighbor each
+	// subvolume in current region
+	// Size is NUM_REGIONS x numSubRegionNeigh x boundSubNumFace
+	unsigned short *** boundVirtualNeighDir;
 	
 	// 2D array of booleans to indicate whether a boundary subvolume needs its
 	// propensities updated due to molecules entering from the microscopic regime.

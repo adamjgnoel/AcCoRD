@@ -15,6 +15,8 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
+ * i.e., when molecule is in micro at start and end of diffusion step.
  * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
@@ -134,6 +136,9 @@ void diffuseMolecules(const short NUM_REGIONS,
 	
 	bool bReaction;
 	unsigned short curRxn, curProd;
+
+	bool bSucked = false;
+	uint32_t minSub;
 	
 	// Indicate that every microscopic molecule in a "normal" list
 	// needs to be moved.
@@ -189,19 +194,76 @@ void diffuseMolecules(const short NUM_REGIONS,
 					newPoint[2] = curNode->item.z;
 								
 					bReaction = false;
+					bSucked = false;
 					if(validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
 						&newRegion, &transRegion, regionArray, curType, &bReaction,
 						false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn))
-					{
-						// Molecule is still within region and no further action is required
-						prevNode = curNode;
+					{ // Molecule is still within region and point did not change
+						
+						// Is region neighbor to any mesoscopic regions?
+						if(regionArray[curRegion].bHasMesoNeigh)
+						{ // Still need to check transition into one of these regions
+							
+							bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
+								regionArray,	 curType, curRegion, &newRegion, oldPoint, newPoint,
+								&minSub, DIFF_COEF);
+						}
+						
+						if(bSucked)
+						{
+							newSub = regionArray[newRegion].neighID[curRegion][minSub];
+							subvolArray[newSub].num_mol[curType]++;							
+							regionArray[newRegion].bNeedUpdate[curRegion][minSub] = true;
+							regionArray[newRegion].numMolFromMicro[curRegion][minSub][curType]++;
+							
+							removeItem(prevNode,curNode);
+							
+							if(prevNode == NULL)
+							{ // We removed first molecule in list.
+							  // nextNode is now the start of the list
+							  // (i.e., we must update pointer to list)
+							  p_list[curRegion][curType] = nextNode;
+							}
+						} else
+						{
+							// Molecule is still within region and no further action is required
+							prevNode = curNode;
+						}
 					} else
 					{
 						// newPoint tells us where to place a molecule in newRegion
 						if(newRegion == curRegion)
 						{ //just update molecule location
-							moveMolecule(&curNode->item, newPoint[0], newPoint[1], newPoint[2]);
-							prevNode = curNode;
+					
+							if(regionArray[curRegion].bHasMesoNeigh)
+							{ // Still need to check transition into one of these regions
+								
+								bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
+									regionArray,	 curType, curRegion, &newRegion, oldPoint, newPoint,
+									&minSub, DIFF_COEF);
+							}
+							
+							if(bSucked)
+							{
+								newSub = regionArray[newRegion].neighID[curRegion][minSub];
+								subvolArray[newSub].num_mol[curType]++;							
+								regionArray[newRegion].bNeedUpdate[curRegion][minSub] = true;
+								regionArray[newRegion].numMolFromMicro[curRegion][minSub][curType]++;
+								
+								removeItem(prevNode,curNode);
+								
+								if(prevNode == NULL)
+								{ // We removed first molecule in list.
+								  // nextNode is now the start of the list
+								  // (i.e., we must update pointer to list)
+								  p_list[curRegion][curType] = nextNode;
+								}
+							} else
+							{
+								// Molecule is still within region and no further action is required
+								moveMolecule(&curNode->item, newPoint[0], newPoint[1], newPoint[2]);
+								prevNode = curNode;
+							}
 						} else
 						{
 							// Molecule is now in a different region
@@ -305,6 +367,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 				// Once molecule is validated, we can proceed directly to transferring
 				// it to the relevant "normal" list and remove it from this list				
 				bReaction = false;
+				bSucked = false;
 				validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
 					&newRegion, &transRegion, regionArray, curType, &bReaction,
 					true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
@@ -333,11 +396,30 @@ void diffuseMolecules(const short NUM_REGIONS,
 								p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
 							}
 						}									
-					} else if(!addMolecule(&p_list[newRegion][curType],
-						newPoint[0], newPoint[1], newPoint[2]))
+					} else
 					{
-						fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
-						exit(EXIT_FAILURE);
+						if(regionArray[curRegion].bHasMesoNeigh)
+						{ // Still need to check transition into one of these regions
+							
+							bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
+								regionArray,	 curType, newRegion, &newRegion, oldPoint, newPoint,
+								&minSub, DIFF_COEF);
+						} else
+							bSucked = false;
+							
+						if(bSucked)
+						{
+							newSub = regionArray[newRegion].neighID[curRegion][minSub];
+							subvolArray[newSub].num_mol[curType]++;							
+							regionArray[newRegion].bNeedUpdate[curRegion][minSub] = true;
+							regionArray[newRegion].numMolFromMicro[curRegion][minSub][curType]++;
+							
+						} else if(!addMolecule(&p_list[newRegion][curType],
+							newPoint[0], newPoint[1], newPoint[2]))
+						{
+							fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
+							exit(EXIT_FAILURE);
+						}
 					}
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
@@ -392,6 +474,183 @@ void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF)
 	molecule->x = generateNormal(molecule->x, sigma);
 	molecule->y = generateNormal(molecule->y, sigma);
 	molecule->z = generateNormal(molecule->z, sigma);
+}
+
+// Did molecule enter mesoscopic region while diffusing?
+bool bEnterMesoIndirect(const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	const struct region regionArray[],
+	const short curType,
+	const short curRegion,
+	short *mesoRegion,
+	const double oldPoint[3],
+	const double newPoint[3],
+	uint32_t * newSub,
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+{
+	double minDistSq, curDistSq, initDist, finalDist, minDist, curProb;
+	short curNeigh, newRegion;
+	unsigned short curFace, minFace;
+	uint32_t curSub, minSub, numSub;
+	uint32_t nearestSub;
+	
+	for(curNeigh = 0; curNeigh < regionArray[curRegion].numRegionNeigh; curNeigh++)
+	{
+		newRegion = regionArray[curRegion].regionNeighID[curNeigh];
+		if(regionArray[newRegion].spec.bMicro)
+			continue; // Only need to check mesoscopic neighbors
+										
+		// Find closest subvolume in this neighbor to starting point
+		numSub = regionArray[newRegion].numSubRegionNeigh[curRegion];
+		minDistSq = INFINITY;								
+		for(curSub = 0; curSub < numSub; curSub++)
+		{
+			curDistSq = (oldPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][curSub][0])
+				*(oldPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][curSub][0]);
+			if (curDistSq > minDistSq)
+				continue; // No need to check y-coordinate
+			
+			curDistSq += (oldPoint[1] -
+				regionArray[newRegion].boundSubCoor[curRegion][curSub][1])
+				*(oldPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][curSub][1]);
+			if (curDistSq > minDistSq)
+				continue; // No need to check z-coordinate
+			
+			curDistSq += (oldPoint[2] -
+				regionArray[newRegion].boundSubCoor[curRegion][curSub][2])
+				*(oldPoint[2] - regionArray[newRegion].boundSubCoor[curRegion][curSub][2]);
+			
+			if(curDistSq < minDistSq)
+			{ // This subvolume is the closest so far
+				minSub = curSub;
+				minDistSq = curDistSq;
+			}
+		}
+		
+		// Determine "shortest" distance from molecule to subvolume surface
+		minDist = INFINITY;
+		for(curFace = 0;
+			curFace < regionArray[newRegion].boundSubNumFace[curRegion][minSub];
+			curFace++)
+		{
+			switch(regionArray[newRegion].boundVirtualNeighDir[curRegion][minSub][curFace])
+			{
+				case LEFT:
+					initDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
+						- regionArray[newRegion].actualSubSize/2 - oldPoint[0];
+					break;
+				case RIGHT:
+					initDist = oldPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
+						- regionArray[newRegion].actualSubSize/2;
+					break;
+				case DOWN:
+					initDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
+						- regionArray[newRegion].actualSubSize/2 - oldPoint[1];
+					break;
+				case UP:
+					initDist = oldPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
+						- regionArray[newRegion].actualSubSize/2;
+					break;
+				case IN:
+					initDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
+						- regionArray[newRegion].actualSubSize/2 - oldPoint[2];
+					break;
+				case OUT:
+					initDist = oldPoint[2] - regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
+						- regionArray[newRegion].actualSubSize/2;
+					break;
+			}
+			
+			if(initDist < minDist)
+			{
+				minDist = initDist;
+				minFace = curFace;
+			}
+		}
+		
+		// Find closest subvolume in this neighbor to final point
+		numSub = regionArray[newRegion].numSubRegionNeigh[curRegion];
+		minDistSq = INFINITY;								
+		for(curSub = 0; curSub < numSub; curSub++)
+		{
+			curDistSq = (newPoint[0] -
+				regionArray[newRegion].boundSubCoor[curRegion][curSub][0])
+				*(newPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][curSub][0]);
+			if (curDistSq > minDistSq)
+				continue; // No need to check y-coordinate
+			
+			curDistSq += (newPoint[1] -
+				regionArray[newRegion].boundSubCoor[curRegion][curSub][1])
+				*(newPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][curSub][1]);
+			if (curDistSq > minDistSq)
+				continue; // No need to check z-coordinate
+			
+			curDistSq += (newPoint[2] -
+				regionArray[newRegion].boundSubCoor[curRegion][curSub][2])
+				*(newPoint[2] -
+				regionArray[newRegion].boundSubCoor[curRegion][curSub][2]);
+			
+			if(curDistSq < minDistSq)
+			{ // This subvolume is the closest so far
+				minSub = curSub;
+				minDistSq = curDistSq;
+			}
+		}
+		
+		// Determine "shortest" distance from molecule to subvolume surface
+		minDist = INFINITY;
+		for(curFace = 0;
+			curFace < regionArray[newRegion].boundSubNumFace[curRegion][minSub];
+			curFace++)
+		{
+			switch(regionArray[newRegion].boundVirtualNeighDir[curRegion][minSub][curFace])
+			{
+				case LEFT:
+					finalDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
+						- regionArray[newRegion].actualSubSize/2 - newPoint[0];
+					break;
+				case RIGHT:
+					finalDist = newPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
+						- regionArray[newRegion].actualSubSize/2;
+					break;
+				case DOWN:
+					finalDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
+						- regionArray[newRegion].actualSubSize/2 - newPoint[1];
+					break;
+				case UP:
+					finalDist = newPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
+						- regionArray[newRegion].actualSubSize/2;
+					break;
+				case IN:
+					finalDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
+						- regionArray[newRegion].actualSubSize/2 - newPoint[2];
+					break;
+				case OUT:
+					finalDist = newPoint[2] - regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
+						- regionArray[newRegion].actualSubSize/2;
+					break;
+			}
+			
+			if(finalDist < minDist)
+			{
+				minDist = finalDist;
+				minFace = curFace;
+			}
+		}
+		
+		
+		// Test probability of entering region
+		curProb = exp(-initDist*
+			finalDist/DIFF_COEF[curRegion][curType]/regionArray[curRegion].spec.dt);
+		if(generateUniform()<curProb)
+		{ // Molecule enters Meso region
+			*mesoRegion = newRegion;
+			*newSub = minSub;
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 // Check first order reactions for all molecules in list

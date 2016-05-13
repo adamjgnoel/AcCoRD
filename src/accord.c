@@ -14,6 +14,8 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - improved placement of molecules from mesoscopic regime into microscopic regime, using
+ * method for small time steps
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
  *
@@ -88,6 +90,8 @@ int main(int argc, char *argv[])
 	double tCur; 				// Current overall simulation time
 	double tMeso, tMicro; 		// MESO and MICRO regime simulation times
 	double point[3];				// Coordinates of new micro molecules created by 0th order rxn
+	double curRand;			// Uniform RV generated for MESO to MICRO transition
+	double randCoor[3];			// Random relative coordinates for MESO to MICRO transition
 	bool bNeedPoint;			// Need to keep looking for a valid micro location
 	
 	// Timer and progress variables
@@ -888,8 +892,9 @@ int main(int argc, char *argv[])
 							curSub);
 						
 						if(curBoundSub < UINT32_MAX)
-						{
-							// Add new molecule to random location next to source subvolume
+						{ // Add new molecule to random location next to source subvolume
+					
+							// Determine direction that new molecule should be placed
 							if(regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub] > 0)
 							{
 								// More than one face of this subvolume faces this micro region
@@ -897,13 +902,91 @@ int main(int argc, char *argv[])
 									regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub]);
 							} else
 								faceDir = 0;
+							
+							curRand = generateUniform();
+							randCoor[0] = regionArray[curRegion].actualSubSize/2 +
+								sqrt(2*DIFF_COEF[curRegion][curMolType]*regionArray[curRegion].spec.dt)*
+								(0.729614*curRand - 0.70252*curRand*curRand)/
+								(1 - 1.47494*curRand + 0.484371*curRand*curRand);
+							//randCoor[0] = regionArray[curRegion].actualSubSize/2 + regionArray[curRegion].actualSubSize*generateUniform();
+							randCoor[1] = regionArray[curRegion].actualSubSize*generateUniform();
+							randCoor[2] = regionArray[curRegion].actualSubSize*generateUniform();				
+							// Determine coordinates of new molecule in microscopic region
+							switch(regionArray[curRegion].boundVirtualNeighDir[destRegion][curBoundSub][faceDir])
+							{
+								case LEFT:
+									point[0] =
+										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+										- randCoor[0];
+									point[1] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
+										+randCoor[1];
+									point[2] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
+										+randCoor[2];
+									break;
+								case RIGHT:
+									point[0] =
+										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+										+ randCoor[0];
+									point[1] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
+										+randCoor[1];
+									point[2] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
+										+randCoor[2];
+									break;
+								case DOWN:
+									point[1] =
+										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1]
+										- randCoor[0];
+									point[0] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
+										+ randCoor[1];
+									point[2] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
+										+ randCoor[2];
+									break;
+								case UP:
+									point[1] =
+										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1]
+										+ randCoor[0];
+									point[0] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
+										+ randCoor[1];
+									point[2] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
+										+ randCoor[2];
+									break;
+								case IN:
+									point[2] =
+										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+										- randCoor[0];
+									point[0] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
+										+ randCoor[1];
+									point[1] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
+										+ randCoor[2];
+									break;
+								case OUT:
+									point[2] =
+										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+										+ randCoor[0];
+									point[0] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
+										+ randCoor[1];
+									point[1] =
+										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
+										+ randCoor[2];
+									break;
+								default:
+									fprintf(stderr,"ERROR: Invalid direction defined for subvolume in region %u having virtual subvolume neighbor in region %u.\n",
+									curRegion, destRegion);
+									exit(EXIT_FAILURE);
+							}
 							if(!addMoleculeRecent(&microMolListRecent[destRegion][curMolType],
-								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-								+regionArray[curRegion].actualSubSize*generateUniform(),
-								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-								+regionArray[curRegion].actualSubSize*generateUniform(),
-								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-								+regionArray[curRegion].actualSubSize*generateUniform(), tMicro - tCur))
+								point[0], point[1], point[2], regionArray[curRegion].spec.dt))
 							{ // Creation of molecule failed
 								fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
 									curMolType, curRegion, destRegion);

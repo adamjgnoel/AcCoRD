@@ -10,9 +10,13 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added members to track the direction of microscopic subvolumes from mesoscopic
+ * subvolumes
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated function bPointInRegionNotChild to take an extra input to indicate
@@ -207,6 +211,7 @@ void initializeRegionArray(struct region regionArray[],
 			
 		regionArray[i].numChildren = 0;
 		regionArray[i].subResolution = SUBVOL_BASE_SIZE * SUB_ADJ_RESOLUTION;
+		regionArray[i].bHasMesoNeigh = false;
 		
 		// Calculate diffusion rates within region
 		if(!regionArray[i].spec.bMicro)
@@ -285,6 +290,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 			malloc(NUM_REGIONS * sizeof(regionArray[i].boundSubCoor));
 		regionArray[i].boundVirtualNeighCoor =
 			malloc(NUM_REGIONS * sizeof(regionArray[i].boundVirtualNeighCoor));
+		regionArray[i].boundVirtualNeighDir =
+			malloc(NUM_REGIONS * sizeof(regionArray[i].boundVirtualNeighDir));
 		regionArray[i].bNeedUpdate =
 			malloc(NUM_REGIONS * sizeof(regionArray[i].bNeedUpdate));
 		regionArray[i].numMolFromMicro =
@@ -293,6 +300,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 			|| regionArray[i].boundSubNumFace == NULL
 			|| regionArray[i].boundSubCoor == NULL
 			|| regionArray[i].boundVirtualNeighCoor == NULL
+			|| regionArray[i].boundVirtualNeighDir == NULL
 			|| regionArray[i].bNeedUpdate == NULL
 			|| regionArray[i].numMolFromMicro == NULL)
 		{
@@ -337,6 +345,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 						  // We could reach here if a surface region prevents all possible
 						  // subvolumes from being neighbors
 			
+			regionArray[j].bHasMesoNeigh = true;
+			
 			regionArray[i].neighID[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(uint32_t));
 			regionArray[i].boundSubNumFace[j] = malloc(regionArray[i].numSubRegionNeigh[j]
@@ -345,6 +355,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				* sizeof(double [3]));
 			regionArray[i].boundVirtualNeighCoor[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(regionArray[i].boundVirtualNeighCoor[j]));
+			regionArray[i].boundVirtualNeighDir[j] = malloc(regionArray[i].numSubRegionNeigh[j]
+				* sizeof(regionArray[i].boundVirtualNeighDir[j]));
 			regionArray[i].bNeedUpdate[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(bool));
 			regionArray[i].numMolFromMicro[j] = malloc(regionArray[i].numSubRegionNeigh[j]
@@ -353,6 +365,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				|| regionArray[i].boundSubNumFace[j] == NULL
 				|| regionArray[i].boundSubCoor[j] == NULL
 				|| regionArray[i].boundVirtualNeighCoor[j] == NULL
+				|| regionArray[i].boundVirtualNeighDir[j] == NULL
 				|| regionArray[i].bNeedUpdate[j] == NULL
 				|| regionArray[i].numMolFromMicro[j] == NULL)
 			{
@@ -397,7 +410,11 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 					regionArray[i].boundVirtualNeighCoor[j][curBoundID] =
 						malloc(regionArray[i].boundSubNumFace[j][curBoundID]
 						* sizeof(double [3]));
-					if(regionArray[i].boundVirtualNeighCoor[j][curBoundID] == NULL)
+					regionArray[i].boundVirtualNeighDir[j][curBoundID] =
+						malloc(regionArray[i].boundSubNumFace[j][curBoundID]
+						* sizeof(unsigned short));
+					if(regionArray[i].boundVirtualNeighCoor[j][curBoundID] == NULL
+						|| regionArray[i].boundVirtualNeighDir[j][curBoundID] == NULL)
 					{
 						fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s neighbor parameters with region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 						exit(EXIT_FAILURE);
@@ -424,6 +441,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[2];
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
 									curSubBound[4];
+								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = LEFT;
 								break;
 							case RIGHT: // New molecule goes to upper x
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
@@ -432,6 +450,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[2];
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
 									curSubBound[4];
+								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = RIGHT;
 								break;
 							case DOWN: // New molecule goes to lower y
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
@@ -440,6 +459,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[2] - regionArray[i].actualSubSize;
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
 									curSubBound[4];
+								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = DOWN;
 								break;
 							case UP: // New molecule goes to upper y
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
@@ -448,6 +468,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[2] + regionArray[i].actualSubSize;
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
 									curSubBound[4];
+								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = UP;
 								break;
 							case IN: // New molecule goes to lower z
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
@@ -456,6 +477,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[2];
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
 									curSubBound[4] - regionArray[i].actualSubSize;
+								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = IN;
 								break;
 							case OUT: // New molecule goes to upper z
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
@@ -464,6 +486,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 									curSubBound[2];
 								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
 									curSubBound[4] + regionArray[i].actualSubSize;
+								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = OUT;
 								break;
 							default:
 								fprintf(stderr, "ERROR: Invalid neighbor direction determined for neighboring regions %u and %u.\n", i, j);
@@ -544,7 +567,9 @@ void delete_boundary_region_(const short NUM_REGIONS,
 				{
 					if(regionArray[i].numMolFromMicro[j][k] != NULL) free(regionArray[i].numMolFromMicro[j][k]);
 					if(regionArray[i].boundVirtualNeighCoor[j][k] != NULL)	
-						free(regionArray[i].boundVirtualNeighCoor[j][k]);						
+						free(regionArray[i].boundVirtualNeighCoor[j][k]);
+					if(regionArray[i].boundVirtualNeighDir[j][k] != NULL)	
+						free(regionArray[i].boundVirtualNeighDir[j][k]);
 				}
 				if(regionArray[i].numMolFromMicro[j] != NULL)
 					free(regionArray[i].numMolFromMicro[j]);
@@ -555,12 +580,15 @@ void delete_boundary_region_(const short NUM_REGIONS,
 					free(regionArray[i].boundSubCoor[j]);
 				if(regionArray[i].boundVirtualNeighCoor[j] != NULL)	
 					free(regionArray[i].boundVirtualNeighCoor[j]);
+				if(regionArray[i].boundVirtualNeighDir[j] != NULL)	
+					free(regionArray[i].boundVirtualNeighDir[j]);
 				if(regionArray[i].bNeedUpdate[j] != NULL) free(regionArray[i].bNeedUpdate[j]);
 			}
 			if(regionArray[i].neighID != NULL) free(regionArray[i].neighID);
 			if(regionArray[i].boundSubNumFace != NULL) free(regionArray[i].boundSubNumFace);
 			if(regionArray[i].boundSubCoor != NULL) free(regionArray[i].boundSubCoor);
 			if(regionArray[i].boundVirtualNeighCoor != NULL) free(regionArray[i].boundVirtualNeighCoor);
+			if(regionArray[i].boundVirtualNeighDir != NULL) free(regionArray[i].boundVirtualNeighDir);
 			if(regionArray[i].bNeedUpdate != NULL) free(regionArray[i].bNeedUpdate);
 			if(regionArray[i].numMolFromMicro != NULL) free(regionArray[i].numMolFromMicro);
 		}

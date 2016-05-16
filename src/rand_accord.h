@@ -42,6 +42,9 @@ void rngInitialize(const uint32_t SEED);
 // Return a uniform random number between 0 and 1 INCLUSIVE
 double generateUniform();
 
+// Return a triangular random number
+double generateTriangular();
+
 // Return a normal random number
 double generateNormal(const double mean,
 	const double variance);

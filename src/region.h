@@ -10,9 +10,17 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added members to track the direction of microscopic subvolumes from mesoscopic
+ * subvolumes. Replaced array for storing coordinates of virtual microscopic
+ * subvolume with array of boundary coordinates of boundary mesoscopic subvolumes. These
+ * changes needed to accommodate improved hybrid transition algorithms
+ * - changed findNearestSub function to return index of subvolume in region's neighID array
+ * instead of the global subvolume list. This makes function suitable for more calls.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated function bPointInRegionNotChild to take an extra input to indicate
@@ -204,6 +212,9 @@ struct region { // Region boundary parameters
 	// Number of other regions that are a neighbor of this region
 	short numRegionNeigh;
 	
+	// Does a microscopic region have at least 1 mesoscopic neighbor?
+	bool bHasMesoNeigh;
+	
 	// IDs of regions that are neighbors. Length is value of numRegionNeigh
 	// TODO: Might not need
 	short * regionNeighID;
@@ -266,14 +277,17 @@ struct region { // Region boundary parameters
 	// 2D array of subvolume coordinates for subvolumes in current region that
 	// border each neighbour. Only needed if region is mesoscopic and neighbor
 	// is microscopic. Size is NUM_REGIONS x numSubRegionNeigh x 3
-	double (** boundSubCoor)[3];
+	double (** boundSubCenterCoor)[3];
 	
-	// 3D array of virtual subvolume anchor coordinates associated with each
-	// subvolume in current region that borders each neighbor.	
-	// Only needed if region is mesoscopic and neighbor
-	// is microscopic.
-	// Size is NUM_REGIONS x numSubRegionNeigh x boundSubNumFace x 3
-	double (*** boundVirtualNeighCoor)[3];
+	// 2D array of subvolume boundary coordinates for subvolumes in current region that
+	// border each neighbour. Only needed if region is mesoscopic and neighbor
+	// is microscopic. Size is NUM_REGIONS x numSubRegionNeigh x 6
+	double (** boundSubCoor)[6];
+	
+	// 3D array of directions of virtual subvolumes that neighbor each
+	// subvolume in current region
+	// Size is NUM_REGIONS x numSubRegionNeigh x boundSubNumFace
+	unsigned short *** boundVirtualNeighDir;
 	
 	// 2D array of booleans to indicate whether a boundary subvolume needs its
 	// propensities updated due to molecules entering from the microscopic regime.

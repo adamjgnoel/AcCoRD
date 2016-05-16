@@ -8,9 +8,10 @@
 	The definition of the actors is a blend of absolute (defined by geometry) and
 	relative (defined by list of regions).
 	In this version, regions are a blend of mesoscopic and microscopic. This version
-	is measurably less accurate than the all-microscopic and all-mesoscopic versions, since
-	the microscopic time step has not been optimized and the current transition rules across
-	the hybrid interface are simplistic.",
+	is measurably less accurate than the all-microscopic and all-mesoscopic versions, due to
+	the limitations in accuracy across hybrid interfaces. Furthermore, the hybrid interfaces
+	here are particularly asymmetric with multiple close transitions between the 2 regimes.
+	A better example configuration with a hybrid interface is 'accord_config_sample_hybrid.txt'.",
 	"Output Filename": "accord_sample_all_shapes_hybrid",
 	"Warning Override": false,
 	"Simulation Control": {
@@ -18,7 +19,9 @@
 		"Final Simulation Time": 1,
 		"Global Microscopic Time Step": 1e-3,
 		"Random Number Seed": 1,
-		"Max Number of Progress Updates": 100
+		"Max Number of Progress Updates": 100,
+		"Small Subvolumes at Hybrid Interface?": true,
+		"Max Intrastep Micro to Meso Distance": 10e-6
 	},
 	"Chemical Properties": {
 		"Number of Molecule Types": 2,

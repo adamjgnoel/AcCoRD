@@ -36,6 +36,18 @@ double generateUniform()
 	return (double) pcg32_random()/UINT32_MAX;
 }
 
+// Return a triangular random number
+// Value will be in range [0,2]
+double generateTriangular()
+{
+	double uniRV = (double) pcg32_random()/UINT32_MAX;
+	
+	if(uniRV < 0.5)
+		return sqrt(2*uniRV);
+	else
+		return (2-sqrt(2*(1-uniRV)));
+}
+
 // Return a normal random number via Box-Muller transform
 // Transform will generate 2 normal RVs; 1 is kept to return in the following call
 double generateNormal(const double mean,

@@ -14,6 +14,9 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - improved placement of molecules from mesoscopic regime into microscopic regime. User
+ * can choose between small time step / large subvolume or large time step / small subvolume
+ * algorithms via config. Actual placement moved to function in micro_molecule source file
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
  *
@@ -88,6 +91,8 @@ int main(int argc, char *argv[])
 	double tCur; 				// Current overall simulation time
 	double tMeso, tMicro; 		// MESO and MICRO regime simulation times
 	double point[3];				// Coordinates of new micro molecules created by 0th order rxn
+	double curRand;			// Uniform RV generated for MESO to MICRO transition
+	double randCoor[3];			// Random relative coordinates for MESO to MICRO transition
 	bool bNeedPoint;			// Need to keep looking for a valid micro location
 	
 	// Timer and progress variables
@@ -802,7 +807,7 @@ int main(int argc, char *argv[])
 				// 2 sets of molecule lists into 1
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
 					microMolListRecent, regionArray, mesoSubArray, subvolArray,
-					micro_sigma, spec.chem_rxn, DIFF_COEF);
+					micro_sigma, spec.chem_rxn, spec.MAX_HYBRID_DIST, DIFF_COEF);
 				
 				
 				if(numMesoSub > 0)
@@ -878,7 +883,7 @@ int main(int argc, char *argv[])
 					if(regionArray[subvolArray[destSub].regionID].spec.bMicro)
 					{ // Destination is in a microscopic region				
 						// Coordinates of source subvolume are "somewhere" in
-						// regionArray[curRegion].boundSubCoor[destRegion][curBoundSub]
+						// regionArray[curRegion].boundSubCenterCoor[destRegion][curBoundSub]
 						// curBoundSub found by searching
 						// curSub == regionArray[curRegion].neighID[destRegion][]
 						
@@ -888,27 +893,12 @@ int main(int argc, char *argv[])
 							curSub);
 						
 						if(curBoundSub < UINT32_MAX)
-						{
-							// Add new molecule to random location next to source subvolume
-							if(regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub] > 0)
-							{
-								// More than one face of this subvolume faces this micro region
-								faceDir = (unsigned short) floor(generateUniform()*
-									regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub]);
-							} else
-								faceDir = 0;
-							if(!addMoleculeRecent(&microMolListRecent[destRegion][curMolType],
-								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-								+regionArray[curRegion].actualSubSize*generateUniform(),
-								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-								+regionArray[curRegion].actualSubSize*generateUniform(),
-								regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-								+regionArray[curRegion].actualSubSize*generateUniform(), tMicro - tCur))
-							{ // Creation of molecule failed
-								fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
-									curMolType, curRegion, destRegion);
-								exit(EXIT_FAILURE);
-							}
+						{ // Add new molecule to random location next to source subvolume
+					
+							placeInMicroFromMeso(curRegion, destRegion, regionArray,
+								curBoundSub, spec.B_HYBRID_SMALL_SUB, curMolType,
+								&microMolListRecent[destRegion][curMolType],
+								DIFF_COEF[curRegion][curMolType]);
 						} else
 						{
 							// Error

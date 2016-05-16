@@ -14,6 +14,12 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - added option for user to select small subvolume or big subvolume assumption
+ * at hybrid interfaces. Only needed if there is at least 1 microscopic and 1
+ * mesoscopic region defined.
+ * - added option for user to choose maximum distance beyond which a micro to mesoscopic
+ * substep transition will not be considered (either initial or final point should be beyond
+ * this distance)
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
  * - added warnings for unnecessary active actor parameters depending on values
@@ -92,7 +98,9 @@ void loadConfig(const char * CONFIG_NAME,
 	int ch;
 	size_t temp; // Garbage variable for discarded file content length
 	int minSubDim = 0; // Minimum # of subvolumes along each dimension for a rectangular region
-	bool bNeedReleaseType;
+	bool bNeedReleaseType; // For surface reaction, does user need to specify what happens to products?
+	bool bHasMicro = false; // There is at least one microscopic region
+	bool bHasMeso = false; // There is at least one mesoscopic region
 	
 	// Construct full name of configuration file
 	nameLength = strlen(CONFIG_NAME);
@@ -992,6 +1000,12 @@ void loadConfig(const char * CONFIG_NAME,
 					cJSON_GetObjectItem(curObj, "Is Region Microscopic?")->valueint;
 			}
 			
+			// Track whether we need might need to consider hybrid interfaces
+			if(curSpec->subvol_spec[curArrayItem].bMicro)
+				bHasMicro = true;
+			else
+				bHasMeso = true;
+			
 			if(curSpec->subvol_spec[curArrayItem].shape == RECTANGLE)
 				minSubDim = 0;
 			else
@@ -1060,6 +1074,7 @@ void loadConfig(const char * CONFIG_NAME,
 		{
 			curSpec->subvol_spec[curArrayItem].sizeRect = 0;
 			curSpec->subvol_spec[curArrayItem].bMicro = true;
+			bHasMicro = true;
 			curSpec->subvol_spec[curArrayItem].numX = 1;
 			curSpec->subvol_spec[curArrayItem].numY = 1;
 			curSpec->subvol_spec[curArrayItem].numZ = 1;
@@ -1112,6 +1127,49 @@ void loadConfig(const char * CONFIG_NAME,
 		//	cJSON_GetObjectItem(curObj,
 		//	"Time Step")->valuedouble;
 	}
+	
+	// Check whether we might need a hybrid interface
+	if(bHasMeso && bHasMicro)
+	{
+		if(cJSON_bItemValid(simControl,"Small Subvolumes at Hybrid Interface?", cJSON_True))
+		{
+			curSpec->B_HYBRID_SMALL_SUB =
+				cJSON_GetObjectItem(simControl, "Small Subvolumes at Hybrid Interface?")->valueint;
+		} else
+		{ // Simulation does not have a valid Small Subvolumes at Hybrid Interface?
+			bWarn = true;
+			printf("WARNING %d: Simulation has at least 1 microscopic region and 1 mesoscopic region, but does not have a valid \"Small Subvolumes at Hybrid Interface?\". Assigning default value \"true\".\n", numWarn++);
+			curSpec->B_HYBRID_SMALL_SUB = true;
+		}
+		
+		if(cJSON_bItemValid(simControl,"Max Intrastep Micro to Meso Distance", cJSON_Number) &&
+			cJSON_GetObjectItem(simControl, "Max Intrastep Micro to Meso Distance")->valuedouble >= 0.)
+		{
+			curSpec->MAX_HYBRID_DIST =
+				cJSON_GetObjectItem(simControl, "Max Intrastep Micro to Meso Distance")->valuedouble;
+		} else
+		{ // Simulation does not have a valid Min Intrastep Micro to Meso Probability
+			bWarn = true;
+			printf("WARNING %d: Simulation has at least 1 microscopic region and 1 mesoscopic region, but does not have a valid \"Max Intrastep Micro to Meso Distance\". Assigning default value \"INFINITY\".\n", numWarn++);
+			curSpec->MAX_HYBRID_DIST = INFINITY;
+		}
+	} else
+	{
+		// Warn if any hybrid properties are defined
+		if(cJSON_bItemValid(simControl,
+			"Small Subvolumes at Hybrid Interface?", cJSON_True))
+		{
+			bWarn = true;
+			printf("WARNING %d: Simulation cannot have a hybrid interface, but \"Small Subvolumes at Hybrid Interface?\" was defined. Ignoring.\n", numWarn++);
+		}
+		if(cJSON_bItemValid(simControl,"Max Intrastep Micro to Meso Distance", cJSON_Number))
+		{
+			bWarn = true;
+			printf("WARNING %d: Simulation cannot have a hybrid interface, but \"Max Intrastep Micro to Meso Distance\" was defined. Ignoring.\n", numWarn++);
+		}
+	}
+	
+	// Load actor details
 	for(curArrayItem = 0;
 		curArrayItem < curSpec->NUM_ACTORS; curArrayItem++)
 	{			
@@ -1771,7 +1829,7 @@ void deleteConfig(struct simSpec3D curSpec)
 			{
 				if(curSpec.actorSpec[curActor].bReleaseMol != NULL)
 					free(curSpec.actorSpec[curActor].bReleaseMol);
-				if(curSpec.actorSpec[curActor].bRandBits
+				if(!curSpec.actorSpec[curActor].bRandBits
 					&& curSpec.actorSpec[curActor].bBits != NULL)
 					free(curSpec.actorSpec[curActor].bBits);
 			} else
@@ -2086,7 +2144,7 @@ void printTextEnd(FILE * out,
 		cJSON_AddNumberToObject(newActor, "ID",
 			actorActiveArray[curActor].actorID);
 		cJSON_AddNumberToObject(newActor, "MaxBitLength",
-			maxActiveBits[curActor]);
+			maxActiveBits[curActorRecord]);
 		cJSON_AddItemToArray(curArray, newActor);
 	}
 	

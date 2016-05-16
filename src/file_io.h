@@ -14,6 +14,12 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
+ * - added option for user to select small subvolume or big subvolume assumption
+ * at hybrid interfaces. Only needed if there is at least 1 microscopic and 1
+ * mesoscopic region defined.
+ * - added option for user to choose maximum distance beyond which a micro to mesoscopic
+ * substep transition will not be considered (either initial or final point should be beyond
+ * this distance)
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
  * - added warnings for unnecessary active actor parameters depending on values
@@ -99,6 +105,8 @@ struct simSpec3D {
 	double DT_MICRO;
 	uint32_t SEED;
 	unsigned int MAX_UPDATES;
+	bool B_HYBRID_SMALL_SUB;
+	double MAX_HYBRID_DIST;
 	
 	// Environment
 	double SUBVOL_BASE_SIZE;

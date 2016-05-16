@@ -17,6 +17,8 @@
  * Revision LATEST_VERSION
  * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
  * i.e., when molecule is in micro at start and end of diffusion step.
+ * - added function for placing molecules in microscopic regime when they come from the
+ * mesoscopic region
  * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
@@ -122,6 +124,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct chem_rxn_struct chem_rxn[],
+	const double HYBRID_DIST_MAX,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	NodeMol3D * curNode, * prevNode, * nextNode;
@@ -206,7 +209,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 							
 							bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
 								regionArray,	 curType, curRegion, &newRegion, oldPoint, newPoint,
-								&minSub, DIFF_COEF);
+								&minSub, HYBRID_DIST_MAX, DIFF_COEF);
 						}
 						
 						if(bSucked)
@@ -240,7 +243,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 								
 								bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
 									regionArray,	 curType, curRegion, &newRegion, oldPoint, newPoint,
-									&minSub, DIFF_COEF);
+									&minSub, HYBRID_DIST_MAX, DIFF_COEF);
 							}
 							
 							if(bSucked)
@@ -304,8 +307,9 @@ void diffuseMolecules(const short NUM_REGIONS,
 								}
 							} else
 							{ // New region is mesoscopic. Find nearest subvolume to new point
-								newSub = findNearestSub(newRegion, regionArray,
-									transRegion, newPoint[0], newPoint[1], newPoint[2]);
+								newSub = regionArray[newRegion].neighID[transRegion]
+									[findNearestSub(newRegion, regionArray,
+									transRegion, newPoint[0], newPoint[1], newPoint[2])];
 								subvolArray[newSub].num_mol[curType]++;
 								 // TODO: Keep track of subvolumes that need updated propensities
 								 // mesoID is subvolArray[newSub].mesoID
@@ -403,7 +407,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 							
 							bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
 								regionArray,	 curType, newRegion, &newRegion, oldPoint, newPoint,
-								&minSub, DIFF_COEF);
+								&minSub, HYBRID_DIST_MAX, DIFF_COEF);
 						} else
 							bSucked = false;
 							
@@ -423,8 +427,9 @@ void diffuseMolecules(const short NUM_REGIONS,
 					}
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
-					newSub = findNearestSub(newRegion, regionArray,
-						transRegion, newPoint[0], newPoint[1], newPoint[2]);
+					newSub = regionArray[newRegion].neighID[curRegion]
+						[findNearestSub(newRegion, regionArray,
+						transRegion, newPoint[0], newPoint[1], newPoint[2])];
 					subvolArray[newSub].num_mol[curType]++;
 					 // TODO: Keep track of subvolumes that need updated propensities
 					 // mesoID is subvolArray[newSub].mesoID
@@ -486,6 +491,7 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	const double oldPoint[3],
 	const double newPoint[3],
 	uint32_t * newSub,
+	const double HYBRID_DIST_MAX,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	double minDistSq, curDistSq, initDist, finalDist, minDist, curProb;
@@ -494,154 +500,35 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	uint32_t curSub, minSub, numSub;
 	uint32_t nearestSub;
 	
+	if(!(HYBRID_DIST_MAX > 0))
+		return false;
+	
 	for(curNeigh = 0; curNeigh < regionArray[curRegion].numRegionNeigh; curNeigh++)
 	{
 		newRegion = regionArray[curRegion].regionNeighID[curNeigh];
 		if(regionArray[newRegion].spec.bMicro)
 			continue; // Only need to check mesoscopic neighbors
+				
+		// Find distance from this neighbor to final point
+		minSub = findNearestSub(newRegion, regionArray, curRegion,
+			newPoint[0], newPoint[1], newPoint[2]);
+		finalDist = distanceToBoundary(newPoint, RECTANGULAR_BOX,
+			regionArray[newRegion].boundSubCoor[curRegion][minSub]);
+		
+		if(finalDist > HYBRID_DIST_MAX)
+			continue;
 										
-		// Find closest subvolume in this neighbor to starting point
-		numSub = regionArray[newRegion].numSubRegionNeigh[curRegion];
-		minDistSq = INFINITY;								
-		for(curSub = 0; curSub < numSub; curSub++)
-		{
-			curDistSq = (oldPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][curSub][0])
-				*(oldPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][curSub][0]);
-			if (curDistSq > minDistSq)
-				continue; // No need to check y-coordinate
-			
-			curDistSq += (oldPoint[1] -
-				regionArray[newRegion].boundSubCoor[curRegion][curSub][1])
-				*(oldPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][curSub][1]);
-			if (curDistSq > minDistSq)
-				continue; // No need to check z-coordinate
-			
-			curDistSq += (oldPoint[2] -
-				regionArray[newRegion].boundSubCoor[curRegion][curSub][2])
-				*(oldPoint[2] - regionArray[newRegion].boundSubCoor[curRegion][curSub][2]);
-			
-			if(curDistSq < minDistSq)
-			{ // This subvolume is the closest so far
-				minSub = curSub;
-				minDistSq = curDistSq;
-			}
-		}
+		// Find distance from this neighbor to starting point
+		minSub = findNearestSub(newRegion, regionArray, curRegion,
+			oldPoint[0], oldPoint[1], oldPoint[2]);
+		initDist = distanceToBoundary(oldPoint, RECTANGULAR_BOX,
+			regionArray[newRegion].boundSubCoor[curRegion][minSub]);
 		
-		// Determine "shortest" distance from molecule to subvolume surface
-		minDist = INFINITY;
-		for(curFace = 0;
-			curFace < regionArray[newRegion].boundSubNumFace[curRegion][minSub];
-			curFace++)
-		{
-			switch(regionArray[newRegion].boundVirtualNeighDir[curRegion][minSub][curFace])
-			{
-				case LEFT:
-					initDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
-						- regionArray[newRegion].actualSubSize/2 - oldPoint[0];
-					break;
-				case RIGHT:
-					initDist = oldPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
-						- regionArray[newRegion].actualSubSize/2;
-					break;
-				case DOWN:
-					initDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
-						- regionArray[newRegion].actualSubSize/2 - oldPoint[1];
-					break;
-				case UP:
-					initDist = oldPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
-						- regionArray[newRegion].actualSubSize/2;
-					break;
-				case IN:
-					initDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
-						- regionArray[newRegion].actualSubSize/2 - oldPoint[2];
-					break;
-				case OUT:
-					initDist = oldPoint[2] - regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
-						- regionArray[newRegion].actualSubSize/2;
-					break;
-			}
-			
-			if(initDist < minDist)
-			{
-				minDist = initDist;
-				minFace = curFace;
-			}
-		}
+		if(initDist > HYBRID_DIST_MAX)
+			continue;
 		
-		// Find closest subvolume in this neighbor to final point
-		numSub = regionArray[newRegion].numSubRegionNeigh[curRegion];
-		minDistSq = INFINITY;								
-		for(curSub = 0; curSub < numSub; curSub++)
-		{
-			curDistSq = (newPoint[0] -
-				regionArray[newRegion].boundSubCoor[curRegion][curSub][0])
-				*(newPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][curSub][0]);
-			if (curDistSq > minDistSq)
-				continue; // No need to check y-coordinate
-			
-			curDistSq += (newPoint[1] -
-				regionArray[newRegion].boundSubCoor[curRegion][curSub][1])
-				*(newPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][curSub][1]);
-			if (curDistSq > minDistSq)
-				continue; // No need to check z-coordinate
-			
-			curDistSq += (newPoint[2] -
-				regionArray[newRegion].boundSubCoor[curRegion][curSub][2])
-				*(newPoint[2] -
-				regionArray[newRegion].boundSubCoor[curRegion][curSub][2]);
-			
-			if(curDistSq < minDistSq)
-			{ // This subvolume is the closest so far
-				minSub = curSub;
-				minDistSq = curDistSq;
-			}
-		}
-		
-		// Determine "shortest" distance from molecule to subvolume surface
-		minDist = INFINITY;
-		for(curFace = 0;
-			curFace < regionArray[newRegion].boundSubNumFace[curRegion][minSub];
-			curFace++)
-		{
-			switch(regionArray[newRegion].boundVirtualNeighDir[curRegion][minSub][curFace])
-			{
-				case LEFT:
-					finalDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
-						- regionArray[newRegion].actualSubSize/2 - newPoint[0];
-					break;
-				case RIGHT:
-					finalDist = newPoint[0] - regionArray[newRegion].boundSubCoor[curRegion][minSub][0]
-						- regionArray[newRegion].actualSubSize/2;
-					break;
-				case DOWN:
-					finalDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
-						- regionArray[newRegion].actualSubSize/2 - newPoint[1];
-					break;
-				case UP:
-					finalDist = newPoint[1] - regionArray[newRegion].boundSubCoor[curRegion][minSub][1]
-						- regionArray[newRegion].actualSubSize/2;
-					break;
-				case IN:
-					finalDist = regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
-						- regionArray[newRegion].actualSubSize/2 - newPoint[2];
-					break;
-				case OUT:
-					finalDist = newPoint[2] - regionArray[newRegion].boundSubCoor[curRegion][minSub][2]
-						- regionArray[newRegion].actualSubSize/2;
-					break;
-			}
-			
-			if(finalDist < minDist)
-			{
-				minDist = finalDist;
-				minFace = curFace;
-			}
-		}
-		
-		
-		// Test probability of entering region
-		curProb = exp(-initDist*
-			finalDist/DIFF_COEF[curRegion][curType]/regionArray[curRegion].spec.dt);
+		curProb = exp(-finalDist * initDist
+			/DIFF_COEF[curRegion][curType]/regionArray[curRegion].spec.dt);
 		if(generateUniform()<curProb)
 		{ // Molecule enters Meso region
 			*mesoRegion = newRegion;
@@ -651,6 +538,119 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	}
 	
 	return false;
+}
+
+// Place a molecule entering microscopic region from a mesoscopic subvolume
+void placeInMicroFromMeso(const unsigned short curRegion,
+	const unsigned short destRegion,
+	const struct region regionArray[],
+	const uint32_t curBoundSub,
+	const bool bSmallSub,
+	const unsigned short curMolType,
+	ListMolRecent3D * pRecentList,
+	const double DIFF_COEF)
+{
+	double randCoor[3];
+	double newPoint[3];
+	unsigned short faceDir;
+	double curRand;
+	
+	// Determine direction that new molecule should be placed
+	if(regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub] > 0)
+	{
+		// More than one face of this subvolume faces this micro region
+		faceDir = (unsigned short) floor(generateUniform()*
+			regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub]);
+	} else
+		faceDir = 0;
+	
+	curRand = generateUniform();
+	randCoor[0] = sqrt(2*DIFF_COEF*regionArray[curRegion].spec.dt)*
+		(0.729614*curRand - 0.70252*curRand*curRand)/
+		(1 - 1.47494*curRand + 0.484371*curRand*curRand);
+	if(bSmallSub)
+	{ // Assume size of subvolume is on order of microscopic diffusion step
+		randCoor[1] = regionArray[curRegion].actualSubSize
+			*(generateTriangular()-0.5);
+		randCoor[2] = regionArray[curRegion].actualSubSize
+			*(generateTriangular()-0.5);
+	} else
+	{ // Assume size of subvolume is much larger than microscopic diffusion step
+		randCoor[1] = regionArray[curRegion].actualSubSize
+			*generateUniform();
+		randCoor[2] = regionArray[curRegion].actualSubSize
+			*generateUniform();
+	}
+	
+	// Determine coordinates of new molecule in microscopic region
+	switch(regionArray[curRegion].boundVirtualNeighDir[destRegion][curBoundSub][faceDir])
+	{
+		case LEFT:
+			newPoint[0] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+				- randCoor[0];
+			newPoint[1] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+				+ randCoor[1];
+			newPoint[2] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4]
+				+ randCoor[2];
+			break;
+		case RIGHT:
+			newPoint[0] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1]
+				+ randCoor[0];
+			newPoint[1] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+				+ randCoor[1];
+			newPoint[2] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4]
+				+ randCoor[2];
+			break;
+		case DOWN:
+			newPoint[1] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+				- randCoor[0];
+			newPoint[0] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+				+ randCoor[1];
+			newPoint[2] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4]
+				+ randCoor[2];
+			break;
+		case UP:
+			newPoint[1] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][3]
+				+ randCoor[0];
+			newPoint[0] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+				+ randCoor[1];
+			newPoint[2] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4]
+				+ randCoor[2];
+			break;
+		case IN:
+			newPoint[2] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4]
+				- randCoor[0];
+			newPoint[0] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+				+ randCoor[1];
+			newPoint[1] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+				+ randCoor[2];
+			break;
+		case OUT:
+			newPoint[2] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][5]
+				+ randCoor[0];
+			newPoint[0] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
+				+ randCoor[1];
+			newPoint[1] = regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
+				+ randCoor[2];
+			break;
+		default:
+			fprintf(stderr,"ERROR: Invalid direction defined for subvolume in region %u having virtual subvolume neighbor in region %u.\n",
+			curRegion, destRegion);
+			exit(EXIT_FAILURE);
+	}
+	if(!addMoleculeRecent(pRecentList,
+		newPoint[0], newPoint[1], newPoint[2], regionArray[curRegion].spec.dt))
+	{ // Creation of molecule failed
+		fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
+			curMolType, curRegion, destRegion);
+		exit(EXIT_FAILURE);
+	}
 }
 
 // Check first order reactions for all molecules in list

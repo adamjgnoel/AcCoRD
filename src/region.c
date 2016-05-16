@@ -16,7 +16,11 @@
  *
  * Revision LATEST_VERSION
  * - added members to track the direction of microscopic subvolumes from mesoscopic
- * subvolumes
+ * subvolumes. Replaced array for storing coordinates of virtual microscopic
+ * subvolume with array of boundary coordinates of boundary mesoscopic subvolumes. These
+ * changes needed to accommodate improved hybrid transition algorithms
+ * - changed findNearestSub function to return index of subvolume in region's neighID array
+ * instead of the global subvolume list. This makes function suitable for more calls.
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated function bPointInRegionNotChild to take an extra input to indicate
@@ -286,10 +290,10 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 		
 		regionArray[i].neighID = malloc(NUM_REGIONS * sizeof(uint32_t *));
 		regionArray[i].boundSubNumFace = malloc(NUM_REGIONS * sizeof(unsigned short *));
+		regionArray[i].boundSubCenterCoor =
+			malloc(NUM_REGIONS * sizeof(regionArray[i].boundSubCenterCoor));
 		regionArray[i].boundSubCoor =
 			malloc(NUM_REGIONS * sizeof(regionArray[i].boundSubCoor));
-		regionArray[i].boundVirtualNeighCoor =
-			malloc(NUM_REGIONS * sizeof(regionArray[i].boundVirtualNeighCoor));
 		regionArray[i].boundVirtualNeighDir =
 			malloc(NUM_REGIONS * sizeof(regionArray[i].boundVirtualNeighDir));
 		regionArray[i].bNeedUpdate =
@@ -298,8 +302,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 			malloc(NUM_REGIONS * sizeof(regionArray[i].numMolFromMicro));
 		if(regionArray[i].neighID == NULL
 			|| regionArray[i].boundSubNumFace == NULL
+			|| regionArray[i].boundSubCenterCoor == NULL
 			|| regionArray[i].boundSubCoor == NULL
-			|| regionArray[i].boundVirtualNeighCoor == NULL
 			|| regionArray[i].boundVirtualNeighDir == NULL
 			|| regionArray[i].bNeedUpdate == NULL
 			|| regionArray[i].numMolFromMicro == NULL)
@@ -351,10 +355,10 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				* sizeof(uint32_t));
 			regionArray[i].boundSubNumFace[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(unsigned short));
-			regionArray[i].boundSubCoor[j] = malloc(regionArray[i].numSubRegionNeigh[j]
+			regionArray[i].boundSubCenterCoor[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(double [3]));
-			regionArray[i].boundVirtualNeighCoor[j] = malloc(regionArray[i].numSubRegionNeigh[j]
-				* sizeof(regionArray[i].boundVirtualNeighCoor[j]));
+			regionArray[i].boundSubCoor[j] = malloc(regionArray[i].numSubRegionNeigh[j]
+				* sizeof(double [6]));
 			regionArray[i].boundVirtualNeighDir[j] = malloc(regionArray[i].numSubRegionNeigh[j]
 				* sizeof(regionArray[i].boundVirtualNeighDir[j]));
 			regionArray[i].bNeedUpdate[j] = malloc(regionArray[i].numSubRegionNeigh[j]
@@ -363,8 +367,8 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 				* sizeof(regionArray[i].numMolFromMicro[j]));
 			if(regionArray[i].neighID[j] == NULL
 				|| regionArray[i].boundSubNumFace[j] == NULL
+				|| regionArray[i].boundSubCenterCoor[j] == NULL
 				|| regionArray[i].boundSubCoor[j] == NULL
-				|| regionArray[i].boundVirtualNeighCoor[j] == NULL
 				|| regionArray[i].boundVirtualNeighDir[j] == NULL
 				|| regionArray[i].bNeedUpdate[j] == NULL
 				|| regionArray[i].numMolFromMicro[j] == NULL)
@@ -407,90 +411,34 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 					// This subvolume borders microscopic region j along numDir faces
 					regionArray[i].boundSubNumFace[j][curBoundID] = numDir;
 					
-					regionArray[i].boundVirtualNeighCoor[j][curBoundID] =
-						malloc(regionArray[i].boundSubNumFace[j][curBoundID]
-						* sizeof(double [3]));
 					regionArray[i].boundVirtualNeighDir[j][curBoundID] =
 						malloc(regionArray[i].boundSubNumFace[j][curBoundID]
 						* sizeof(unsigned short));
-					if(regionArray[i].boundVirtualNeighCoor[j][curBoundID] == NULL
-						|| regionArray[i].boundVirtualNeighDir[j][curBoundID] == NULL)
+					if(regionArray[i].boundVirtualNeighDir[j][curBoundID] == NULL)
 					{
 						fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\")'s neighbor parameters with region %u (label: \"%s\").\n", i, subvol_spec[i].label, j, subvol_spec[j].label);
 						exit(EXIT_FAILURE);
 					}
 					
 					regionArray[i].neighID[j][curBoundID] = curID;
-					regionArray[i].boundSubCoor[j][curBoundID][0] =
+					regionArray[i].boundSubCenterCoor[j][curBoundID][0] =
 						(curSubBound[0] + curSubBound[1])/2;
-					regionArray[i].boundSubCoor[j][curBoundID][1] =
+					regionArray[i].boundSubCenterCoor[j][curBoundID][1] =
 						(curSubBound[2] + curSubBound[3])/2;
-					regionArray[i].boundSubCoor[j][curBoundID][2] =
+					regionArray[i].boundSubCenterCoor[j][curBoundID][2] =
 						(curSubBound[4] + curSubBound[5])/2;
+					
+					for(k = 0; k < 6; k++)
+					{
+						regionArray[i].boundSubCoor[j][curBoundID][k] =
+							curSubBound[k];
+					}
 					
 					for(curDir = 0;
 						curDir < regionArray[i].boundSubNumFace[j][curBoundID]; curDir++)
 					{
-						
-						switch (dirArray[curDir])
-						{
-							case LEFT: // New molecule goes to lower x
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
-									curSubBound[0] - regionArray[i].actualSubSize;
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][1] =
-									curSubBound[2];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
-									curSubBound[4];
-								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = LEFT;
-								break;
-							case RIGHT: // New molecule goes to upper x
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
-									curSubBound[0] + regionArray[i].actualSubSize;
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][1] =
-									curSubBound[2];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
-									curSubBound[4];
-								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = RIGHT;
-								break;
-							case DOWN: // New molecule goes to lower y
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
-									curSubBound[0];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][1] =
-									curSubBound[2] - regionArray[i].actualSubSize;
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
-									curSubBound[4];
-								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = DOWN;
-								break;
-							case UP: // New molecule goes to upper y
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
-									curSubBound[0];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][1] =
-									curSubBound[2] + regionArray[i].actualSubSize;
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
-									curSubBound[4];
-								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = UP;
-								break;
-							case IN: // New molecule goes to lower z
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
-									curSubBound[0];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][1] =
-									curSubBound[2];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
-									curSubBound[4] - regionArray[i].actualSubSize;
-								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = IN;
-								break;
-							case OUT: // New molecule goes to upper z
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][0] =
-									curSubBound[0];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][1] =
-									curSubBound[2];
-								regionArray[i].boundVirtualNeighCoor[j][curBoundID][curDir][2] =
-									curSubBound[4] + regionArray[i].actualSubSize;
-								regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] = OUT;
-								break;
-							default:
-								fprintf(stderr, "ERROR: Invalid neighbor direction determined for neighboring regions %u and %u.\n", i, j);
-						}
+						regionArray[i].boundVirtualNeighDir[j][curBoundID][curDir] =
+							dirArray[curDir];
 					}
 					curBoundID++; // Increment the index of the ordered subvolume along region
 									// boundary
@@ -559,15 +507,12 @@ void delete_boundary_region_(const short NUM_REGIONS,
 					continue; // Regions don't border each other
 				if(regionArray[i].numSubRegionNeigh[j] < 1)
 					continue; // No neighbours found
-							  // (failsafe; should not have reached here)
-							  
-				
+							  // (failsafe; should not have reached here)				
 				
 				for(k = 0; k < regionArray[i].numSubRegionNeigh[j]; k++)
 				{
-					if(regionArray[i].numMolFromMicro[j][k] != NULL) free(regionArray[i].numMolFromMicro[j][k]);
-					if(regionArray[i].boundVirtualNeighCoor[j][k] != NULL)	
-						free(regionArray[i].boundVirtualNeighCoor[j][k]);
+					if(regionArray[i].numMolFromMicro[j][k] != NULL)
+						free(regionArray[i].numMolFromMicro[j][k]);
 					if(regionArray[i].boundVirtualNeighDir[j][k] != NULL)	
 						free(regionArray[i].boundVirtualNeighDir[j][k]);
 				}
@@ -576,18 +521,18 @@ void delete_boundary_region_(const short NUM_REGIONS,
 				
 				if(regionArray[i].neighID[j] != NULL) free(regionArray[i].neighID[j]);
 				if(regionArray[i].boundSubNumFace[j] != NULL) free(regionArray[i].boundSubNumFace[j]);
+				if(regionArray[i].boundSubCenterCoor[j] != NULL)	
+					free(regionArray[i].boundSubCenterCoor[j]);
 				if(regionArray[i].boundSubCoor[j] != NULL)	
 					free(regionArray[i].boundSubCoor[j]);
-				if(regionArray[i].boundVirtualNeighCoor[j] != NULL)	
-					free(regionArray[i].boundVirtualNeighCoor[j]);
 				if(regionArray[i].boundVirtualNeighDir[j] != NULL)	
 					free(regionArray[i].boundVirtualNeighDir[j]);
 				if(regionArray[i].bNeedUpdate[j] != NULL) free(regionArray[i].bNeedUpdate[j]);
 			}
 			if(regionArray[i].neighID != NULL) free(regionArray[i].neighID);
 			if(regionArray[i].boundSubNumFace != NULL) free(regionArray[i].boundSubNumFace);
+			if(regionArray[i].boundSubCenterCoor != NULL) free(regionArray[i].boundSubCenterCoor);
 			if(regionArray[i].boundSubCoor != NULL) free(regionArray[i].boundSubCoor);
-			if(regionArray[i].boundVirtualNeighCoor != NULL) free(regionArray[i].boundVirtualNeighCoor);
 			if(regionArray[i].boundVirtualNeighDir != NULL) free(regionArray[i].boundVirtualNeighDir);
 			if(regionArray[i].bNeedUpdate != NULL) free(regionArray[i].bNeedUpdate);
 			if(regionArray[i].numMolFromMicro != NULL) free(regionArray[i].numMolFromMicro);
@@ -978,7 +923,9 @@ unsigned short findNearestValidRegion(const double point[],
 }
 
 // Find the closest subvolume in current region that is along boundary
-// of specified neighbor region
+// of specified neighbor region.
+// Returned value is index of subvolume in
+// regionArray[curRegion].neighID[neighRegion] array
 uint32_t findNearestSub(const short curRegion,
 	const struct region regionArray[],
 	const short neighRegion,
@@ -995,18 +942,18 @@ uint32_t findNearestSub(const short curRegion,
 	double curDistSq;
 	for(curSub = 0; curSub < numSub; curSub++)
 	{
-		curDistSq = (x - regionArray[curRegion].boundSubCoor[neighRegion][curSub][0])
-			*(x - regionArray[curRegion].boundSubCoor[neighRegion][curSub][0]);
+		curDistSq = (x - regionArray[curRegion].boundSubCenterCoor[neighRegion][curSub][0])
+			*(x - regionArray[curRegion].boundSubCenterCoor[neighRegion][curSub][0]);
 		if (curDistSq > minDistSq)
 			continue; // No need to check y-coordinate
 		
-		curDistSq += (y - regionArray[curRegion].boundSubCoor[neighRegion][curSub][1])
-			*(y - regionArray[curRegion].boundSubCoor[neighRegion][curSub][1]);
+		curDistSq += (y - regionArray[curRegion].boundSubCenterCoor[neighRegion][curSub][1])
+			*(y - regionArray[curRegion].boundSubCenterCoor[neighRegion][curSub][1]);
 		if (curDistSq > minDistSq)
 			continue; // No need to check z-coordinate
 		
-		curDistSq += (z - regionArray[curRegion].boundSubCoor[neighRegion][curSub][2])
-			*(z - regionArray[curRegion].boundSubCoor[neighRegion][curSub][2]);
+		curDistSq += (z - regionArray[curRegion].boundSubCenterCoor[neighRegion][curSub][2])
+			*(z - regionArray[curRegion].boundSubCenterCoor[neighRegion][curSub][2]);
 		
 		if(curDistSq < minDistSq)
 		{ // This subvolume is the closest so far
@@ -1014,7 +961,7 @@ uint32_t findNearestSub(const short curRegion,
 			minDistSq = curDistSq;
 		}
 	}
-	return regionArray[curRegion].neighID[neighRegion][minSub];
+	return minSub;
 }
 
 // Determine coordinates of child region as subvolumes of parent

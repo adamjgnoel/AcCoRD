@@ -14,8 +14,9 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
- * - improved placement of molecules from mesoscopic regime into microscopic regime, using
- * method for small time steps
+ * - improved placement of molecules from mesoscopic regime into microscopic regime. User
+ * can choose between small time step / large subvolume or large time step / small subvolume
+ * algorithms via config. Actual placement moved to function in micro_molecule source file
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
  *
@@ -806,7 +807,7 @@ int main(int argc, char *argv[])
 				// 2 sets of molecule lists into 1
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
 					microMolListRecent, regionArray, mesoSubArray, subvolArray,
-					micro_sigma, spec.chem_rxn, DIFF_COEF);
+					micro_sigma, spec.chem_rxn, spec.MAX_HYBRID_DIST, DIFF_COEF);
 				
 				
 				if(numMesoSub > 0)
@@ -882,7 +883,7 @@ int main(int argc, char *argv[])
 					if(regionArray[subvolArray[destSub].regionID].spec.bMicro)
 					{ // Destination is in a microscopic region				
 						// Coordinates of source subvolume are "somewhere" in
-						// regionArray[curRegion].boundSubCoor[destRegion][curBoundSub]
+						// regionArray[curRegion].boundSubCenterCoor[destRegion][curBoundSub]
 						// curBoundSub found by searching
 						// curSub == regionArray[curRegion].neighID[destRegion][]
 						
@@ -894,104 +895,10 @@ int main(int argc, char *argv[])
 						if(curBoundSub < UINT32_MAX)
 						{ // Add new molecule to random location next to source subvolume
 					
-							// Determine direction that new molecule should be placed
-							if(regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub] > 0)
-							{
-								// More than one face of this subvolume faces this micro region
-								faceDir = (unsigned short) floor(generateUniform()*
-									regionArray[curRegion].boundSubNumFace[destRegion][curBoundSub]);
-							} else
-								faceDir = 0;
-							
-							curRand = generateUniform();
-							randCoor[0] = regionArray[curRegion].actualSubSize/2 +
-								sqrt(2*DIFF_COEF[curRegion][curMolType]*regionArray[curRegion].spec.dt)*
-								(0.729614*curRand - 0.70252*curRand*curRand)/
-								(1 - 1.47494*curRand + 0.484371*curRand*curRand);
-							//randCoor[0] = regionArray[curRegion].actualSubSize/2 + regionArray[curRegion].actualSubSize*generateUniform();
-							randCoor[1] = regionArray[curRegion].actualSubSize*generateUniform();
-							randCoor[2] = regionArray[curRegion].actualSubSize*generateUniform();				
-							// Determine coordinates of new molecule in microscopic region
-							switch(regionArray[curRegion].boundVirtualNeighDir[destRegion][curBoundSub][faceDir])
-							{
-								case LEFT:
-									point[0] =
-										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
-										- randCoor[0];
-									point[1] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-										+randCoor[1];
-									point[2] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-										+randCoor[2];
-									break;
-								case RIGHT:
-									point[0] =
-										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0]
-										+ randCoor[0];
-									point[1] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-										+randCoor[1];
-									point[2] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-										+randCoor[2];
-									break;
-								case DOWN:
-									point[1] =
-										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1]
-										- randCoor[0];
-									point[0] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-										+ randCoor[1];
-									point[2] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-										+ randCoor[2];
-									break;
-								case UP:
-									point[1] =
-										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1]
-										+ randCoor[0];
-									point[0] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-										+ randCoor[1];
-									point[2] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][2]
-										+ randCoor[2];
-									break;
-								case IN:
-									point[2] =
-										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
-										- randCoor[0];
-									point[0] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-										+ randCoor[1];
-									point[1] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-										+ randCoor[2];
-									break;
-								case OUT:
-									point[2] =
-										regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2]
-										+ randCoor[0];
-									point[0] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][0]
-										+ randCoor[1];
-									point[1] =
-										regionArray[curRegion].boundVirtualNeighCoor[destRegion][curBoundSub][faceDir][1]
-										+ randCoor[2];
-									break;
-								default:
-									fprintf(stderr,"ERROR: Invalid direction defined for subvolume in region %u having virtual subvolume neighbor in region %u.\n",
-									curRegion, destRegion);
-									exit(EXIT_FAILURE);
-							}
-							if(!addMoleculeRecent(&microMolListRecent[destRegion][curMolType],
-								point[0], point[1], point[2], regionArray[curRegion].spec.dt))
-							{ // Creation of molecule failed
-								fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
-									curMolType, curRegion, destRegion);
-								exit(EXIT_FAILURE);
-							}
+							placeInMicroFromMeso(curRegion, destRegion, regionArray,
+								curBoundSub, spec.B_HYBRID_SMALL_SUB, curMolType,
+								&microMolListRecent[destRegion][curMolType],
+								DIFF_COEF[curRegion][curMolType]);
 						} else
 						{
 							// Error

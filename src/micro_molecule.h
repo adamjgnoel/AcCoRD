@@ -17,6 +17,8 @@
  * Revision LATEST_VERSION
  * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
  * i.e., when molecule is in micro at start and end of diffusion step.
+ * - added function for placing molecules in microscopic regime when they come from the
+ * mesoscopic region
  * - modified random number generation. Now use PCG via a separate interface file.
  *
  * Revision v0.5.1 (2016-05-06)
@@ -128,6 +130,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct chem_rxn_struct chem_rxn[],
+	const double HYBRID_DIST_MAX,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
@@ -144,7 +147,18 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	const double oldPoint[3],
 	const double newPoint[3],
 	uint32_t * newSub,
+	const double HYBRID_DIST_MAX,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Place a molecule entering microscopic region from a mesoscopic subvolume
+void placeInMicroFromMeso(const unsigned short curRegion,
+	const unsigned short destRegion,
+	const struct region regionArray[],
+	const uint32_t curBoundSub,
+	const bool bSmallSub,
+	const unsigned short curMolType,
+	ListMolRecent3D * pRecentList,
+	const double DIFF_COEF);
 
 void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,

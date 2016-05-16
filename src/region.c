@@ -937,7 +937,7 @@ uint32_t findNearestSub(const short curRegion,
 	uint32_t numSub = regionArray[curRegion].numSubRegionNeigh[neighRegion];
 	
 	uint32_t curSub;
-	uint32_t minSub;
+	uint32_t minSub = UINT32_MAX;
 	double minDistSq = DBL_MAX;
 	double curDistSq;
 	for(curSub = 0; curSub < numSub; curSub++)

@@ -140,7 +140,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	bool bReaction;
 	unsigned short curRxn, curProd;
 
-	bool bSucked = false;
+	bool bRemove, bValidDiffusion;
 	uint32_t minSub;
 	
 	// Indicate that every microscopic molecule in a "normal" list
@@ -197,142 +197,105 @@ void diffuseMolecules(const short NUM_REGIONS,
 					newPoint[2] = curNode->item.z;
 								
 					bReaction = false;
-					bSucked = false;
-					if(validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+					bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS,
+						NUM_MOL_TYPES, curRegion,
 						&newRegion, &transRegion, regionArray, curType, &bReaction,
-						false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn))
-					{ // Molecule is still within region and point did not change
-						
-						// Is region neighbor to any mesoscopic regions?
-						if(regionArray[curRegion].bHasMesoNeigh)
-						{ // Still need to check transition into one of these regions
-							
-							bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
-								regionArray,	 curType, curRegion, &newRegion, oldPoint, newPoint,
-								&minSub, HYBRID_DIST_MAX, DIFF_COEF);
-						}
-						
-						if(bSucked)
+						false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn);
+					
+					if(regionArray[newRegion].spec.bMicro)
+					{
+						// Check for entering meso region within time step, even though
+						// we weren't in meso region at end of time step
+						if(regionArray[newRegion].bHasMesoNeigh
+							&& bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
+							regionArray,	 curType, newRegion, &transRegion, oldPoint, newPoint,
+							&minSub, HYBRID_DIST_MAX, DIFF_COEF))
 						{
-							newSub = regionArray[newRegion].neighID[curRegion][minSub];
+							newSub = regionArray[transRegion].neighID[newRegion][minSub];
 							subvolArray[newSub].num_mol[curType]++;							
-							regionArray[newRegion].bNeedUpdate[curRegion][minSub] = true;
-							regionArray[newRegion].numMolFromMicro[curRegion][minSub][curType]++;
+							regionArray[transRegion].bNeedUpdate[newRegion][minSub] = true;
+							regionArray[transRegion].numMolFromMicro[newRegion][minSub][curType]++;
 							
-							removeItem(prevNode,curNode);
-							
-							if(prevNode == NULL)
-							{ // We removed first molecule in list.
-							  // nextNode is now the start of the list
-							  // (i.e., we must update pointer to list)
-							  p_list[curRegion][curType] = nextNode;
-							}
+							bRemove = true; // Remove molecule from curRegion list
+						} else if(bValidDiffusion)
+						{ // Molecule is still within region and point did not change
+							bRemove = false;
+							prevNode = curNode;
+						} else if(newRegion == curRegion)
+						{
+							// Molecule is still within region. Just need to update position
+							moveMolecule(&curNode->item, newPoint[0], newPoint[1], newPoint[2]);
+							bRemove = false;
+							prevNode = curNode;
 						} else
 						{
-							// Molecule is still within region and no further action is required
-							prevNode = curNode;
+							// Molecule is in a new microscopic region. Move to appropriate list
+							if(bReaction)
+							{ // We need to fire the corresponding reaction curRxn
+								if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
+								{
+									for(curProd = 0;
+										curProd < regionArray[newRegion].numRxnProducts[curRxn];
+										curProd++)
+									{
+										// Add the (curProd)th product to the corresponding molecule list
+										if(!addMolecule(
+											&p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]],
+											newPoint[0], newPoint[1], newPoint[2]))
+										{ // Creation of molecule failed
+											fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+											regionArray[newRegion].productID[curRxn][curProd], curRxn);
+											exit(EXIT_FAILURE);						
+										}
+										// Indicate that product molecule doesn't need to be
+										// moved again
+										p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
+									}
+								}									
+							} else if(!addMolecule(&p_list[newRegion][curType],
+								newPoint[0], newPoint[1], newPoint[2]))
+							{
+								fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
+								exit(EXIT_FAILURE);
+							} else
+							{
+								// Indicate that molecule doesn't need to be moved again
+								p_list[newRegion][curType]->item.bNeedUpdate = false;
+							}
+							bRemove = true;
 						}
 					} else
 					{
-						// newPoint tells us where to place a molecule in newRegion
-						if(newRegion == curRegion)
-						{ //just update molecule location
-					
-							if(regionArray[curRegion].bHasMesoNeigh)
-							{ // Still need to check transition into one of these regions
-								
-								bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
-									regionArray,	 curType, curRegion, &newRegion, oldPoint, newPoint,
-									&minSub, HYBRID_DIST_MAX, DIFF_COEF);
-							}
-							
-							if(bSucked)
-							{
-								newSub = regionArray[newRegion].neighID[curRegion][minSub];
-								subvolArray[newSub].num_mol[curType]++;							
-								regionArray[newRegion].bNeedUpdate[curRegion][minSub] = true;
-								regionArray[newRegion].numMolFromMicro[curRegion][minSub][curType]++;
-								
-								removeItem(prevNode,curNode);
-								
-								if(prevNode == NULL)
-								{ // We removed first molecule in list.
-								  // nextNode is now the start of the list
-								  // (i.e., we must update pointer to list)
-								  p_list[curRegion][curType] = nextNode;
-								}
-							} else
-							{
-								// Molecule is still within region and no further action is required
-								moveMolecule(&curNode->item, newPoint[0], newPoint[1], newPoint[2]);
-								prevNode = curNode;
-							}
-						} else
+						// New region is mesoscopic. Find nearest subvolume to new point
+						newSub = regionArray[newRegion].neighID[transRegion]
+							[findNearestSub(newRegion, regionArray,
+							transRegion, newPoint[0], newPoint[1], newPoint[2])];
+						subvolArray[newSub].num_mol[curType]++;
+						 // TODO: Keep track of subvolumes that need updated propensities
+						 // mesoID is subvolArray[newSub].mesoID
+						 //
+						curBoundSub = 0;
+						while(regionArray[newRegion].neighID[transRegion][curBoundSub]
+							!= newSub)
 						{
-							// Molecule is now in a different region
-							if(regionArray[newRegion].spec.bMicro)
-							{ // New region is microscopic. Move to appropriate list
-								
-								if(bReaction)
-								{ // We need to fire the corresponding reaction curRxn
-									if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
-									{
-										for(curProd = 0;
-											curProd < regionArray[newRegion].numRxnProducts[curRxn];
-											curProd++)
-										{
-											// Add the (curProd)th product to the corresponding molecule list
-											if(!addMolecule(
-												&p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]],
-												newPoint[0], newPoint[1], newPoint[2]))
-											{ // Creation of molecule failed
-												fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
-												regionArray[newRegion].productID[curRxn][curProd], curRxn);
-												exit(EXIT_FAILURE);						
-											}
-											// Indicate that product molecule doesn't need to be
-											// moved again
-											p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
-										}
-									}									
-								} else if(!addMolecule(&p_list[newRegion][curType],
-									newPoint[0], newPoint[1], newPoint[2]))
-								{
-									fprintf(stderr, "ERROR: Memory allocation to move molecule between microscopic regions %u and %u.\n", curRegion, newRegion);
-									exit(EXIT_FAILURE);
-								} else
-								{
-									// Indicate that molecule doesn't need to be moved again
-									p_list[newRegion][curType]->item.bNeedUpdate = false;
-								}
-							} else
-							{ // New region is mesoscopic. Find nearest subvolume to new point
-								newSub = regionArray[newRegion].neighID[transRegion]
-									[findNearestSub(newRegion, regionArray,
-									transRegion, newPoint[0], newPoint[1], newPoint[2])];
-								subvolArray[newSub].num_mol[curType]++;
-								 // TODO: Keep track of subvolumes that need updated propensities
-								 // mesoID is subvolArray[newSub].mesoID
-								 //
-								curBoundSub = 0;
-								while(regionArray[newRegion].neighID[transRegion][curBoundSub]
-									!= newSub)
-								{
-									curBoundSub++;
-								}
-								regionArray[newRegion].bNeedUpdate[transRegion][curBoundSub] = true;
-								regionArray[newRegion].numMolFromMicro[transRegion][curBoundSub][curType]++;
-							}
-							
-							// Remove molecule from current region molecule list
-							removeItem(prevNode,curNode);
-							
-							if(prevNode == NULL)
-							{ // We removed first molecule in list.
-							  // nextNode is now the start of the list
-							  // (i.e., we must update pointer to list)
-							  p_list[curRegion][curType] = nextNode;
-							}
+							curBoundSub++;
+						}
+						regionArray[newRegion].bNeedUpdate[transRegion][curBoundSub] = true;
+						regionArray[newRegion].numMolFromMicro[transRegion][curBoundSub][curType]++;
+						
+						bRemove = true; // Remove molecule from curRegion list
+					}
+					
+					if(bRemove)
+					{
+						// Remove molecule from current region molecule list
+						removeItem(prevNode,curNode);
+						
+						if(prevNode == NULL)
+						{ // We removed first molecule in list.
+						  // nextNode is now the start of the list
+						  // (i.e., we must update pointer to list)
+						  p_list[curRegion][curType] = nextNode;
 						}
 					}					
 				} else
@@ -371,14 +334,24 @@ void diffuseMolecules(const short NUM_REGIONS,
 				// Once molecule is validated, we can proceed directly to transferring
 				// it to the relevant "normal" list and remove it from this list				
 				bReaction = false;
-				bSucked = false;
 				validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
 					&newRegion, &transRegion, regionArray, curType, &bReaction,
 					true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
 					
 				if(regionArray[newRegion].spec.bMicro)
-				{ // Region is microscopic. Move to appropriate list
-					if(bReaction)
+				{ // Region is microscopic.
+					
+					if(regionArray[newRegion].bHasMesoNeigh
+						&& bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
+						regionArray,	 curType, newRegion, &transRegion, oldPoint, newPoint,
+						&minSub, HYBRID_DIST_MAX, DIFF_COEF))
+					{
+						newSub = regionArray[transRegion].neighID[newRegion][minSub];
+						subvolArray[newSub].num_mol[curType]++;							
+						regionArray[transRegion].bNeedUpdate[newRegion][minSub] = true;
+						regionArray[transRegion].numMolFromMicro[newRegion][minSub][curType]++;
+						
+					} else if(bReaction)
 					{ // We need to fire the corresponding reaction curRxn
 						if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
 						{
@@ -395,30 +368,11 @@ void diffuseMolecules(const short NUM_REGIONS,
 									regionArray[newRegion].productID[curRxn][curProd], curRxn);
 									exit(EXIT_FAILURE);						
 								}
-								// Indicate that product molecule doesn't need to be
-								// moved again
-								p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
 							}
 						}									
 					} else
 					{
-						if(regionArray[curRegion].bHasMesoNeigh)
-						{ // Still need to check transition into one of these regions
-							
-							bSucked = bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
-								regionArray,	 curType, newRegion, &newRegion, oldPoint, newPoint,
-								&minSub, HYBRID_DIST_MAX, DIFF_COEF);
-						} else
-							bSucked = false;
-							
-						if(bSucked)
-						{
-							newSub = regionArray[newRegion].neighID[curRegion][minSub];
-							subvolArray[newSub].num_mol[curType]++;							
-							regionArray[newRegion].bNeedUpdate[curRegion][minSub] = true;
-							regionArray[newRegion].numMolFromMicro[curRegion][minSub][curType]++;
-							
-						} else if(!addMolecule(&p_list[newRegion][curType],
+						if(!addMolecule(&p_list[newRegion][curType],
 							newPoint[0], newPoint[1], newPoint[2]))
 						{
 							fprintf(stderr, "ERROR: Memory allocation to move molecule between recent molecule list of region %u and list of region %u.\n", curRegion, newRegion);
@@ -427,7 +381,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 					}
 				} else
 				{ // New region is mesoscopic. Find nearest subvolume to new point
-					newSub = regionArray[newRegion].neighID[curRegion]
+					newSub = regionArray[newRegion].neighID[transRegion]
 						[findNearestSub(newRegion, regionArray,
 						transRegion, newPoint[0], newPoint[1], newPoint[2])];
 					subvolArray[newSub].num_mol[curType]++;

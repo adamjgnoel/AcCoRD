@@ -576,7 +576,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 	int i; // loop index
 	short curActor, curActive, curPassive;
 	short curRegion, curInterRegion;
-	short curPassiveRecord, curActiveRecord;
+	short curPassiveRecord;
 	uint32_t curSub, curInterSub, gamma;
 	double curSubBound[6];
 	double curInterSubBound[6];
@@ -594,15 +594,9 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 		}
 	}
 	
-	curActiveRecord = 0;
 	for(curActive = 0; curActive < NUM_ACTORS_ACTIVE; curActive++)
 	{
 		curActor = actorActiveArray[curActive].actorID;
-		
-		if (actorCommonArray[curActor].spec.bWrite)
-		{
-			actorPassiveArray[curActive].recordID = curActiveRecord++;
-		}
 		
 		actorActiveArray[curActive].cumFracActorInSub =
 			malloc(actorCommonArray[curActor].numRegion*sizeof(double *));

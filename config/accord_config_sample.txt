@@ -20,7 +20,6 @@
 		"Chemical Reaction Specification": []
 	},
 	"Environment":	{
-		"Number of Dimensions": 3,
 		"Subvolume Base Size": 1e-6,
 		"Region Specification": [
 			{

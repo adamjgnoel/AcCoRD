@@ -1,9 +1,38 @@
 function config =  accordConfigImport(configJSON)
-% Convert configuration file in JSON format to a format that is more easily
-% read
-
-% The default JSON structure uses unusual characters for the field names,
-% and is inconsistent with cell and array notation.
+%
+% The AcCoRD Simulator
+% (Actor-based Communication via Reaction-Diffusion)
+%
+% Copyright 2016 Adam Noel. All rights reserved.
+% 
+% For license details, read LICENSE.txt in the root AcCoRD directory
+% For user documentation, read README.txt in the root AcCoRD directory
+%
+% accordConfigImport.m - convert AcCoRD simulation configuration structure
+%   that is imported via the JSON interface into a structure format that is
+%   more consistent and easier to use. The converted structure is more
+%   consistent in its use of cell arrays, has simpler field names, and adds
+%   fields that may not have been explicitly included in the configuration
+%   file (but which can be implied from the contents of the file)
+%
+% INPUTS
+% configJSON - structure created by running "loadjson" function on a valid
+%   AcCoRD configuration file
+%
+% OUTPUTS
+% config - structure converted from configJSON. All content in configJSON
+%   should be maintained. More fields are added whose values are implied by
+%   the contents of configJSON (e.g., counts of number of regions and
+%   actors)
+%
+% Last revised for AcCoRD LATEST_VERSION
+%
+% Revision history:
+%
+% Revision LATEST_VERSION
+% - Created file
+%
+% Created 2016-05-16
 
 config.outputFilename = configJSON.Output_0x20_Filename;
 
@@ -13,24 +42,32 @@ config.dt = configJSON.Simulation_0x20_Control.Global_0x20_Microscopic_0x20_Time
 config.tFinal = configJSON.Simulation_0x20_Control.Final_0x20_Simulation_0x20_Time;
 
 %% Extract chemical properties
-config.numMolTypes = configJSON.Chemical_0x20_Properties.Number_0x20_of_0x20_Molecule_0x20_Types;
+config.numMolTypes = ...
+    configJSON.Chemical_0x20_Properties.Number_0x20_of_0x20_Molecule_0x20_Types;
 
 config.diffusionCoeff = zeros(1,config.numMolTypes);
 for i = 1:config.numMolTypes
-    config.diffusionCoeff(i) = configJSON.Chemical_0x20_Properties.Diffusion_0x20_Coefficients(i);
+    config.diffusionCoeff(i) = ...
+        configJSON.Chemical_0x20_Properties.Diffusion_0x20_Coefficients(i);
 end
 
-config.numChemRxn = length(configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification);
-chemStruct = struct('label', '', 'bReversible', 0, 'revLabel', '', 'bSurface', 0, 'surfRxnType', '', 'surfTransProb', '',...
-    'bEverywhere', 0, 'numExceptions', 0, 'exceptionRegions', [], 'reactants', zeros(1,config.numMolTypes), 'products', ...
-    zeros(1,config.numMolTypes), 'bProdReleased', zeros(1,config.numMolTypes), 'releaseType', '', 'rate', 0);
+config.numChemRxn = ...
+    length(configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification);
+chemStruct = struct('label', '', 'bReversible', 0, 'revLabel', '', ...
+    'bSurface', 0, 'surfRxnType', '', 'surfTransProb', '',...
+    'bEverywhere', 0, 'numExceptions', 0, 'exceptionRegions', [], ...
+    'reactants', zeros(1,config.numMolTypes), 'products', ...
+    zeros(1,config.numMolTypes), 'bProdReleased', zeros(1,config.numMolTypes), ...
+    'releaseType', '', 'rate', 0);
 config.chemRxn = cell(1, config.numChemRxn);
 for i = 1:config.numChemRxn
     config.chemRxn{i} = chemStruct;
     if config.numChemRxn == 1
-        curRxn = configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification;
+        curRxn = ...
+            configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification;
     else
-        curRxn = configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification{i};
+        curRxn = ...
+            configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification{i};
     end
     
     config.chemRxn{i}.rate = curRxn.Reaction_0x20_Rate;
@@ -43,8 +80,10 @@ for i = 1:config.numChemRxn
     
     config.chemRxn{i}.bSurface = curRxn.Surface_0x20_Reaction_0x3F_;
     if config.chemRxn{i}.bSurface
-        config.chemRxn{i}.surfRxnType = curRxn.Surface_0x20_Reaction_0x20_Type;
-        config.chemRxn{i}.surfTransProb = curRxn.Surface_0x20_Transition_0x20_Probability;
+        config.chemRxn{i}.surfRxnType = ...
+            curRxn.Surface_0x20_Reaction_0x20_Type;
+        config.chemRxn{i}.surfTransProb = ...
+            curRxn.Surface_0x20_Transition_0x20_Probability;
     end
     
     config.chemRxn{i}.bEverywhere = curRxn.Default_0x20_Everywhere_0x3F_;
@@ -61,7 +100,8 @@ for i = 1:config.numChemRxn
         config.chemRxn{i}.exceptionRegions{1} = curRxn.Exception_0x20_Regions;
     else
         for j = 1:config.chemRxn{i}.numExceptions
-            config.chemRxn{i}.exceptionRegions{j} = curRxn.Exception_0x20_Regions{j};
+            config.chemRxn{i}.exceptionRegions{j} = ...
+                curRxn.Exception_0x20_Regions{j};
         end
     end
         
@@ -70,23 +110,26 @@ for i = 1:config.numChemRxn
         config.chemRxn{i}.products(j) = curRxn.Products(j);
         if strcmp(config.chemRxn{i}.surfRxnType, 'Adsorbing') || ...
             strcmp(config.chemRxn{i}.surfRxnType, 'Desorbing')
-            config.chemRxn{i}.bProdReleased(j) = curRxn.Products_0x20_Released_0x3F_(j);
+            config.chemRxn{i}.bProdReleased(j) = ...
+                curRxn.Products_0x20_Released_0x3F_(j);
         end
     end
     
     if (strcmp(config.chemRxn{i}.surfRxnType, 'Adsorbing') || ...
         strcmp(config.chemRxn{i}.surfRxnType, 'Desorbing')) && ...
         sum(config.chemRxn{i}.products) > 0
-        config.chemRxn{i}.releaseType = curRxn.Release_0x20_Placement_0x20_Type;
+        config.chemRxn{i}.releaseType =...
+            curRxn.Release_0x20_Placement_0x20_Type;
     end
 end
 
 %% Extract Region Properties
 config.subBaseSize = configJSON.Environment.Subvolume_0x20_Base_0x20_Size;
 config.numRegion = length(configJSON.Environment.Region_0x20_Specification);
-regionStruct = struct('label', '', 'parent', '', 'shape', '', 'type', '', 'surfaceType', '', ...
-    'bMicro', 0,...
-    'anchorCoor', zeros(1,3), 'subvolSizeInt', 0, 'numSubDim', zeros(1,3), 'radius', 0);
+regionStruct = struct('label', '', 'parent', '', 'shape', '', ...
+    'type', '', 'surfaceType', '', 'bMicro', 0,...
+    'anchorCoor', zeros(1,3), 'subvolSizeInt', 0, ...
+    'numSubDim', zeros(1,3), 'radius', 0);
 config.region = cell(1, config.numRegion);
 for i = 1:config.numRegion
     config.region{i} = regionStruct;
@@ -108,16 +151,18 @@ for i = 1:config.numRegion
     if strcmp(config.region{i}.shape, 'Rectangle') || ...
         strcmp(config.region{i}.shape, 'Rectangular Box')
         config.region{i}.bMicro = curRegion.Is_0x20_Region_0x20_Microscopic_0x3F_;
-        config.region{i}.numSubDim = [curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_X ...
+        config.region{i}.numSubDim = ...
+            [curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_X ...
             curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_Y ...
             curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_Z];
+        config.region{i}.subvolSizeInt = curRegion.Integer_0x20_Subvolume_0x20_Size;
         config.region{i}.radius = 0;
     elseif strcmp(config.region{i}.shape, 'Sphere')
         config.region{i}.bMicro = true;
         config.region{i}.numSubDim = [1 1 1];
         config.region{i}.radius = curRegion.Radius;
     else
-        warn('Region %d shape %s not recognized\n', i, config.region{i}.shape);
+        warning('Region %d shape %s not recognized\n', i-1, config.region{i}.shape);
     end
     
     config.region{i}.anchorCoor = [curRegion.Anchor_0x20_X_0x20_Coordinate ...
@@ -127,9 +172,9 @@ end
 
 %% Extract Actor Properties
 config.numActor = length(configJSON.Environment.Actor_0x20_Specification);
-actorStruct = struct('bDefinedByRegions', 0, 'numRegion', 0, 'regionList', [], ...
-    'shape', '', 'boundary', [], ...
-    'bActive', 0, 'startTime', 0, 'bMaxActions', 0, 'maxActions', 0, 'bIndependent', 0, ...
+actorStruct = struct('bDefinedByRegions', 0, 'numRegion', 0, ...
+    'regionList', [], 'shape', '', 'boundary', [], 'bActive', 0, ...
+    'startTime', 0, 'bMaxActions', 0, 'maxActions', 0, 'bIndependent', 0, ...
     'actionInterval', 0, 'bRecord', 0, 'activeID', NaN, 'passiveID', NaN);
 config.actor = cell(1, config.numActor);
 config.numActive = 0;

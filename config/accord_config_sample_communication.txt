@@ -23,7 +23,6 @@
 		]
 	},
 	"Environment":	{
-		"Number of Dimensions": 3,
 		"Subvolume Base Size": 1e-12,
 		"Region Specification": [
 			{

@@ -57,6 +57,7 @@ end
 
 %% Create axes and apply properties
 hAxes = axes('Parent',hFig);
+axis equal
 if ~isempty(axesProp)
     axesPropFields = fieldnames(axesProp);
     numProp = numel(axesPropFields);

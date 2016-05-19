@@ -41,7 +41,7 @@ function axesProp = accordBuildAxesStruct(propChange)
 % Overall axes placement and visibility
 axesProp.Box = 'on';        % If on, draw complete box outline along axis
                             % limits
-axesProp.Clipping = 'on';   % If on, crop parts of curves that are defined
+axesProp.Clipping = 'off';   % If on, crop parts of curves that are defined
                             % beyond axis limits
 axesProp.OuterPosition = [0 0 1 1]; % Relative position of axes within figure
 axesProp.Visible = 'off';    % If off, plots will appear but the axis lines

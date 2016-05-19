@@ -1,4 +1,4 @@
-function dispStruct = accordBuildDispStruct(indToDisp)
+function dispStruct = accordBuildDispStruct(indToDisp, propChange)
 %
 % The AcCoRD Simulator
 % (Actor-based Communication via Reaction-Diffusion)
@@ -9,11 +9,15 @@ function dispStruct = accordBuildDispStruct(indToDisp)
 % For user documentation, read README.txt in the root AcCoRD directory
 %
 % accordBuildDispStruct.m - build structure with parameters to define how
-%   some kind of object should be plotted (i.e., Region or actor)
+%   some kind of object should be plotted (i.e., Region or actor). Default
+%   settings will plot only the edges of the object (and not the faces) in
+%   fully opaque black.
 %
 % INPUTS
 % indToDisp - indices of objects that will be displayed and thus need
 %   properties
+% propChange - structure of properties to modify from their default values.
+%   Any field must match one in dispStruct and be the same size.
 %
 % OUTPUTS
 % dispStruct - structure with display parameters
@@ -26,6 +30,8 @@ function dispStruct = accordBuildDispStruct(indToDisp)
 % - Created file
 %
 % Created 2016-05-18
+
+%% Set Default Values
 
 indLength = length(indToDisp);
 
@@ -41,4 +47,13 @@ dispStruct.dispColor{1} = cell(1,indLength);
 
 for i = 1:indLength
     dispStruct.dispColor{1}{i} = 'black';
+end
+
+%% Make Specified Changes to Defaults
+if ~isempty(propChange)
+    propFields = fieldnames(propChange);
+    numProp = numel(propFields);
+    for i = 1:numProp
+        dispStruct.(propFields{i}) = propChange.(propFields{i});
+    end
 end

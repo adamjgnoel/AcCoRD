@@ -32,9 +32,9 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 %   object to plot has dimension of order 1
 %
 % OUTPUTS
-% hFig - handle to plotted figure. Useful for making changes to figure.
+% hFig - handle to plotted figure. Use for making changes to figure.
 % hAxes - handle to axes in plotted figure. Use for making changes to
-%   figure.
+%   axes.
 %
 % Last revised for AcCoRD LATEST_VERSION
 %

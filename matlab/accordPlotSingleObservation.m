@@ -47,14 +47,18 @@ hPoints = zeros(1, molStruct.numToDisp);
 
 for i = 1:molStruct.numToDisp
     curMol = molStruct.indToDisp(i);
-    hPoints(i) = ...
-        scatter3(hAxes, scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,1),...
-        scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,2),...
-        scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,3));
-    set(hPoints(i),'DisplayName', molStruct.dispStr{1}{i});
-    set(hPoints(i),'SizeData', molStruct.size(i));
-    set(hPoints(i),'LineWidth', molStruct.lineWidth(i));
-    set(hPoints(i),'MarkerEdgeColor', molStruct.edgeColor{1}{i});
-    set(hPoints(i),'MarkerFaceColor', molStruct.faceColor{1}{i});
-    set(hPoints(i),'Marker', molStruct.marker{1}{i});
+    if ~isempty(data.passiveRecordPos{actorInd}{curMol})
+        hPoints(i) = ...
+            scatter3(hAxes, scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,1),...
+            scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,2),...
+            scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,3));
+        set(hPoints(i),'DisplayName', molStruct.dispStr{1}{i});
+        set(hPoints(i),'SizeData', molStruct.size(i));
+        set(hPoints(i),'LineWidth', molStruct.lineWidth(i));
+        set(hPoints(i),'MarkerEdgeColor', molStruct.edgeColor{1}{i});
+        set(hPoints(i),'MarkerFaceColor', molStruct.faceColor{1}{i});
+        set(hPoints(i),'Marker', molStruct.marker{1}{i});
+    else
+        hPoints(i) = scatter3(hAxes, NaN, NaN, NaN);
+    end
 end

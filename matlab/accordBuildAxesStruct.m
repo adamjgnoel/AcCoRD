@@ -1,4 +1,4 @@
-function axesProp = accordBuildAxesStruct()
+function axesProp = accordBuildAxesStruct(propChange)
 %
 % The AcCoRD Simulator
 % (Actor-based Communication via Reaction-Diffusion)
@@ -13,10 +13,16 @@ function axesProp = accordBuildAxesStruct()
 %   they will be directly applied to the axes handle via set. Field values
 %   can be appended or changed within this function or by modifying the
 %   output structure. The fields and parameters listed here are considered
-%   "defaults".
+%   "defaults". Please note that defined axis limits are not scaled and so
+%   are not affected by the "scale" parameter when plotting in
+%   accordPlotEnvironment.
 %
 % INPUTS
-% NONE
+% propChange - structure of properties to modify from their default values
+%   Any field must be a standard Matlab axes property and be the correct
+%   size. Fields that match any of the default values below will be applied
+%   in the order below. Fields that do not match the defaults below will
+%   be applied after the defaults and in the order defined.
 %
 % OUTPUTS
 % axesProp - structure with common axes properties
@@ -29,6 +35,8 @@ function axesProp = accordBuildAxesStruct()
 % - Created file
 %
 % Created 2016-05-18
+
+%% Set Default Values
 
 % Overall axes placement and visibility
 axesProp.Box = 'on';        % If on, draw complete box outline along axis
@@ -82,3 +90,12 @@ axesProp.CameraViewAngle = 6.6086;      % Default is 6.6086. Range [0, 180)
 axesProp.CameraViewAngleMode = 'auto';  % Default is 'auto'
                                         % If 'manual', need to specify
                                         % CameraViewAngle
+
+%% Make Specified Changes to Defaults
+if ~isempty(propChange)
+    propFields = fieldnames(propChange);
+    numProp = numel(propFields);
+    for i = 1:numProp
+        axesProp.(propFields{i}) = propChange.(propFields{i});
+    end
+end

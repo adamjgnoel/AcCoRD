@@ -92,8 +92,8 @@
 				"Notes": "Point Transmitter at origin with 10ms symbol length. Molecules are
 					generated at random times at an expected rate that depends on the current symbol.",
 				"Is Location Defined by Regions?": false,
-				"Shape": "Rectangular Box",
-				"Outer Boundary": [-1e-12, 1e-12, -1e-12, 1e-12, -1e-12, 1e-12],
+				"Shape": "Point",
+				"Outer Boundary": [0, 0, 0],
 				"Is Actor Active?": true,
 				"Start Time": 0,
 				"Is There Max Number of Actions?": false,
@@ -130,8 +130,7 @@
 				"Is Molecule Position Observed?": [false, false]
 		},
 		{
-				"Notes": "Spherical observer. Its location must match that of the receiver region
-					in order for the reversible receiver reaction to occur",
+				"Notes": "Spherical observer at receiver",
 				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["Receiver"],
 				"Is Actor Active?": false,

@@ -15,6 +15,8 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - added active point sources. Can be placed in microscopic or mesoscopic regions.
+ * Cannot be on boundary of 2 or more regions or mesoscopic subvolumes
  * - made output of active actor data sequence a user option
  * - added bBits array for user to define a constant active actor bit sequence
  *

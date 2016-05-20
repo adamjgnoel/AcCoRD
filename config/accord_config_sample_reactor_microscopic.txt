@@ -52,7 +52,7 @@
 		"Subvolume Base Size": 1e-6,
 		"Region Specification": [
 			{
-				"Notes": "Single mesoscopic region with 1 subvolume.",
+				"Notes": "Single microscopic region.",
 				"Label": "A",
 				"Parent Label": "",
 				"Shape": "Rectangular Box",

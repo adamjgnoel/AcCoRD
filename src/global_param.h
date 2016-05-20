@@ -10,9 +10,12 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added POINT as a shape
  *
  * Revision v0.5.1 (2016-05-06)
  * - added types of chemical reaction probability calculations
@@ -47,7 +50,8 @@
 #define RECTANGULAR_BOX 2
 #define SPHERE 3
 #define LINE 4
-#define UNDEFINED_SHAPE 5
+#define POINT 5
+#define UNDEFINED_SHAPE 6
 
 // Types of regions
 // NOTE: Changes to list of names must be reflected in file_io.c

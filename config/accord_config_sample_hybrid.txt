@@ -98,7 +98,7 @@
 				"Is Molecule Position Observed?": [false, false]
 		},
 		{
-				"Notes": "Transmitter 1. Releases 1 molecule per 10 cubic microns",
+				"Notes": "Transmitter 1. 1000 molecules",
 				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["Right", "Left"],
 				"Is Actor Active?": true,

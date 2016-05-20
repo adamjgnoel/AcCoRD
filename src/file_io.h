@@ -22,6 +22,9 @@
  * this distance)
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
+ * - added point active actors defined by their 3D coordinate.
+ * - added check for positive (and not just non-negative) radii for spherical regions and
+ * actors (i.e., 0 is not a valid radius)
  * - added warnings for unnecessary active actor parameters depending on values
  * of other active actor parameters
  *

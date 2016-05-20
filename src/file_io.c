@@ -22,6 +22,9 @@
  * this distance)
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
+ * - added point active actors defined by their 3D coordinate.
+ * - added check for positive (and not just non-negative) radii for spherical regions and
+ * actors (i.e., 0 is not a valid radius)
  * - added warnings for unnecessary active actor parameters depending on values
  * of other active actor parameters
  *
@@ -1108,7 +1111,7 @@ void loadConfig(const char * CONFIG_NAME,
 		
 			// Region radius
 			if(!cJSON_bItemValid(curObj,"Radius", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Radius")->valuedouble < 0)
+				cJSON_GetObjectItem(curObj,"Radius")->valuedouble <= 0.)
 			{ // Region does not have a valid Radius
 				bWarn = true;
 				printf("WARNING %d: Region %d does not have a valid \"Radius\". Assigning value of \"Subvolume Base Size\".\n", numWarn++, curArrayItem);
@@ -1290,6 +1293,11 @@ void loadConfig(const char * CONFIG_NAME,
 				curSpec->actorSpec[curArrayItem].shape = SPHERE;
 				arrayLen = 4;
 			}
+			else if(strcmp(tempString,"Point") == 0)
+			{
+				curSpec->actorSpec[curArrayItem].shape = POINT;
+				arrayLen = 3;
+			}
 			else
 			{
 				bWarn = true;
@@ -1325,9 +1333,17 @@ void loadConfig(const char * CONFIG_NAME,
 				}
 			}
 			
-			// Add r^2 term for spherical boundaries
+			// For spherical boundaries, confirm radius validity and add r^2 term
 			if(strcmp(tempString,"Sphere") == 0)
 			{
+				if(curSpec->actorSpec[curArrayItem].boundary[3] <= 0.)
+				{
+					bWarn = true;
+					printf("WARNING %d: Actor %d is a sphere but has invalid radius %f. Setting to default value \"1e-6\".\n",
+						numWarn++, curArrayItem,
+						curSpec->actorSpec[curArrayItem].boundary[3]);
+					curSpec->actorSpec[curArrayItem].boundary[3] = 1e-6;
+				}
 				curSpec->actorSpec[curArrayItem].boundary[4] =
 					squareDBL(curSpec->actorSpec[curArrayItem].boundary[3]);
 			}

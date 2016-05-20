@@ -16,6 +16,8 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - added implementation of point shapes. Implementation is not comprehensive, but enough
+ * to account for active point actors.
  *
  * Revision v0.5.1 (2016-05-06)
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,

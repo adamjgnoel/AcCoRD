@@ -16,6 +16,8 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - added implementation of point shapes. Implementation is not comprehensive, but enough
+ * to account for active point actors.
  *
  * Revision v0.5.1 (2016-05-06)
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
@@ -74,6 +76,10 @@ bool bPointInBoundary(const double point[3],
 {
 	switch (boundary1Type)
 	{
+		case POINT:
+			return point[0] == boundary1[0]
+				&& point[1] == boundary1[1]
+				&& point[2] == boundary1[2];
 		case RECTANGLE:
 		case RECTANGULAR_BOX:
 			return (point[0] >= boundary1[0]
@@ -100,6 +106,9 @@ bool bBoundaryIntersect(const int boundary1Type,
 	double d;
 	switch (boundary1Type)
 	{
+		case POINT:
+			// Just need to check whether point is within boundary2
+			return bPointInBoundary(boundary1, boundary2Type, boundary2);
 		case RECTANGLE:
 		case RECTANGULAR_BOX:
 			switch (boundary2Type)
@@ -342,10 +351,14 @@ bool bBoundarySurround(const int boundary1Type,
 	
 	switch (boundary1Type)
 	{ // Is boundary1 inside of boundary2?
+		case POINT:
+			return bPointInBoundary(boundary1, boundary2Type, boundary2);
 		case RECTANGLE:
 		case RECTANGULAR_BOX:
 			switch (boundary2Type)
 			{
+				case POINT:
+					return false; // No object can be inside a point
 				case RECTANGLE:
 				case RECTANGULAR_BOX:
 					return (boundary1[0] >= boundary2[0] + clearance
@@ -406,6 +419,8 @@ bool bBoundarySurround(const int boundary1Type,
 		case SPHERE:
 			switch (boundary2Type)
 			{
+				case POINT:
+					return false; // No object can be inside a point
 				case RECTANGLE:
 					return false; // A 3D object cannot be inside of a 2D object
 				case RECTANGULAR_BOX:
@@ -1285,6 +1300,8 @@ double boundaryVolume(const int boundary1Type,
 {
 	switch (boundary1Type)
 	{
+		case POINT:
+			return 0.;
 		case RECTANGLE:
 			if(boundary1[1] < boundary1[0] || boundary1[3] < boundary1[2]
 				 || boundary1[5] < boundary1[4])
@@ -1377,6 +1394,13 @@ void uniformPointVolume(double point[3],
 	
 	switch (boundaryType)
 	{
+		case POINT:
+			// Simplest case. No need to generate a random point.
+			// Assume that boundary still defined in "Rectangular" format
+			point[0] = boundary1[0];
+			point[1] = boundary1[2];
+			point[2] = boundary1[4];
+			return;
 		case RECTANGLE:
 			if(bSurface)
 			{
@@ -1556,6 +1580,7 @@ double squareDBL(double v)
 // to allocated memory
 const char * boundaryString(const int boundaryType)
 {
+	static char pointString[] = "Point";
 	static char rectString[] = "Rectangle";
 	static char boxString[] = "Rectangular Box";
 	static char circleString[] = "Circle";
@@ -1564,6 +1589,8 @@ const char * boundaryString(const int boundaryType)
 	
 	switch (boundaryType)
 	{
+		case POINT:
+			return pointString;
 		case RECTANGLE:
 			return rectString;
 		case RECTANGULAR_BOX:

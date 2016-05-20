@@ -15,6 +15,8 @@
  *
  * Revision LATEST_VERSION
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - added active point sources. Can be placed in microscopic or mesoscopic regions.
+ * Cannot be on boundary of 2 or more regions or mesoscopic subvolumes
  * - made output of active actor data sequence a user option
  * - added bBits array for user to define a constant active actor bit sequence
  *
@@ -121,6 +123,16 @@ void initializeActorCommon(const short NUM_ACTORS,
 		if(actorCommonArray[curActor].spec.bDefinedByRegions)
 		{
 			actorCommonArray[curActor].volume = 0;
+		} else if(actorCommonArray[curActor].spec.shape == POINT)
+		{ // Actor is a point
+			if(!actorCommonArray[curActor].spec.bActive)
+			{
+				// Only active actors can be points
+				fprintf(stderr, "ERROR: Actor %u is passive and defined as a point.\nOnly active actors can be points.\n",
+					curActor);
+				exit(EXIT_FAILURE);
+			}
+			actorCommonArray[curActor].volume = 0.;
 		} else
 		{
 			actorCommonArray[curActor].volume =
@@ -146,9 +158,10 @@ void initializeActorCommon(const short NUM_ACTORS,
 		// Find number of regions within actor space
 		for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
 		{
+			bCurRegionIntersectActor = false;
 			if(actorCommonArray[curActor].spec.bDefinedByRegions)
 			{
-				bCurRegionIntersectActor = false;
+				
 				for(curStr = 0;
 					curStr < actorCommonArray[curActor].spec.numRegion;
 					curStr++)
@@ -162,45 +175,49 @@ void initializeActorCommon(const short NUM_ACTORS,
 						break;
 					}
 				}
-			} else
-			{
-				if(bIntersectRegion(curRegion, regionArray,
+			} else if(bIntersectRegion(curRegion, regionArray,
 				actorCommonArray[curActor].spec.shape,
 				actorCommonArray[curActor].spec.boundary))
+			{
+				// Non-zero volume. Make sure that shape/regime combination is not
+				// invalid (i.e., round actor in meso region)
+				if(actorCommonArray[curActor].spec.shape == SPHERE
+					&& !regionArray[curRegion].spec.bMicro
+					&& bBoundarySurround(actorCommonArray[curActor].spec.shape,
+					actorCommonArray[curActor].spec.boundary,
+					regionArray[curRegion].spec.shape,
+					regionArray[curRegion].boundary, 0.))
 				{
-					// Non-zero volume. Make sure that shape/regime combination is not
-					// invalid (i.e., round actor in meso region)
-					if(actorCommonArray[curActor].spec.shape == SPHERE
-						&& !regionArray[curRegion].spec.bMicro
-						&& bBoundarySurround(actorCommonArray[curActor].spec.shape,
-						actorCommonArray[curActor].spec.boundary,
-						regionArray[curRegion].spec.shape,
-						regionArray[curRegion].boundary, 0.))
-					{
-						// Invalid actor for region
-						fprintf(stderr, "ERROR: Round actor %u placed inside mesoscopic region %u.\n",
-							curActor, curRegion);
-						exit(EXIT_FAILURE);
-					}
-					
-					// If an actor intersects a 3D surface that is a 3D region, or a
-					// 2D surface that is a 2D region, then it must surround the
-					// entire region
-					if(regionArray[curRegion].dimension != regionArray[curRegion].effectiveDim
-						&& !bBoundarySurround(regionArray[curRegion].spec.shape,
-						regionArray[curRegion].boundary,
-						actorCommonArray[curActor].spec.shape,
-						actorCommonArray[curActor].spec.boundary, 0.))
-					{
-						// Invalid actor for region
-						fprintf(stderr, "ERROR: Actor %u intersects surface region %u.\n",
-							curActor, curRegion);
-						fprintf(stderr, "An actor's surface cannot intersect a 3D surface region that is a 3D shape or a 2D surface region that is a 2D shape.\n");
-						exit(EXIT_FAILURE);
-					}
-					bCurRegionIntersectActor = true;
-				} else
-					bCurRegionIntersectActor = false;
+					// Invalid actor for region
+					fprintf(stderr, "ERROR: Round actor %u placed inside mesoscopic region %u.\n",
+						curActor, curRegion);
+					exit(EXIT_FAILURE);
+				}
+				
+				if(actorCommonArray[curActor].spec.shape == POINT
+					&& actorCommonArray[curActor].numRegion > 0)
+				{
+					fprintf(stderr, "ERROR: Actor %u is a point but is defined on the boundary of multiple regions.\nPoint actors must be defined within a single region.\n",
+						curActor);
+					exit(EXIT_FAILURE);
+				}
+				
+				// If an actor intersects a 3D surface that is a 3D region, or a
+				// 2D surface that is a 2D region, then it must surround the
+				// entire region
+				if(regionArray[curRegion].dimension != regionArray[curRegion].effectiveDim
+					&& !bBoundarySurround(regionArray[curRegion].spec.shape,
+					regionArray[curRegion].boundary,
+					actorCommonArray[curActor].spec.shape,
+					actorCommonArray[curActor].spec.boundary, 0.))
+				{
+					// Invalid actor for region
+					fprintf(stderr, "ERROR: Actor %u intersects surface region %u.\n",
+						curActor, curRegion);
+					fprintf(stderr, "An actor's surface cannot intersect a 3D surface region that is a 3D shape or a 2D surface region that is a 2D shape.\n");
+					exit(EXIT_FAILURE);
+				}
+				bCurRegionIntersectActor = true;
 			}
 			
 			if(bCurRegionIntersectActor)
@@ -316,26 +333,41 @@ void initializeActorCommon(const short NUM_ACTORS,
 			{
 				bCurRegionIntersectActor = true;
 				
-				// Find "outer" boundary of intersection (this includes space of
-				// child regions)
-				actorCommonArray[curActor].regionInterType[curInterRegion] = 
-				intersectBoundary(actorCommonArray[curActor].spec.shape,
-					actorCommonArray[curActor].spec.boundary,
-					regionArray[curRegion].spec.shape, regionArray[curRegion].boundary,
-					actorCommonArray[curActor].regionInterBound[curInterRegion]);
-			
-				// Find volume of intersection (this does exclude volumes of child regions)
-				actorCommonArray[curActor].regionInterArea[curInterRegion] = 
-					intersectRegionVolume(curRegion, regionArray,
-					actorCommonArray[curActor].spec.shape,
-					actorCommonArray[curActor].spec.boundary);
-			
-				// Is all of region inside the actor?
-				actorCommonArray[curActor].bRegionInside[curInterRegion] =
-					bBoundarySurround(regionArray[curRegion].spec.shape,
-					regionArray[curRegion].boundary,
-					actorCommonArray[curActor].spec.shape,
-					actorCommonArray[curActor].spec.boundary, 0.);
+				if(actorCommonArray[curActor].spec.shape == POINT)
+				{
+					actorCommonArray[curActor].bRegionInside[curInterRegion] = false;
+					actorCommonArray[curActor].regionInterArea[curInterRegion] = 0.;
+					actorCommonArray[curActor].regionInterType[curInterRegion] = POINT;
+					for(i = 0; i < 3; i++)
+					{
+						actorCommonArray[curActor].regionInterBound[curInterRegion][2*i] =
+							actorCommonArray[curActor].spec.boundary[i];
+						actorCommonArray[curActor].regionInterBound[curInterRegion][2*i+1] =
+							actorCommonArray[curActor].spec.boundary[i];
+					}
+				} else
+				{					
+					// Find "outer" boundary of intersection (this includes space of
+					// child regions)
+					actorCommonArray[curActor].regionInterType[curInterRegion] = 
+					intersectBoundary(actorCommonArray[curActor].spec.shape,
+						actorCommonArray[curActor].spec.boundary,
+						regionArray[curRegion].spec.shape, regionArray[curRegion].boundary,
+						actorCommonArray[curActor].regionInterBound[curInterRegion]);
+				
+					// Find volume of intersection (this does exclude volumes of child regions)
+					actorCommonArray[curActor].regionInterArea[curInterRegion] = 
+						intersectRegionVolume(curRegion, regionArray,
+						actorCommonArray[curActor].spec.shape,
+						actorCommonArray[curActor].spec.boundary);
+				
+					// Is all of region inside the actor?
+					actorCommonArray[curActor].bRegionInside[curInterRegion] =
+						bBoundarySurround(regionArray[curRegion].spec.shape,
+						regionArray[curRegion].boundary,
+						actorCommonArray[curActor].spec.shape,
+						actorCommonArray[curActor].spec.boundary, 0.);
+				}
 			}		
 			
 			// Is current region within actor space?
@@ -354,7 +386,11 @@ void initializeActorCommon(const short NUM_ACTORS,
 				{
 					actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] = 0.;
 				}
-				if(actorCommonArray[curActor].maxDim == regionArray[curRegion].effectiveDim)
+				if(actorCommonArray[curActor].spec.shape == POINT)
+				{ // Point actors must be entirely within their respective region
+					actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] = 1.;
+				} else if(actorCommonArray[curActor].maxDim ==
+					regionArray[curRegion].effectiveDim)
 				{ 	// Do not add region volumes that are effectively of a lower dimension
 					// than the actor
 					actorCommonArray[curActor].cumFracActorInRegion[curInterRegion] +=
@@ -418,6 +454,13 @@ void initializeActorCommon(const short NUM_ACTORS,
 								}
 							}
 						}
+					}
+					if(actorCommonArray[curActor].spec.shape == POINT
+						&& actorCommonArray[curActor].numSub[curInterRegion] > 1)
+					{ // Point actors can only be within one subvolume
+						fprintf(stderr, "ERROR: Actor %u is a point in a mesoscopic region %u but is defined on the boundary of multiple subvolumes.\nPoint actors must be defined within a single subvolume if their parent region is mesoscopic.\n",
+							curActor, curRegion);
+						exit(EXIT_FAILURE);
 					}
 				}
 				
@@ -648,6 +691,12 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 				== NULL){
 				fprintf(stderr,"ERROR: Memory allocation for structure members of active actor %u.\n", curActive);
 				exit(EXIT_FAILURE);
+			}
+			
+			if(actorCommonArray[curActor].spec.shape == POINT)
+			{ // Actor is a point. It must be entirely within 1 subvolume
+				actorActiveArray[curActive].cumFracActorInSub[curInterRegion][0] = 1.;
+				continue;
 			}
 			
 			for(curInterSub = 0;
@@ -1323,7 +1372,8 @@ void placeMoleculesInRegion(const struct actorStruct3D * actorCommon,
 					actorCommon->regionInterBound[curRegionInter], bSurface,
 					regionArray[curRegion].plane);
 				
-				if(bPointInRegionNotChild(curRegion, regionArray, point, false))
+				if(actorCommon->spec.shape == POINT
+					|| bPointInRegionNotChild(curRegion, regionArray, point, false))
 				{
 					bNeedPoint = false;
 					if(!addMoleculeRecent(microMolListRecent, point[0], point[1],
@@ -1608,6 +1658,7 @@ void findSubSearchRange(const struct region regionArray[],
 		(actorCommonArray[curActor].regionInterBound[curInterRegion][dim[5]] - zAnch - regionArray[curRegion].actualSubSize)
 		/regionArray[curRegion].actualSubSize);
 	
+	// Correct for rounding that takes us beyond number of subvolumes in any dimension
 	if(*last1 > maxSize[0]) *last1 = maxSize[0];
 	if(*last2 > maxSize[1]) *last2 = maxSize[1];
 	if(*last3 > maxSize[2]) *last3 = maxSize[2];

@@ -21,6 +21,7 @@
  * changes needed to accommodate improved hybrid transition algorithms
  * - changed findNearestSub function to return index of subvolume in region's neighID array
  * instead of the global subvolume list. This makes function suitable for more calls.
+ * - added case for point boundary when determining intersection with a region
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated function bPointInRegionNotChild to take an extra input to indicate
@@ -1008,6 +1009,15 @@ double intersectRegionVolume(const short curRegion,
 		boundary2Type, boundary2, 0.))
 	{ // Boundary is fully inside region such that there is no intersection with region boundary
 		return 0.;		
+	}
+	
+	if(boundary2Type == POINT)
+	{
+		if(bPointInRegionNotChild(curRegion, regionArray,
+			boundary2, false))
+			return INFINITY;
+		else
+			return 0.;
 	}
 	
 	// Calculate overall intersection area (including space occupied by children)

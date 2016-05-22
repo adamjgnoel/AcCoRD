@@ -210,6 +210,7 @@ disp('Type dbcont to continue or dbquit to quit');
 keyboard
 
 %% Lock in axis limits and store inital camera view
+figureProp.Position = get(hFig(1),'Position');
 curAxis = axis(hAxes(1));
 initCamera = get(hAxes(1), {'CameraPosition','CameraTarget',...
     'CameraViewAngle','CameraUpVector'});
@@ -224,8 +225,27 @@ if bDynamicCamera
     lastCameraAnchor = find(frameCameraAnchor,1, 'last');
 end
 
-if bDynamicAnnotation
+if bDynamicAnnotation || ~bMakeVideo
     hAnnotInvis = findall(hInvisible, 'Tag', 'scribeOverlay');
+    if ~bMakeVideo
+        % Are there any static annotations? If so then store them
+        hAnnotAxes = findall(hFig(1), 'Tag', 'scribeOverlay');
+        hAnnot = get(hAnnotAxes, 'Children');
+        if bDispTime
+            if iscell(hAnnot)
+                hAnnot = [hAnnot{:}];
+            end
+            % Find and exclude time display
+            for hCur = 1:length(hAnnot)
+                if strcmp('Timer Box', get(hAnnot(hCur),'Tag'))
+                    hAnnot(hCur) = [];
+                    break
+                end
+            end
+        end
+        set(hAnnot, 'Tag', 'Static Annotation');
+        copyobj(hAnnot, hAnnotInvisAxes);
+    end
 end
 
 if bDispTime
@@ -322,6 +342,10 @@ for i = 1:numFrames
                 % Remove annotations
                 delete(hCurAnnot);
             end
+        else
+            % Add static annotations if there were any
+            hCurAnnotInvis = findall(hAnnotInvis, 'Tag', 'Static Annotation');
+            hCurAnnot = copyobj(hCurAnnotInvis, hCurAnnotAxes);
         end
     end
 end
@@ -392,6 +416,9 @@ end
         hAnnotAxes = findall(hFig(1), 'Tag', 'scribeOverlay');
         hAnnot = get(hAnnotAxes, 'Children');
         if bDispTime
+            if iscell(hAnnot)
+                hAnnot = [hAnnot{:}];
+            end
             % Find and exclude time display
             for hCur = 1:length(hAnnot)
                 if strcmp('Timer Box', get(hAnnot(hCur),'Tag'))

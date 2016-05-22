@@ -136,10 +136,27 @@ molToPlot = {1};
 %   default values.
 customMolProp = {[]};
 
+% cameraAnchorArray - cell array of cell arrays defining anchor points for
+%   the camera display. Can be passed as an empty cell array. Each anchor
+%   point is a cell array defining a complete set of camera settings, in
+%   the format {'CameraPosition', 'CameraTarget', 'CameraViewAngle',
+%   'CameraUpVector'}. See MATLAB camera documentation for more details.
+cameraAnchorArray = {};
+
+% frameCameraAnchor - array that specifies which frames use which camera
+%   anchors. Length of array should be equal to length of
+%   observationToPlot. If cameraAnchorArray is empty, then this array can
+%   also be empty. Values in array must match indices of anchor points in
+%   cameraAnchorArray. If a frame has associated value 0, and there are
+%   camera anchors defined, then the camera settings will be interpolated
+%   between anchors.
+frameCameraAnchor = [];
+
 %% Call accordVideoMaker
 [hFig, hAxes] = accordVideoMaker(fileToLoad,...
     bMakeVideo, videoName, videoFormat, ...
     curRepeat, scale, observationToPlot, ...
     customFigProp, customAxesProp, customVideoProp, ...
     regionToPlot, customRegionProp, actorToPlot, customActorProp,...
-    passiveActorToPlot, molToPlot, customMolProp);
+    passiveActorToPlot, molToPlot, customMolProp, ...
+    cameraAnchorArray, frameCameraAnchor);

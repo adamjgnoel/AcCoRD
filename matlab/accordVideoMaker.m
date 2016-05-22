@@ -3,7 +3,8 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
     curRepeat, scale, observationToPlot, ...
     customFigProp, customAxesProp, customVideoProp, ...
     regionToPlot, customRegionProp, actorToPlot, customActorProp,...
-    passiveActorToPlot, molToPlot, customMolProp)
+    passiveActorToPlot, molToPlot, customMolProp, ...
+    cameraAnchorArray, frameCameraAnchor)
 %
 % The AcCoRD Simulator
 % (Actor-based Communication via Reaction-Diffusion)
@@ -77,6 +78,18 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 %   changed. Indexing in this cell array matches that of the molToPlot cell
 %   array. See accordBuildMarkerStruct for structure fields and their
 %   default values.
+% cameraAnchorArray - cell array of cell arrays defining anchor points for
+%   the camera display. Can be passed as an empty cell array. Each anchor
+%   point is a cell array defining a complete set of camera settings, in
+%   the format {'CameraPosition', 'CameraTarget', 'CameraViewAngle',
+%   'CameraUpVector'}. See MATLAB camera documentation for more details.
+% frameCameraAnchor - array that specifies which frames use which camera
+%   anchors. Length of array should be equal to length of
+%   observationToPlot. If cameraAnchorArray is empty, then this array can
+%   also be empty. Values in array must match indices of anchor points in
+%   cameraAnchorArray. If a frame has associated value 0, and there are
+%   camera anchors defined, then the camera settings will be interpolated
+%   between anchors.
 %
 % OUTPUTS
 % hFig - handle(s) to plotted figure(s). Use for making changes.
@@ -128,25 +141,117 @@ if bMakeVideo
     videoObj = accordInitializeVideo(videoName, videoFormat, customVideoProp);
 else
     %% Generating Series of Figures Instead of a Video. Plot Empty Environment
-    hFig = zeros(1,1+numFrames);
-    hAxes = zeros(1,1+numFrames);
-    [hFig(1), hAxes(1)] = accordPlotEnvironment(config, axesProp, figureProp, ...
+    hFig = gobjects(1,1+numFrames);
+    hAxes = gobjects(1,1+numFrames);
+    [curFig, curAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
         regionDispStruct, actorDispStruct, scale);
+    hFig(1) = curFig;
+    hAxes(1) = curAxes;
+    
+    % Check with user if number of frames is large
+    if numFrames > 10
+        warning('Configuration will create %d figures instead of a video, which is a large number of new windows', numFrames);
+    end
 end
 
-%% Allow User To Adjust Environment View
-disp('Adjust figure camera angle if desired.\nType dbcont to continue or dbquit to quit');
+%% Allow User To Adjust Environment View and Set Dynamic Behavior
+disp('Adjust figure camera angles or annotations if desired.');
+
+bDispTime = false;
+numPt = 0;
+disp('Call accordAddTimeDisplay(NUM_DECIMAL_PLACES) to print dynamic simulation time in seconds,');
+disp(' where NUM_DECIMAL_PLACES is the number of decimal places.');
+disp(' The default is 4 places.');
+
+disp('Call accordAddCameraAnchor(FRAME_INDICES) to anchor the camera display settings,');
+disp('	for the video frames defined by FRAME_INDICES.');
+disp('	For frames that are not defined, the camera display is interpolated between');
+disp('	anchor frames.');
+disp('	If accordDynamicCamera is called without arguments, then existing camera');
+disp('	anchor settings are reset and all frames are anchored to the current.');
+disp('	camera.');
+disp('	Current settings can be checked by reading variables');
+disp('	cameraAnchorArray and frameCameraAnchor.');
+disp('  Call accordViewCameraAnchor(ANCHOR_IND) to apply the camera settings');
+disp('  defined for anchor ANCHOR_IND.');
+
+numCameraAnchor = length(cameraAnchorArray);
+bDynamicCamera = numCameraAnchor > 0;
+if bDynamicCamera
+    disp('NOTE: Camera anchor points already defined by wrapper file.');
+    disp('	Calls to accordDynamicCamera will append to current settings.');
+    disp('	Camera is set to first camera anchor.');
+    set(hAxes(1), {'CameraPosition','CameraTarget',...
+        'CameraViewAngle','CameraUpVector'}, cameraAnchorArray{1});
+else
+    disp('NOTE: No camera anchor points already defined by wrapper file.');
+    disp('	If accordDynamicCamera is not called, then camera settings.');
+    disp('	will not be changed when video generation starts.');
+    frameCameraAnchor = zeros(1,numFrames);
+end
+
+disp('Call accordAddAnnotation(FRAME_INDICES) to save the current figure annotations,');
+disp('	to display for the video frames defined by FRAME_INDICES.');
+disp('	Subsequent calls to accordAddAnnotation with the same indices will');
+disp('	override the previous annotations for those frames.');
+disp('	The timer display is treated as a separate annotation and is not affected');
+disp('	by calls to accordAddAnnotation.');
+disp('	Any annotations remaining on the figure at the start of the video');
+disp('	will remain for the entire video.');
+hInvisible = figure('Visible', 'off');
+annotation(hInvisible, 'textbox', [0.01 0.01 0.01 0.01], ...
+    'String', '');
+hAnnotInvisAxes = findall(hInvisible, 'Tag', 'scribeOverlay');
+bDynamicAnnotation = false;
+numAnnotatedFrames = 0;
+frameAnnotation = zeros(1, numFrames);
+
+disp('Type dbcont to continue or dbquit to quit');
 keyboard
 
-% Lock in axes limits and camera view for remainder
+%% Lock in axis limits and store inital camera view
+figureProp.Position = get(hFig(1),'Position');
 curAxis = axis(hAxes(1));
-curCamera = get(hAxes(1), {'CameraPosition','CameraTarget',...
+initCamera = get(hAxes(1), {'CameraPosition','CameraTarget',...
     'CameraViewAngle','CameraUpVector'});
 set(hAxes(1),{'CameraPositionMode','CameraTargetMode',...
     'CameraViewAngleMode','CameraUpVectorMode'}, ...
     {'manual', 'manual', 'manual', 'manual'});
 set(hAxes(1), {'CameraPosition','CameraTarget',...
-    'CameraViewAngle','CameraUpVector'}, curCamera);
+    'CameraViewAngle','CameraUpVector'}, initCamera);
+
+if bDynamicCamera
+    firstCameraAnchor = find(frameCameraAnchor,1);
+    lastCameraAnchor = find(frameCameraAnchor,1, 'last');
+end
+
+if bDynamicAnnotation || ~bMakeVideo
+    hAnnotInvis = findall(hInvisible, 'Tag', 'scribeOverlay');
+    if ~bMakeVideo
+        % Are there any static annotations? If so then store them
+        hAnnotAxes = findall(hFig(1), 'Tag', 'scribeOverlay');
+        hAnnot = get(hAnnotAxes, 'Children');
+        if bDispTime
+            if iscell(hAnnot)
+                hAnnot = [hAnnot{:}];
+            end
+            % Find and exclude time display
+            for hCur = 1:length(hAnnot)
+                if strcmp('Timer Box', get(hAnnot(hCur),'Tag'))
+                    hAnnot(hCur) = [];
+                    break
+                end
+            end
+        end
+        set(hAnnot, 'Tag', 'Static Annotation');
+        copyobj(hAnnot, hAnnotInvisAxes);
+    end
+end
+
+if bDispTime
+    hDispTimeCopy = copyobj(hTimer,hAnnotInvisAxes);
+    hTimerArray = zeros(1,numFrames);
+end
 
 %% Make the Movie
 % Assume that number of observations of first actor is same as number for
@@ -171,7 +276,12 @@ for i = 1:numFrames
                 regionDispStruct, actorDispStruct, scale);
             hAxes(i+1) = curAxes;
             hFig(i+1) = curFig;
+            % Give new figure an invisible string annotation so that we can
+            % copy new annotations to it if needed
+            annotation(curFig, 'textbox', [0.01 0.01 0.01 0.01], ...
+                'String', '', 'Visible', 'off');
         end
+        hCurAnnotAxes = findall(curFig, 'Tag', 'scribeOverlay');
         % Plot all of the specified molecules
         for j = 1:numPassiveObservers
             hPoints{j} = accordPlotSingleObservation(curAxes, data, ...
@@ -179,8 +289,46 @@ for i = 1:numFrames
                 observationToPlot(i), curRepeat, scale);
         end
         axis(curAxes, curAxis);
-        set(curAxes, {'CameraPosition','CameraTarget',...
-            'CameraViewAngle','CameraUpVector'}, curCamera);
+        if bDynamicCamera
+            % Determine what camera values to use
+            if frameCameraAnchor(i) > 0
+                % Camera view explicitly specified
+                curCamera = cameraAnchorArray{frameCameraAnchor(i)};
+            elseif i < firstCameraAnchor
+                % Use first camera anchor
+                curCamera = cameraAnchorArray{frameCameraAnchor(firstCameraAnchor)};
+            elseif i > lastCameraAnchor
+                % Use last camera anchor
+                curCamera = cameraAnchorArray{frameCameraAnchor(lastCameraAnchor)};
+            else
+                % Need to interpolate camera between anchors
+                anchor1Ind = find(frameCameraAnchor(1:i),1,'last');
+                anchor2Ind = i+find(frameCameraAnchor((i+1):end),1);
+                anchor1 = cameraAnchorArray{frameCameraAnchor(anchor1Ind)};
+                anchor2 = cameraAnchorArray{frameCameraAnchor(anchor2Ind)};
+                prog = (i - anchor1Ind)/(anchor2Ind - anchor1Ind);
+                for j = 1:4
+                    curCamera{j} = anchor1{j} + prog*(anchor2{j} - anchor1{j});
+                end
+            end
+            set(curAxes, {'CameraPosition','CameraTarget',...
+                'CameraViewAngle','CameraUpVector'}, curCamera);
+        else
+            set(curAxes, {'CameraPosition','CameraTarget',...
+                'CameraViewAngle','CameraUpVector'}, initCamera);
+        end
+        if bDynamicAnnotation && frameAnnotation(i) > 0
+            hCurAnnotInvis = findall(hAnnotInvis, 'Tag', num2str(frameAnnotation(i)));
+            hCurAnnot = copyobj(hCurAnnotInvis, hCurAnnotAxes);
+        end
+        if bDispTime
+            if bMakeVideo
+                set(hTimer, 'String', sprintf('%.*f s',numPt, tArray(i)));
+            else
+                hTimerArray(i) = copyobj(hDispTimeCopy,hCurAnnotAxes);
+                set(hTimerArray(i), 'String', sprintf('%.*f s',numPt, tArray(i)));
+            end
+        end
         if bMakeVideo
             % Capture frame and add to video
             drawnow
@@ -190,13 +338,97 @@ for i = 1:numFrames
             for j = 1:numPassiveObservers
                 delete(hPoints{j});
             end
+            if bDynamicAnnotation && frameAnnotation(i) > 0
+                % Remove annotations
+                delete(hCurAnnot);
+            end
+        else
+            % Add static annotations if there were any
+            hCurAnnotInvis = findall(hAnnotInvis, 'Tag', 'Static Annotation');
+            hCurAnnot = copyobj(hCurAnnotInvis, hCurAnnotAxes);
         end
     end
 end
 
 %% Cleanup
+delete(hInvisible);
 if bMakeVideo
     close(videoObj)
+    if bDispTime
+        delete(hTimer);
+    end
     annotation(hFig, 'textbox', [0.01 0.01 0.1 0.1], ...
         'String', 'Video Completed!');
+end
+
+
+
+    %% Nested Functions That User Can Call When Adjusting View
+    
+    % Add timer display. Apply same text properties as those used in axes
+    % properties structure
+    function accordAddTimeDisplay(numPtUser)
+        bDispTime = true;
+        hTimer = annotation(hFig(1), ...
+            'textbox', [0.01 0.01 0.1 0.1], ...
+            'Tag', 'Timer Box', ...
+            'String', 'Timer String', ...
+            'FontName', axesProp.FontName, ...
+            'FontSize', axesProp.FontSize, ...
+            'FontWeight', axesProp.FontWeight, ...            
+            'Interpreter', axesProp.TickLabelInterpreter);
+        firstObsID = ...
+            config.passiveActor{passiveActorToPlot(1)}.actorID;
+        tArray = config.actor{firstObsID}.startTime + ...
+            config.actor{firstObsID}.actionInterval*(observationToPlot-1);
+        if nargin == 0
+            numPt = 4;
+        else
+            numPt = numPtUser;
+        end
+    end
+
+    % Add anchor camera point to apply at specified frames
+    function accordAddCameraAnchor(curCameraFrames)
+        bDynamicCamera = true;
+        numCameraAnchor = numCameraAnchor + 1;
+        cameraAnchorArray{1,numCameraAnchor} = get(hAxes(1), ...
+            {'CameraPosition','CameraTarget', ...
+            'CameraViewAngle','CameraUpVector'});
+        frameCameraAnchor(curCameraFrames) = numCameraAnchor;
+    end
+
+    % View existing camera anchor
+    function accordViewCameraAnchor(curAnchor)
+        if bDynamicCamera && curAnchor <= numCameraAnchor
+            set(hAxes(1), {'CameraPosition','CameraTarget',...
+                'CameraViewAngle','CameraUpVector'}, ...
+                cameraAnchorArray{curAnchor});
+        else
+            warning('Cannot view camera angle %d. %d anchors have been defined',...
+                curAnchor, numCameraAnchor);
+        end
+    end
+
+    function accordAddAnnotation(curAnnotFrames)
+        bDynamicAnnotation = true;
+        numAnnotatedFrames = numAnnotatedFrames + 1;
+        hAnnotAxes = findall(hFig(1), 'Tag', 'scribeOverlay');
+        hAnnot = get(hAnnotAxes, 'Children');
+        if bDispTime
+            if iscell(hAnnot)
+                hAnnot = [hAnnot{:}];
+            end
+            % Find and exclude time display
+            for hCur = 1:length(hAnnot)
+                if strcmp('Timer Box', get(hAnnot(hCur),'Tag'))
+                    hAnnot(hCur) = [];
+                    break
+                end
+            end
+        end
+        set(hAnnot, 'Tag', num2str(numAnnotatedFrames));
+        copyobj(hAnnot, hAnnotInvisAxes);
+        frameAnnotation(curAnnotFrames) = numAnnotatedFrames;
+    end
 end

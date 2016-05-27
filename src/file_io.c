@@ -20,6 +20,8 @@
  * - added option for user to choose maximum distance beyond which a micro to mesoscopic
  * substep transition will not be considered (either initial or final point should be beyond
  * this distance)
+ * - added binding and unbinding radii as bimolecular reaction parameters (needed in
+ * microscopic regime)
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
  * - added point active actors defined by their 3D coordinate.
@@ -698,6 +700,39 @@ void loadConfig(const char * CONFIG_NAME,
 					
 					curSpec->chem_rxn[curArrayItem].k = 
 						cJSON_GetObjectItem(curObj, "Reaction Rate")->valuedouble;
+					
+					// Check for binding and unbinding radii
+					if(cJSON_bItemValid(curObj,"Binding Radius", cJSON_Number))
+					{
+						if(cJSON_GetObjectItem(curObj, "Binding Radius")->valuedouble >= 0.)
+						{
+							curSpec->chem_rxn[curArrayItem].rBind = 
+								cJSON_GetObjectItem(curObj, "Binding Radius")->valuedouble;
+						} else
+						{
+							bWarn = true;
+							printf("WARNING %d: Reaction %d has an invalid binding radius. Setting to default value of \"0\".\n", numWarn++, curArrayItem);
+							curSpec->chem_rxn[curArrayItem].rBind = 0.;
+						}
+					} else
+						curSpec->chem_rxn[curArrayItem].rBind = 0.;
+					
+					if(cJSON_bItemValid(curObj,"Unbinding Radius", cJSON_Number))
+					{						
+						if(cJSON_GetObjectItem(curObj, "Unbinding Radius")->valuedouble >= 0.)
+						{
+							curSpec->chem_rxn[curArrayItem].rUnbind = 
+								cJSON_GetObjectItem(curObj, "Unbinding Radius")->valuedouble;
+						} else
+						{
+							bWarn = true;
+							printf("WARNING %d: Reaction %d has an invalid unbinding radius. Setting to default value of \"0\".\n", numWarn++, curArrayItem);
+							curSpec->chem_rxn[curArrayItem].rUnbind = 0.;
+						}
+					} else
+						curSpec->chem_rxn[curArrayItem].rUnbind = 0.;
+					
+					// Read array of reactant stoichiometry
 					curObjInner = cJSON_GetObjectItem(curObj,"Reactants");
 					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
 					curMolType++)
@@ -715,6 +750,7 @@ void loadConfig(const char * CONFIG_NAME,
 						}
 					}
 					
+					// Read array of product stoichiometry
 					curObjInner = cJSON_GetObjectItem(curObj,"Products");
 					for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
 					curMolType++)

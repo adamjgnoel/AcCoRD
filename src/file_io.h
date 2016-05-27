@@ -20,6 +20,8 @@
  * - added option for user to choose maximum distance beyond which a micro to mesoscopic
  * substep transition will not be considered (either initial or final point should be beyond
  * this distance)
+ * - added binding and unbinding radii as bimolecular reaction parameters (needed in
+ * microscopic regime)
  * - made output of active actor data sequence a user option
  * - added option for user to define a constant active actor bit sequence
  * - added point active actors defined by their 3D coordinate.

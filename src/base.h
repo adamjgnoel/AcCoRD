@@ -18,6 +18,9 @@
  * - modified random number generation. Now use PCG via a separate interface file.
  * - added implementation of point shapes. Implementation is not comprehensive, but enough
  * to account for active point actors.
+ * - added new version of function for the distance between 2 points where the coordinates
+ * of one point are defined as separate variables
+ * - added sphere as trivial case in function for finding a shape's closest face
  *
  * Revision v0.5.1 (2016-05-06)
  * - added 2D rectangle case to point reflection. Actually only works for surface cases,
@@ -215,6 +218,15 @@ void defineLine(const double p1[3],
 	const double p2[3],
 	double L[3],
 	double * length);
+
+// Define unit vector pointing from one point to another
+// This version defines 2nd point as individual arguments
+// and does not return the length of the line
+void defineLine2(const double p1[3],
+	const double p2x,
+	const double p2y,
+	const double p2z,
+	double L[3]);
 
 // Determine volume of boundary
 //

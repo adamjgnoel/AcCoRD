@@ -17,6 +17,8 @@
  * - improved placement of molecules from mesoscopic regime into microscopic regime. User
  * can choose between small time step / large subvolume or large time step / small subvolume
  * algorithms via config. Actual placement moved to function in micro_molecule source file
+ * - added bimolecular chemical reactions in microscopic regime (via binding and unbinding
+ * radii)
  * - modified random number generation. Now use PCG via a separate interface file.
  * - made output of active actor data sequence a user option
  *
@@ -745,7 +747,7 @@ int main(int argc, char *argv[])
 					{ // For current molecule type in this region
 					
 						if(!isListMol3DEmpty(&microMolList[i][j])
-							&& regionArray[i].numFirstCurReactant[j] > 0)
+							&& regionArray[i].numFirstRxnWithReactant[j] > 0)
 						{ // Check 1st order reactions of "old" molecules
 							rxnFirstOrder(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, i,
 								microMolList, regionArray, j,
@@ -768,7 +770,7 @@ int main(int argc, char *argv[])
 						{ // For current molecule type in this region
 						
 							if(!isListMol3DRecentEmpty(&microMolListRecent[i][j])
-								&& regionArray[i].numFirstCurReactant[j] > 0)
+								&& regionArray[i].numFirstRxnWithReactant[j] > 0)
 							{ // Check 1st order reactions of "old" molecules
 								rxnFirstOrderRecent(spec.NUM_REGIONS,
 									spec.NUM_MOL_TYPES, i, microMolListRecent,
@@ -780,7 +782,7 @@ int main(int argc, char *argv[])
 						for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 						{ // For current molecule type in this region
 						
-							if(regionArray[i].numFirstCurReactant[j] < 1)
+							if(regionArray[i].numFirstRxnWithReactant[j] < 1)
 							{ 
 								numMicroMolCheck[i][j] = 0;
 							}
@@ -806,9 +808,12 @@ int main(int argc, char *argv[])
 				// Diffuse all microscopic molecules to valid locations and merge
 				// 2 sets of molecule lists into 1
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
-					microMolListRecent, regionArray, mesoSubArray, subvolArray,
+					microMolListRecent, regionArray, subvolArray,
 					micro_sigma, spec.chem_rxn, spec.MAX_HYBRID_DIST, DIFF_COEF);
 				
+				// Execute 2nd Order Reactions
+				rxnSecondOrder(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
+					regionArray, subvolArray, spec.chem_rxn, DIFF_COEF);
 				
 				if(numMesoSub > 0)
 				{

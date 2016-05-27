@@ -9,9 +9,18 @@
  *
  * chem_rxn.h - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - preliminary implementation of bimolecular reactions in microscopic regime
+ * (based on binding and unbinding radii). Can also model molecular crowding
+ * - added new members to region array structure to facilitate microscopic
+ * bimolecular reactions
+ * - added indicator for whether reactions in the global reaction lists can occur
+ * in given region, which is needed to asses bimolecular reactions where the
+ * reactants are in different regions
  *
  * Revision v0.5.1 (2016-05-06)
  * - added label, bReversible, and labelCoupled so that reactions can be named
@@ -94,6 +103,14 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	
 	// Base reaction rate k (units depends on order of reaction)
 	double k;
+	
+	// Binding radius (defined for mircoscopic bimolecular reactions)
+	// Default is 0 (molecules effectively do not react)
+	double rBind;
+	
+	// Unbinding radius (defined for microscopic reactions with multiple products)
+	// Default is 0 (products are left at same location as reactant)
+	double rUnbind;
 	
 	// Is the reaction a surface reaction?
 	// This will affect where a reaction will take place by default,

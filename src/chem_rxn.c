@@ -9,9 +9,18 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.5.1 (2016-05-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - preliminary implementation of bimolecular reactions in microscopic regime
+ * (based on binding and unbinding radii). Can also model molecular crowding
+ * - added new members to region array structure to facilitate microscopic
+ * bimolecular reactions
+ * - added indicator for whether reactions in the global reaction lists can occur
+ * in given region, which is needed to asses bimolecular reactions where the
+ * reactants are in different regions
  *
  * Revision v0.5.1 (2016-05-06)
  * - added label, bReversible, and labelCoupled so that reactions can be named
@@ -151,6 +160,10 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		if(regionArray[i].numChemRxn == 0)
 			continue; // No reactions in this region; no need to allocate memory
 		
+		regionArray[i].globalRxnID =
+			malloc(regionArray[i].numChemRxn*sizeof(unsigned short));
+		regionArray[i].bGlobalRxnID =
+			malloc(MAX_RXNS*sizeof(bool));
 		regionArray[i].bReversible =
 			malloc(regionArray[i].numChemRxn*sizeof(bool));
 		regionArray[i].reverseRxnID =
@@ -185,10 +198,12 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			malloc(regionArray[i].numChemRxn*sizeof(double));
 		regionArray[i].uniReactant =
 			malloc(regionArray[i].numChemRxn*sizeof(unsigned short));
-		regionArray[i].numFirstCurReactant =
+		regionArray[i].numFirstRxnWithReactant =
 			malloc(NUM_MOL_TYPES*sizeof(unsigned short));
-		regionArray[i].firstRxnID =
+		regionArray[i].firstRxnWithReactantID =
 			malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
+		regionArray[i].numSecondRxnWithReactant =
+			malloc(NUM_MOL_TYPES*sizeof(unsigned short));
 		regionArray[i].uniSumRate =
 			malloc(NUM_MOL_TYPES*sizeof(double));
 		regionArray[i].uniCumProb =
@@ -197,6 +212,12 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			malloc(NUM_MOL_TYPES*sizeof(double *));
 		regionArray[i].minRxnTimeRV =
 			malloc(NUM_MOL_TYPES*sizeof(double));
+		regionArray[i].rBind =
+			malloc(regionArray[i].numChemRxn*sizeof(double));
+		regionArray[i].rBindSq =
+			malloc(regionArray[i].numChemRxn*sizeof(double));
+		regionArray[i].rUnbind =
+			malloc(regionArray[i].numChemRxn*sizeof(double));
 		regionArray[i].biReactants =
 			malloc(regionArray[i].numChemRxn*sizeof(unsigned short [2]));
 		regionArray[i].rxnProbType =
@@ -216,7 +237,9 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		regionArray[i].bUseRxnOutProb =
 			malloc(NUM_MOL_TYPES*sizeof(bool));
 		
-		if(regionArray[i].bReversible == NULL
+		if(regionArray[i].globalRxnID == NULL
+			|| regionArray[i].bGlobalRxnID == NULL
+			|| regionArray[i].bReversible == NULL
 			|| regionArray[i].reverseRxnID == NULL
 			|| regionArray[i].numMolChange == NULL
 			|| regionArray[i].bMolAdd == NULL
@@ -233,12 +256,16 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			|| regionArray[i].tZeroth == NULL
 			|| regionArray[i].rxnRateZerothMicro == NULL
 			|| regionArray[i].uniReactant == NULL
-			|| regionArray[i].numFirstCurReactant == NULL
-			|| regionArray[i].firstRxnID == NULL
+			|| regionArray[i].numFirstRxnWithReactant == NULL
+			|| regionArray[i].firstRxnWithReactantID == NULL
+			|| regionArray[i].numSecondRxnWithReactant == NULL
 			|| regionArray[i].uniSumRate == NULL
 			|| regionArray[i].uniCumProb == NULL
 			|| regionArray[i].uniRelativeRate == NULL
 			|| regionArray[i].minRxnTimeRV == NULL
+			|| regionArray[i].rBind == NULL
+			|| regionArray[i].rBindSq == NULL
+			|| regionArray[i].rUnbind == NULL
 			|| regionArray[i].biReactants == NULL
 			|| regionArray[i].rxnProbType == NULL
 			|| regionArray[i].bSurfRxnIn == NULL
@@ -253,10 +280,18 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			exit(EXIT_FAILURE);
 		}
 		
+		// Initialize region's global reaction bool array
+		for(j = 0; j < MAX_RXNS; j++)
+		{
+			regionArray[i].bGlobalRxnID[j] = false;
+		}
+		
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
 		{
 			numTotalProd = 0;
 			curRxn = rxnInRegionID[j][i];
+			regionArray[i].globalRxnID[j] = curRxn;
+			regionArray[i].bGlobalRxnID[curRxn] = true;
 			
 			// Determine total number of products for this reaction
 			// Then we know how much memory to assign to productID
@@ -288,13 +323,13 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
-			regionArray[i].firstRxnID[j] =
+			regionArray[i].firstRxnWithReactantID[j] =
 				malloc(regionArray[i].numChemRxn * sizeof(unsigned short));
 			regionArray[i].uniCumProb[j] =
 				malloc(regionArray[i].numChemRxn * sizeof(double));
 			regionArray[i].uniRelativeRate[j] =
 				malloc(regionArray[i].numChemRxn * sizeof(double));
-			if(regionArray[i].firstRxnID[j] == NULL
+			if(regionArray[i].firstRxnWithReactantID[j] == NULL
 				|| regionArray[i].uniCumProb[j] == NULL
 				|| regionArray[i].uniRelativeRate[j] == NULL)
 			{
@@ -314,7 +349,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	
 	// Initialize the allocated elements based on chem_rxn array
 	for(i = 0; i < NUM_REGIONS; i++)
-	{	
+	{
+		regionArray[i].rBindMax = 0;
 		if(regionArray[i].numChemRxn == 0)
 			continue; // No reactions in this region; no need to proceed
 		
@@ -325,6 +361,12 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			bFoundReactant = false;
 			regionArray[i].numRxnProducts[j] = 0;
 			curRxn = rxnInRegionID[j][i]; // Current reaction in chem_rxn array
+			
+			regionArray[i].rBind[j] = chem_rxn[curRxn].rBind;
+			regionArray[i].rBindSq[j] = squareDBL(regionArray[i].rBind[j]);
+			regionArray[i].rUnbind[j] = chem_rxn[curRxn].rUnbind;
+			if(regionArray[i].rBind[j] > regionArray[i].rBindMax)
+				regionArray[i].rBindMax = regionArray[i].rBind[j]; // Found new maximum binding radius
 			
 			regionArray[i].rxnProbType[j] = chem_rxn[curRxn].rxnProbType;
 			regionArray[i].releaseType[j] = chem_rxn[curRxn].releaseType;
@@ -431,22 +473,34 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 					regionArray[i].firstRxn[regionArray[i].numFirstRxn++] = j;
 					break;
 				case 2:
-					if(chem_rxn[curRxn].bSurface && chem_rxn[curRxn].surfRxnType != RXN_NORMAL)
+					if(chem_rxn[curRxn].surfRxnType != RXN_NORMAL)
 					{
-						fprintf(stderr, "ERROR: Chemical reaction %u is 2nd order and must be defined as a normal surface reaction.\n", j);
+						fprintf(stderr, "ERROR: Chemical reaction %u is a 2nd order reaction and so it must be defined as a normal reaction.\n", j);
 						exit(EXIT_FAILURE);
 					}
-					if (regionArray[i].plane == PLANE_3D
-						&& regionArray[i].spec.type == REGION_NORMAL)
-						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-							/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
-					else if (regionArray[i].spec.type == REGION_NORMAL
-						|| regionArray[i].spec.type == REGION_SURFACE_3D) // Region is 2D so need area and not volume
-						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-							/regionArray[i].actualSubSize / regionArray[i].actualSubSize;
-					else
-						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
-							/regionArray[i].actualSubSize; // Region is 1D so need length
+					if(regionArray[i].spec.bMicro)
+					{ // Microscopic bimolecular reaction
+						// TODO: For now just copy reaction rate, even though we rely
+						// on binding radius alone. Warn if binding radius is 0.
+						regionArray[i].rxnRate[j] = chem_rxn[curRxn].k;
+						if(chem_rxn[curRxn].rBind == 0.)
+						{
+							fprintf(stderr, "WARNING: Chemical reaction %u is 2nd order and can occur in the microscopic regime but has a binding radius of 0.\n", j);
+						}
+					} else
+					{ // Mesoscopic bimolecular reaction
+						if (regionArray[i].plane == PLANE_3D
+							&& regionArray[i].spec.type == REGION_NORMAL)
+							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+								/regionArray[i].actualSubSize / regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+						else if (regionArray[i].spec.type == REGION_NORMAL
+							|| regionArray[i].spec.type == REGION_SURFACE_3D) // Region is 2D so need area and not volume
+							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+								/regionArray[i].actualSubSize / regionArray[i].actualSubSize;
+						else
+							regionArray[i].rxnRate[j] = chem_rxn[curRxn].k
+								/regionArray[i].actualSubSize; // Region is 1D so need length
+					}
 					regionArray[i].secondRxn[regionArray[i].numSecondRxn++] = j;
 					break;
 				default:
@@ -487,7 +541,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		// Initialize elements that are sorted by reactant
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
-			regionArray[i].numFirstCurReactant[j] = 0;
+			regionArray[i].numFirstRxnWithReactant[j] = 0;
+			regionArray[i].numSecondRxnWithReactant[j] = 0;
 			regionArray[i].uniSumRate[j] = 0.;
 			regionArray[i].uniCumProb[j][0] = 0.;
 			numInfRxn = 0;
@@ -502,9 +557,9 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						if(chem_rxn[curRxn].reactants[j] > 0)
 						{
 							
-							regionArray[i].firstRxnID[j][regionArray[i].numFirstCurReactant[j]] = k;
+							regionArray[i].firstRxnWithReactantID[j][regionArray[i].numFirstRxnWithReactant[j]] = k;
 							
-							regionArray[i].numFirstCurReactant[j]++;
+							regionArray[i].numFirstRxnWithReactant[j]++;
 							
 							switch(chem_rxn[curRxn].surfRxnType)
 							{
@@ -591,15 +646,19 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						}
 						break;
 					case 2:
+						if(regionArray[i].biReactants[k][0] == j)
+							regionArray[i].numSecondRxnWithReactant[j]++;
+						if(regionArray[i].biReactants[k][1] == j)
+							regionArray[i].numSecondRxnWithReactant[j]++;
 						break;
 				}
 			}
 			
 			// Scan reactions with current molecule as reactant to determine the
 			// cumulative reaction probabilities
-			for(k = 0; k < regionArray[i].numFirstCurReactant[j]; k++)
+			for(k = 0; k < regionArray[i].numFirstRxnWithReactant[j]; k++)
 			{
-				curRxn = rxnInRegionID[regionArray[i].firstRxnID[j][k]][i];
+				curRxn = rxnInRegionID[regionArray[i].firstRxnWithReactantID[j][k]][i];
 				switch(chem_rxn[curRxn].surfRxnType)
 				{
 					case RXN_RECEPTOR:
@@ -610,7 +669,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 								
 						// Relative rate will be used when we need to recalculate the probabilities
 						// due to smaller time step size
-						if(regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]] == INFINITY)
+						if(regionArray[i].rxnRate[regionArray[i].firstRxnWithReactantID[j][k]] == INFINITY)
 						{
 							regionArray[i].uniRelativeRate[j][k] = 1/numInfRxn;
 							regionArray[i].uniCumProb[j][k] += 1/numInfRxn;
@@ -619,8 +678,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						{
 							
 							if(chem_rxn[curRxn].surfRxnType == RXN_DESORBING
-								&& regionArray[i].rxnProbType[regionArray[i].firstRxnID[j][k]] == RXN_PROB_STEADY_STATE
-								&& regionArray[i].bReversible[regionArray[i].firstRxnID[j][k]])
+								&& regionArray[i].rxnProbType[regionArray[i].firstRxnWithReactantID[j][k]] == RXN_PROB_STEADY_STATE
+								&& regionArray[i].bReversible[regionArray[i].firstRxnWithReactantID[j][k]])
 							{ // This reaction is reversible steady state desorption
 							 // It was excluding from calculation of uniSumRate
 							 // Ignore its reaction probability
@@ -628,7 +687,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 							} else
 							{
 								regionArray[i].uniRelativeRate[j][k] =
-								regionArray[i].rxnRate[regionArray[i].firstRxnID[j][k]]
+								regionArray[i].rxnRate[regionArray[i].firstRxnWithReactantID[j][k]]
 								/ regionArray[i].uniSumRate[j];
 							}							
 								
@@ -697,14 +756,16 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
-			if(regionArray[i].firstRxnID[j] != NULL)
-				free(regionArray[i].firstRxnID[j]);
+			if(regionArray[i].firstRxnWithReactantID[j] != NULL)
+				free(regionArray[i].firstRxnWithReactantID[j]);
 			if(regionArray[i].uniCumProb[j] != NULL)
 				free(regionArray[i].uniCumProb[j]);
 			if(regionArray[i].uniRelativeRate[j] != NULL)
 				free(regionArray[i].uniRelativeRate[j]);
 		}
 		
+		if(regionArray[i].globalRxnID != NULL) free(regionArray[i].globalRxnID);
+		if(regionArray[i].bGlobalRxnID != NULL) free(regionArray[i].bGlobalRxnID);
 		if(regionArray[i].bReversible != NULL) free(regionArray[i].bReversible);
 		if(regionArray[i].reverseRxnID != NULL) free(regionArray[i].reverseRxnID);
 		if(regionArray[i].numMolChange != NULL) free(regionArray[i].numMolChange);
@@ -722,12 +783,19 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		if(regionArray[i].tZeroth != NULL) free(regionArray[i].tZeroth);
 		if(regionArray[i].rxnRateZerothMicro != NULL) free(regionArray[i].rxnRateZerothMicro);
 		if(regionArray[i].uniReactant != NULL) free(regionArray[i].uniReactant);
-		if(regionArray[i].numFirstCurReactant != NULL) free(regionArray[i].numFirstCurReactant);
-		if(regionArray[i].firstRxnID != NULL) free(regionArray[i].firstRxnID);
+		if(regionArray[i].numFirstRxnWithReactant != NULL)
+			free(regionArray[i].numFirstRxnWithReactant);
+		if(regionArray[i].firstRxnWithReactantID != NULL)
+			free(regionArray[i].firstRxnWithReactantID);
+		if(regionArray[i].numSecondRxnWithReactant != NULL)
+			free(regionArray[i].numSecondRxnWithReactant);
 		if(regionArray[i].uniSumRate != NULL) free(regionArray[i].uniSumRate);
 		if(regionArray[i].uniCumProb != NULL) free(regionArray[i].uniCumProb);
 		if(regionArray[i].uniRelativeRate != NULL) free(regionArray[i].uniRelativeRate);
 		if(regionArray[i].minRxnTimeRV != NULL) free(regionArray[i].minRxnTimeRV);
+		if(regionArray[i].rBind != NULL) free(regionArray[i].rBind);
+		if(regionArray[i].rBindSq != NULL) free(regionArray[i].rBindSq);
+		if(regionArray[i].rUnbind != NULL) free(regionArray[i].rUnbind);
 		if(regionArray[i].biReactants != NULL) free(regionArray[i].biReactants);
 		if(regionArray[i].rxnProbType != NULL) free(regionArray[i].rxnProbType);
 		if(regionArray[i].bSurfRxnIn != NULL) free(regionArray[i].bSurfRxnIn);

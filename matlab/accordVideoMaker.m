@@ -146,12 +146,7 @@ else
     [curFig, curAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
         regionDispStruct, actorDispStruct, scale);
     hFig(1) = curFig;
-    hAxes(1) = curAxes;
-    
-    % Check with user if number of frames is large
-    if numFrames > 10
-        warning('Configuration will create %d figures instead of a video, which is a large number of new windows', numFrames);
-    end
+    hAxes(1) = curAxes;    
 end
 
 %% Allow User To Adjust Environment View and Set Dynamic Behavior
@@ -185,7 +180,7 @@ if bDynamicCamera
         'CameraViewAngle','CameraUpVector'}, cameraAnchorArray{1});
 else
     disp('NOTE: No camera anchor points already defined by wrapper file.');
-    disp('	If accordDynamicCamera is not called, then camera settings.');
+    disp('	If accordDynamicCamera is not called, then camera settings');
     disp('	will not be changed when video generation starts.');
     frameCameraAnchor = zeros(1,numFrames);
 end
@@ -207,6 +202,10 @@ numAnnotatedFrames = 0;
 frameAnnotation = zeros(1, numFrames);
 
 disp('Type dbcont to continue or dbquit to quit');
+% Check with user if number of frames is large
+if ~bMakeVideo && numFrames > 10
+    warning('Configuration will create %d figures instead of a video, which is a large number of new figure windows', numFrames);
+end
 keyboard
 
 %% Lock in axis limits and store inital camera view

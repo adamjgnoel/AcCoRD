@@ -19,6 +19,8 @@
  * subvolumes. Replaced array for storing coordinates of virtual microscopic
  * subvolume with array of boundary coordinates of boundary mesoscopic subvolumes. These
  * changes needed to accommodate improved hybrid transition algorithms
+ * - added members to implement bimolecular chemical reactions in microscopic regime.
+ * Use a preliminary algorithm where the user must supply the binding and unbinding radii
  * - changed findNearestSub function to return index of subvolume in region's neighID array
  * instead of the global subvolume list. This makes function suitable for more calls.
  * - added case for point boundary when determining intersection with a region

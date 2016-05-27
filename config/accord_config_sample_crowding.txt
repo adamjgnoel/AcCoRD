@@ -1,0 +1,105 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration places 10 molecules in a box with a reflecting center. A bimolecular reaction is defined with a binding and unbinding radius so that a minimum distance between individual molecules is maintained. Molecule locations are recorded. This simulation should take less than 1 second to run on a personal computer.",
+	"Output Filename": "accord_sample_crowding",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 0.05,
+		"Global Microscopic Time Step": 1e-4,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-9],
+		"Chemical Reaction Specification": [
+			{							
+				"Notes": "Binding reaction.",
+				"Label": "Binding",
+				"Is Reaction Reversible?": false,
+				"Surface Reaction?": false,
+				"Default Everywhere?": true,
+				"Exception Regions": [],
+				"Reactants": [2],
+				"Products": [2],
+				"Reaction Rate": 1e-14,
+				"Binding Radius": 2e-6,
+				"Unbinding Radius": 2e-6
+			}
+		]
+	},
+	"Environment":	{
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "Microscopic box.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 10,
+				"Number of Subvolumes Along Y": 10,
+				"Number of Subvolumes Along Z": 1
+			},
+			{
+				"Notes": "Microscopic box.",
+				"Label": "B",
+				"Parent Label": "A",
+				"Shape": "Rectangular Box",
+				"Type": "3D Surface",
+				"Surface Type": "Outer",
+				"Anchor X Coordinate": 2e-6,
+				"Anchor Y Coordinate": 2e-6,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Along X": 6,
+				"Number of Subvolumes Along Y": 6,
+				"Number of Subvolumes Along Z": 1
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Molecule initialization",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["A"],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Is Actor Activity Recorded?": true,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 10,
+				"Is Molecule Type Released?": [true]
+		},
+		{
+				"Notes": "Box observer that logs molecule positions",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["A"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [true]
+		}
+		]		
+	}
+}

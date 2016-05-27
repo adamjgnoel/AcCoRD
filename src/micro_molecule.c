@@ -20,6 +20,18 @@
  * - added function for placing molecules in microscopic regime when they come from the
  * mesoscopic region
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - added bimolecular chemical reactions in microscopic regime. Transition of reactants
+ * to reaction site is tested if reaction site is not in same region. Transition of
+ * product molecules from reaction site is also tested if unbinding radius is used.
+ * Molecules are compared with all potential reactants in current region and neighboring
+ * regions where the reaction is also valid. A molecule cannot participate in more than
+ * one bimolecular reaction is a single time step (as a reactant or product). Reaction
+ * site and displacement of products depends on relative diffusion coefficients
+ * - added check on total number of chemical reactions in a region before checking for
+ * surface reactions during diffusion validation, since many surface reaction structure
+ * members are not initialized unless there is at least one reaction at the surface
+ * - corrected bug where a molecule is not correctly reflected off of a child region
+ * surface
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated first order reaction functions to account for surface reactions that
@@ -120,7 +132,6 @@ void diffuseMolecules(const short NUM_REGIONS,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D p_listRecent[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
-	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct chem_rxn_struct chem_rxn[],
@@ -134,7 +145,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	double newPoint[3];
 	short curRegion, curType, newRegion, newType, transRegion;
 	uint32_t newSub, curBoundSub;
-	bool bInRegion;
+	bool bInRegion, bPointChange;
 	int curMol = 0;
 	
 	bool bReaction;
@@ -198,8 +209,8 @@ void diffuseMolecules(const short NUM_REGIONS,
 								
 					bReaction = false;
 					bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS,
-						NUM_MOL_TYPES, curRegion,
-						&newRegion, &transRegion, regionArray, curType, &bReaction,
+						NUM_MOL_TYPES, curRegion, &newRegion, &transRegion, &bPointChange,
+						regionArray, curType, &bReaction,
 						false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn);
 					
 					if(regionArray[newRegion].spec.bMicro)
@@ -335,7 +346,8 @@ void diffuseMolecules(const short NUM_REGIONS,
 				// it to the relevant "normal" list and remove it from this list				
 				bReaction = false;
 				validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
-					&newRegion, &transRegion, regionArray, curType, &bReaction,
+					&newRegion, &transRegion, &bPointChange,
+					regionArray, curType, &bReaction,
 					true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
 					
 				if(regionArray[newRegion].spec.bMicro)
@@ -669,7 +681,7 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 		}
 		
 		// Reset molecule list parameters if there are other 1st order reactions
-		if(regionArray[curRegion].numFirstCurReactant[curMolType] > 1)
+		if(regionArray[curRegion].numFirstRxnWithReactant[curMolType] > 1)
 		{
 			curNode = p_list[curRegion][curMolType];
 			prevNode = NULL;
@@ -685,12 +697,12 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 		// Generate RV to see which/whether first order reaction occurred
 		curRand = generateUniform();
 		
-		for(i = 0; i < regionArray[curRegion].numFirstCurReactant[curMolType]; i++)
+		for(i = 0; i < regionArray[curRegion].numFirstRxnWithReactant[curMolType]; i++)
 		{			
 			if(curRand < regionArray[curRegion].uniCumProb[curMolType][i])
 			{
 				// Reaction i took place
-				curRxn = regionArray[curRegion].firstRxnID[curMolType][i];
+				curRxn = regionArray[curRegion].firstRxnWithReactantID[curMolType][i];
 				
 				// Generate products (if necessary)
 				// TODO: May need to consider associating a separation distance with
@@ -748,7 +760,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 	unsigned short curProd;
 	unsigned short curRxn;
 	bool bRemove;
-	double uniCumProb[regionArray[curRegion].numFirstCurReactant[curMolType]];
+	double uniCumProb[regionArray[curRegion].numFirstRxnWithReactant[curMolType]];
 	double minRxnTimeRV;
 	uint32_t numMolOrig = numMolCheck[curRegion][curMolType];
 	// Number of molecules to check in second while loop
@@ -809,7 +821,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 		}
 		
 		// Reset molecule list parameters if there are other 1st order reactions
-		if(regionArray[curRegion].numFirstCurReactant[curMolType] > 1)
+		if(regionArray[curRegion].numFirstRxnWithReactant[curMolType] > 1)
 		{
 			curNode = pRecentList[curRegion][curMolType];
 			prevNode = NULL;
@@ -835,9 +847,9 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 		// Need to generate probabilities for current molecule based on the partial
 		// time step size
 		
-		for(i = 0; i < regionArray[curRegion].numFirstCurReactant[curMolType]; i++)
+		for(i = 0; i < regionArray[curRegion].numFirstRxnWithReactant[curMolType]; i++)
 		{
-			curRxn = regionArray[curRegion].firstRxnID[curMolType][i];
+			curRxn = regionArray[curRegion].firstRxnWithReactantID[curMolType][i];
 			
 			if(i == 0)
 			{
@@ -1142,6 +1154,468 @@ unsigned short findDestRegion(const double point[3],
 	return curRegion;
 }
 
+// Check all second order reactions for region
+void rxnSecondOrder(const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	struct subvolume3D subvolArray[],
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+{
+	unsigned short curRegion, neighRegion, rxnRegion, transRegion, destRegion;
+	bool bSameRegion;		// Are current and neighboring molecules in same region?
+	unsigned short curMolType, secondMolType;
+	unsigned short curRxnSecond, curRxnNeighSecond, curRxnRegion, curRxnNeighRegion, curRxn;
+	unsigned short diffRxn; 	// ID of reaction while a reactant is diffusing to site
+							// Only written to
+	unsigned short curProd, curProdRxn;
+	NodeMol3D * curNode, * prevNode, * nextNode;
+	NodeMol3D * curNeighNode, * prevNeighNode, * nextNeighNode;
+	double rxnCoor[3];		// Location where reaction "occurs"
+	double sphDef[] = {0., 0., 0., 1.}; 	// Use sphere when we need a random direction
+							// Needed when we need to place more than 2 reaction products
+	double rxnProdCoor[3];	// Location where product molecule is placed
+	double prodDirVec[4]; 	// Unit vector in direction of where product molecule is to be placed
+							// Needed when there is an unbinding radius
+	double prodDist; 		// Distance of product molecule from
+							// "reaction site"
+	double relDiff; 			// Ratio of 1st reactant's diffusion coefficient to mutual diffusion
+	double sumProdDiff;		// Sum of product diffusion coefficients
+	double * relDiffProd;	// Each product's diffusion coefficient scaled by mutual diffusion
+							// and unbinding radius
+	bool bNeedUnbind;		// Need to apply unbinding radius
+	bool bNewRegion;			// We placed a product molecule but destination is not in a valid region
+	bool bAddProdMicro;		// Product molecule is going in a microscopic region
+	uint32_t newSub, curBoundSub; // Index of subvolume of product that ends up in meso region
+	bool bRxn;				// Current molecule reacted
+	short numReactant1Add; 	// # of products same type as reactant 1 in same region
+	short numReactant2Add; 	// # of products same type as reactant 2 in same region
+	
+	// Variables needed if product molecule leaves reactant regions
+	double reactantPoint[3];
+	bool bDiffRxn; // reactant or product undergoes surface reaction while diffusing
+	bool bPointChange; // trajectory of diffusing reactant or product changed
+	unsigned short curDiffRxnProd;
+	
+	// Initialize all potential reactants as capable of reacting
+	for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
+	{
+		if(!regionArray[curRegion].spec.bMicro || regionArray[curRegion].numSecondRxn == 0)
+			continue;
+		
+		for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
+		{
+			// Could this molecule react and are there any in region?
+			if(regionArray[curRegion].numSecondRxnWithReactant[curMolType] == 0
+				|| isListMol3DEmpty(&p_list[curRegion][curMolType]))
+				continue;
+			
+			// Indicate that molecules in list are potential reactants
+			curNode = p_list[curRegion][curMolType];
+			while(curNode != NULL)
+			{
+				curNode->item.bNeedUpdate = true;
+				curNode = curNode->next;
+			}
+		}
+	}
+	
+	// Find and execute second order reactions where valid
+	for(curRegion = 0; curRegion < NUM_REGIONS; curRegion++)
+	{
+		if(!regionArray[curRegion].spec.bMicro || regionArray[curRegion].numSecondRxn == 0)
+			continue;
+		
+		for(curRxnSecond = 0;
+			curRxnSecond < regionArray[curRegion].numSecondRxn; curRxnSecond++)
+		{
+			curRxnRegion = regionArray[curRegion].secondRxn[curRxnSecond];
+			curRxn = regionArray[curRegion].globalRxnID[curRxnRegion];
+			curMolType = regionArray[curRegion].biReactants[curRxnRegion][0];
+			secondMolType = regionArray[curRegion].biReactants[curRxnRegion][1];
+			
+			if(isListMol3DEmpty(&p_list[curRegion][curMolType]))
+				continue;
+			
+			relDiff = DIFF_COEF[curRegion][curMolType]
+				/(DIFF_COEF[curRegion][curMolType] + DIFF_COEF[curRegion][secondMolType]);
+			
+			// Determine relative unbinding distance if there is more than 1 product and
+			// a nonzero unbinding radius
+			if(regionArray[curRegion].numRxnProducts[curRxnRegion] > 1
+				&& regionArray[curRegion].rUnbind[curRxnRegion] > 0.)
+			{
+				bNeedUnbind = true;
+				relDiffProd = malloc(regionArray[curRegion].numRxnProducts[curRxnRegion] * sizeof(double));
+				if(relDiffProd == NULL)
+				{
+					fprintf(stderr, "ERROR: Memory allocation for relative diffusion of products of reaction %u failed.\n", curRxn);
+					exit(EXIT_FAILURE);
+				}
+				
+				sumProdDiff = 0.;
+				for(curProdRxn = 0;
+				curProdRxn < regionArray[curRegion].numRxnProducts[curRxnRegion];
+				curProdRxn++)
+				{
+					curProd = regionArray[curRegion].productID[curRxnRegion][curProdRxn];
+					sumProdDiff += DIFF_COEF[curRegion][curProd];
+				}
+				
+				for(curProdRxn = 0;
+				curProdRxn < regionArray[curRegion].numRxnProducts[curRxnRegion];
+				curProdRxn++)
+				{
+					curProd = regionArray[curRegion].productID[curRxnRegion][curProdRxn];
+					relDiffProd[curProdRxn] =  regionArray[curRegion].rUnbind[curRxnRegion]
+						*DIFF_COEF[curRegion][curProd]/sumProdDiff;
+				}
+			} else
+				bNeedUnbind = false;
+			
+			// Scan all "first reactant" molecules against "second reactants" in current
+			// and remaining regions
+			for(neighRegion = curRegion; neighRegion < NUM_REGIONS; neighRegion++)
+			{
+				bSameRegion = neighRegion == curRegion;
+				
+				// Is region a neighbor?
+				if(!bSameRegion
+					&& !regionArray[curRegion].isRegionNeigh[neighRegion])
+					continue;
+				
+				// Is other region microscopic, contain the second molecule type,
+				// and allow the reaction to occur?
+				if(!regionArray[neighRegion].spec.bMicro
+					|| isListMol3DEmpty(&p_list[neighRegion][secondMolType])
+					|| !regionArray[neighRegion].bGlobalRxnID[curRxn])
+					continue;
+				
+				// Reaction is possible. Scan molecules in both regions
+				curNode = p_list[curRegion][curMolType];
+				prevNode = NULL;
+				while(curNode != NULL)
+				{
+					nextNode = curNode->next;
+					
+					bRxn = false;					
+					if(curNode->item.bNeedUpdate)
+					{ // Molecule has not yet already reacted
+						if(bSameRegion
+							&& curMolType == secondMolType)
+						{ // We are scanning molecules in the same list
+							curNeighNode = nextNode;
+							prevNeighNode = curNode;
+						}
+						else
+						{
+							curNeighNode = p_list[neighRegion][secondMolType];
+							prevNeighNode = NULL;
+						}
+
+						while(curNeighNode != NULL)
+						{
+							nextNeighNode = curNeighNode->next;
+							
+							if(curNeighNode->item.bNeedUpdate)
+							{ // Neighbor molecule has not yet already reacted
+								
+								// Check distance between molecules with binding radius
+								if(!moleculeSeparation(&curNode->item,
+									&curNeighNode->item,
+									regionArray[curRegion].rBindSq[curRxnRegion]))
+								{ // Molecule separation is less than binding radius
+								  // Execute reaction
+									numReactant1Add = 0;
+									numReactant2Add = 0;
+									if(regionArray[curRegion].numRxnProducts[curRxnRegion] > 0)
+									{
+										// Find ''central point'' of reaction
+										rxnCoor[0] = curNode->item.x + relDiff*(curNeighNode->item.x
+											- curNode->item.x);
+										rxnCoor[1] = curNode->item.y + relDiff*(curNeighNode->item.y
+											- curNode->item.y);
+										rxnCoor[2] = curNode->item.z + relDiff*(curNeighNode->item.z
+											- curNode->item.z);
+										
+										// Can 1st reactant reach reaction site?
+										reactantPoint[0] = curNode->item.x;
+										reactantPoint[1] = curNode->item.y;
+										reactantPoint[2] = curNode->item.z;
+										validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
+											NUM_MOL_TYPES, curRegion, &rxnRegion, &transRegion,
+											&bPointChange, regionArray, curMolType,
+											&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+											&diffRxn);
+										
+										if(bPointChange)
+										{
+											// 1st reactant can't reach reaction site
+											prevNeighNode = curNeighNode;
+											curNeighNode = nextNeighNode;
+											continue;
+										}
+										
+										// Can 1st reactant reach reaction site?
+										reactantPoint[0] = curNeighNode->item.x;
+										reactantPoint[1] = curNeighNode->item.y;
+										reactantPoint[2] = curNeighNode->item.z;
+										validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
+											NUM_MOL_TYPES, neighRegion, &rxnRegion, &transRegion,
+											&bPointChange, regionArray, secondMolType,
+											&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+											&diffRxn);
+										
+										if(bPointChange
+											|| !regionArray[rxnRegion].bGlobalRxnID[curRxn])
+										{
+											// 2nd reactant can't reach reaction site
+											// Or reaction takes place in an invalid region
+											prevNeighNode = curNeighNode;
+											curNeighNode = nextNeighNode;
+											continue;
+										}
+										
+										for(curProdRxn = 0;
+										curProdRxn < regionArray[curRegion].numRxnProducts[curRxnRegion];
+										curProdRxn++)
+										{
+											curProd = regionArray[curRegion].productID[curRxnRegion][curProdRxn];
+											
+											// Determine location of product molecule
+											if(bNeedUnbind)
+											{ // We must determine directions of unbinding
+												if(regionArray[curRegion].numRxnProducts[curRxnRegion] == 2)
+												{
+													// Since there are 2 products and 2 reactants, use
+													// direction of reactants as direction of products
+													if(curProdRxn == 0)
+													{
+														// Placing first product. Need vector of line towards
+														// first reactant
+														defineLine2(rxnCoor, curNode->item.x, curNode->item.y,
+															curNode->item.z, prodDirVec);
+														rxnProdCoor[0] = rxnCoor[0] +
+															relDiffProd[curProdRxn]*prodDirVec[0];
+														rxnProdCoor[1] = rxnCoor[1] +
+															relDiffProd[curProdRxn]*prodDirVec[1];
+														rxnProdCoor[2] = rxnCoor[2] +
+															relDiffProd[curProdRxn]*prodDirVec[2];
+													} else
+													{
+														// Second product goes in opposite direction from first
+														rxnProdCoor[0] = rxnCoor[0] -
+															relDiffProd[curProdRxn]*prodDirVec[0];
+														rxnProdCoor[1] = rxnCoor[1] -
+															relDiffProd[curProdRxn]*prodDirVec[1];
+														rxnProdCoor[2] = rxnCoor[2] -
+															relDiffProd[curProdRxn]*prodDirVec[2];
+													}
+												} else
+												{
+													// There are more than 2 products. Choose a random direction
+													uniformPointVolume(prodDirVec, SPHERE, sphDef, true, 0);
+													rxnProdCoor[0] = rxnCoor[0] +
+														relDiffProd[curProdRxn]*prodDirVec[0];
+													rxnProdCoor[1] = rxnCoor[1] +
+														relDiffProd[curProdRxn]*prodDirVec[1];
+													rxnProdCoor[2] = rxnCoor[2] +
+														relDiffProd[curProdRxn]*prodDirVec[2];
+												}
+												
+												// Determine what region product ends up in
+												if(bPointInRegionNotChild(rxnRegion, regionArray,
+													rxnProdCoor, false))
+													destRegion = rxnRegion;
+												else
+												{
+													bDiffRxn = false;
+													validateMolecule(rxnProdCoor, rxnCoor, NUM_REGIONS,
+														NUM_MOL_TYPES, rxnRegion, &destRegion, &transRegion,
+														&bPointChange, regionArray, curProd,
+														&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+														&diffRxn);
+													
+													if(bDiffRxn &&
+													regionArray[destRegion].numRxnProducts[diffRxn] > 0)
+													{ // Product molecule went on to react with a surface
+														for(curDiffRxnProd = 0;
+															curDiffRxnProd < regionArray[destRegion].numRxnProducts[diffRxn];
+															curDiffRxnProd++)
+														{
+															// Add the (curDiffRxnProd)th product to the corresponding molecule list
+															if(!addMolecule(
+																&p_list[destRegion][regionArray[destRegion].productID[diffRxn][curDiffRxnProd]],
+																rxnProdCoor[0], rxnProdCoor[1], rxnProdCoor[2]))
+															{ // Creation of molecule failed
+																fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+																regionArray[destRegion].productID[diffRxn][curDiffRxnProd], diffRxn);
+																exit(EXIT_FAILURE);						
+															}
+															// Indicate that product molecule can't react again
+															p_list[destRegion][regionArray[destRegion].productID[diffRxn][curDiffRxnProd]]->item.bNeedUpdate = false;
+														}
+														continue; // Don't try to place bimolecular product
+																	// since it went on to react
+													}
+												}
+											} else
+											{ // Place product where reaction occured
+												rxnProdCoor[0] = rxnCoor[0];
+												rxnProdCoor[1] = rxnCoor[1];
+												rxnProdCoor[2] = rxnCoor[2];
+												destRegion = rxnRegion;
+											}
+											
+											// Place new product molecule
+											if(regionArray[destRegion].spec.bMicro)
+											{
+												bAddProdMicro = true;
+											} else
+											{ // Add product to subvolume
+												// Confirm meso region is neighbor of curRegion
+												if(!regionArray[curRegion].isRegionNeigh[destRegion])
+												{ // Destination mesoscopic region is not a neighbor of
+													// curRegion. Force product to be placed in curRegion
+													bAddProdMicro = true;
+													destRegion = curRegion;
+												} else
+												{
+													bAddProdMicro = false;
+												
+													newSub = regionArray[destRegion].neighID[curRegion]
+														[findNearestSub(destRegion, regionArray,
+														curRegion, rxnProdCoor[0], rxnProdCoor[1], rxnProdCoor[2])];
+													subvolArray[newSub].num_mol[curProd]++;
+													curBoundSub = 0;
+													while(regionArray[destRegion].neighID[curRegion][curBoundSub]
+														!= newSub)
+													{
+														curBoundSub++;
+													}
+													regionArray[destRegion].bNeedUpdate[curRegion][curBoundSub] = true;
+													regionArray[destRegion].numMolFromMicro[curRegion][curBoundSub][curProd]++;
+												}
+											}
+											
+											if(curProd == curMolType
+												&& curRegion == destRegion)
+												numReactant1Add++;
+											
+											if(curProd == secondMolType
+												&& neighRegion == destRegion)
+												numReactant2Add++;
+											
+											if(bAddProdMicro)
+											{ // Add current product to corresponding molecule list
+												if(!addMolecule(
+													&p_list[destRegion][curProd],
+													rxnProdCoor[0], rxnProdCoor[1], rxnProdCoor[2]))
+												{ // Creation of molecule failed
+													fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+													curProd, curRxn);
+													exit(EXIT_FAILURE);						
+												}
+												// Indicate that product molecule can't react again
+												p_list[destRegion][curProd]->item.bNeedUpdate = false;
+											}
+										}
+									}
+									
+									// Update start of list or previous node if applicable
+									if(prevNode == NULL)
+									{
+										switch (numReactant1Add)
+										{
+											case 0:
+												p_list[curRegion][curMolType] = nextNode;
+												break;
+											case 1:
+												prevNode = p_list[curRegion][curMolType];
+												break;
+											case 2:
+												prevNode =
+													p_list[curRegion][curMolType]->next;
+												break;
+										}
+									}
+									if(prevNeighNode == NULL)
+									{
+										switch (numReactant2Add)
+										{
+											case 0:
+												p_list[neighRegion][secondMolType] = nextNeighNode;
+												break;
+											case 1:
+												prevNeighNode = p_list[neighRegion][secondMolType];
+												break;
+											case 2:
+												prevNeighNode =
+													p_list[neighRegion][secondMolType]->next;
+												break;
+										}
+									}
+									
+									// Remove reactants from their respective lists
+									if(curNode->next == curNeighNode)
+									{
+										// Reactants are adjacent molecules in same molecule list
+										// We will be removing both curNode and nextNode
+										curNode->next = nextNeighNode;
+										nextNode = nextNeighNode;
+										prevNeighNode = prevNode;
+									}
+									removeItem(prevNode, curNode);
+									removeItem(prevNeighNode, curNeighNode);
+									
+									// Break out of inner while loop
+									bRxn = true;
+									break;
+								}
+							}
+							
+							prevNeighNode = curNeighNode;
+							curNeighNode = nextNeighNode;
+						}
+					}
+					if(!bRxn)
+						prevNode = curNode;
+					curNode = nextNode;
+				}
+			}
+			
+			if(bNeedUnbind
+				&& relDiffProd != NULL)
+			{
+				free(relDiffProd);
+			}
+		}
+	}
+}
+
+// Compare distance between 2 molecules with threshold
+// Return true if distance is greater than threshold
+bool moleculeSeparation(ItemMol3D * molecule1, ItemMol3D * molecule2, double threshSq)
+{
+	double distSq;
+	
+	distSq = squareDBL(molecule1->x - molecule2->x);
+	if(distSq > threshSq)
+		return true;
+	
+	distSq += squareDBL(molecule1->y - molecule2->y);
+	if(distSq > threshSq)
+		return true;
+	
+	distSq += squareDBL(molecule1->z - molecule2->z);
+	if(distSq > threshSq)
+		return true;
+	
+	return false;
+}
+
+
 // Empty recent list and add corresponding molecules to "normal" list
 void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList)
 {
@@ -1171,6 +1645,7 @@ bool validateMolecule(double newPoint[3],
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
+	bool * bPointChange,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
@@ -1200,7 +1675,7 @@ bool validateMolecule(double newPoint[3],
 		
 		return followMolecule(oldPoint, newPoint, trajLine,
 			lineLength, curRegion,
-			newRegion, transRegion, NUM_REGIONS, NUM_MOL_TYPES,
+			newRegion, transRegion, bPointChange, NUM_REGIONS, NUM_MOL_TYPES,
 			regionArray, molType, bReaction, curRxn,
 			bRecent, dt, chem_rxn, DIFF_COEF, 0);
 	}
@@ -1216,6 +1691,7 @@ bool followMolecule(const double startPoint[3],
 	const short startRegion,
 	short * endRegion,
 	short * transRegion,
+	bool * bPointChange,
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
@@ -1256,6 +1732,7 @@ bool followMolecule(const double startPoint[3],
 	minNormalDist = INFINITY;
 	* endRegion = SHRT_MAX;
 	closestNormal = SHRT_MAX;
+	* bPointChange = false;
 	for(curNeigh = 0; curNeigh < regionArray[startRegion].numRegionNeigh; curNeigh++)
 	{
 		curRegion = regionArray[startRegion].regionNeighID[curNeigh];
@@ -1320,7 +1797,7 @@ bool followMolecule(const double startPoint[3],
 				// Keep following molecule within own region
 				lineLength -= lineLength*pushFrac; // Correct line length for having been pushed
 				return followMolecule(curIntersectPoint, endPoint, lineVector,
-					lineLength, startRegion, endRegion, transRegion,
+					lineLength, startRegion, endRegion, transRegion, bPointChange,
 					NUM_REGIONS, NUM_MOL_TYPES, regionArray, molType,
 					bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1);
 			}
@@ -1351,79 +1828,84 @@ bool followMolecule(const double startPoint[3],
 				endPoint[1] = startPoint[1];
 				endPoint[2] = startPoint[2];
 				*endRegion = startRegion;
+				*bPointChange = true;
 				return false;
 			}
 			
-			switch(regionArray[*endRegion].spec.surfaceType)
-			{
-				case SURFACE_INNER:
-				case SURFACE_OUTER:
-					// Need to check for surface absorption
-					if(regionArray[*endRegion].bSurfRxnIn[molType])
-					{ // Absorption is possible
-						*curRxn = regionArray[*endRegion].rxnInID[molType];
-						if(bRecent)
-						{
-							// Need to calculate absorption probability
-							rxnProb = calculateAbsorptionProb(*endRegion,
-								molType, *curRxn,
-								dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-								DIFF_COEF);
+			if(regionArray[*endRegion].numChemRxn > 0)
+			{				
+				switch(regionArray[*endRegion].spec.surfaceType)
+				{
+					case SURFACE_INNER:
+					case SURFACE_OUTER:
+						// Need to check for surface absorption
+						if(regionArray[*endRegion].bSurfRxnIn[molType])
+						{ // Absorption is possible
+							*curRxn = regionArray[*endRegion].rxnInID[molType];
+							if(bRecent)
+							{
+								// Need to calculate absorption probability
+								rxnProb = calculateAbsorptionProb(*endRegion,
+									molType, *curRxn,
+									dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+									DIFF_COEF);
+							} else
+							{ // Use pre-calculated probability
+								rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
+							}
 						} else
-						{ // Use pre-calculated probability
-							rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
+							rxnProb = 0.;
+						break;
+					case SURFACE_MEMBRANE:
+						// Need to check relative direction so that correct probability
+						// is used
+						switch(regionArray[startRegion].regionNeighDir[* endRegion])
+						{
+							case LEFT:
+							case DOWN:
+							case IN:
+							case PARENT:
+								// Use "Inner" membrane transition probability
+								if(regionArray[*endRegion].bSurfRxnIn[molType])
+								{
+									*curRxn = regionArray[*endRegion].rxnInID[molType];
+									if(bRecent)
+										rxnProb = calculateMembraneProb(*endRegion,
+											molType, *curRxn,
+											dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+											DIFF_COEF);
+									else
+										rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
+								} else
+									rxnProb = 0.;
+								break;
+							default:
+								// Use "Outer" membrane transition probability
+								if(regionArray[*endRegion].bSurfRxnOut[molType])
+								{
+									*curRxn = regionArray[*endRegion].rxnOutID[molType];
+									if(bRecent)
+										rxnProb = calculateMembraneProb(*endRegion,
+											molType, *curRxn,
+											dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
+											DIFF_COEF);
+									else
+										rxnProb = regionArray[*endRegion].surfRxnOutProb[molType];
+								} else
+									rxnProb = 0.;
+								break;
 						}
-					} else
-						rxnProb = 0.;
-					break;
-				case SURFACE_MEMBRANE:
-					// Need to check relative direction so that correct probability
-					// is used
-					switch(regionArray[startRegion].regionNeighDir[* endRegion])
-					{
-						case LEFT:
-						case DOWN:
-						case IN:
-						case PARENT:
-							// Use "Inner" membrane transition probability
-							if(regionArray[*endRegion].bSurfRxnIn[molType])
-							{
-								*curRxn = regionArray[*endRegion].rxnInID[molType];
-								if(bRecent)
-									rxnProb = calculateMembraneProb(*endRegion,
-										molType, *curRxn,
-										dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-										DIFF_COEF);
-								else
-									rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
-							} else
-								rxnProb = 0.;
-							break;
-						default:
-							// Use "Outer" membrane transition probability
-							if(regionArray[*endRegion].bSurfRxnOut[molType])
-							{
-								*curRxn = regionArray[*endRegion].rxnOutID[molType];
-								if(bRecent)
-									rxnProb = calculateMembraneProb(*endRegion,
-										molType, *curRxn,
-										dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-										DIFF_COEF);
-								else
-									rxnProb = regionArray[*endRegion].surfRxnOutProb[molType];
-							} else
-								rxnProb = 0.;
-							break;
-					}
-					break;
-			}
+						break;
+				}
 			
-			curRand = generateUniform();
-			if(curRand < rxnProb)
-			{
-				// Reaction curRxn took place
-				*bReaction = true;
-			}
+				curRand = generateUniform();
+				if(curRand < rxnProb)
+				{
+					// Reaction curRxn took place
+					*bReaction = true;
+				}
+			} else
+				*bReaction = false; // Surface region has no chemical reactions; must reflect
 			
 			if(*bReaction)
 			{
@@ -1540,6 +2022,7 @@ bool followMolecule(const double startPoint[3],
 					endPoint[1] = startPoint[1];
 					endPoint[2] = startPoint[2];
 					*endRegion = startRegion;
+					*bPointChange = true;
 					return false;
 				}
 					
@@ -1550,11 +2033,12 @@ bool followMolecule(const double startPoint[3],
 					endPoint[1] = curIntersectPoint[1];
 					endPoint[2] = curIntersectPoint[2];
 					* transRegion = startRegion; // Indicate from which micro region we came from
+					* bPointChange = true;
 					return false;
 				}
 				lineLength -= lineLength*pushFrac; // Correct line length for having been pushed	
 				return followMolecule(curIntersectPoint, endPoint, lineVector,
-					lineLength, *endRegion, endRegion, transRegion,
+					lineLength, *endRegion, endRegion, transRegion, bPointChange,
 					NUM_REGIONS, NUM_MOL_TYPES, regionArray, molType,
 					bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1)
 					&& startRegion == *endRegion;
@@ -1563,6 +2047,7 @@ bool followMolecule(const double startPoint[3],
 				endPoint[0] = nearestIntersectPoint[0];
 				endPoint[1] = nearestIntersectPoint[1];
 				endPoint[2] = nearestIntersectPoint[2];
+				* bPointChange = true;
 				return false;
 			}
 		}
@@ -1585,23 +2070,25 @@ bool followMolecule(const double startPoint[3],
 		*endRegion = startRegion;
 		endPoint[0] = nearestIntersectPoint[0];
 		endPoint[1] = nearestIntersectPoint[1];
-		endPoint[2] = nearestIntersectPoint[2];
+		endPoint[2] = nearestIntersectPoint[2];		
+		*bPointChange = true;
 		return false;		
 	}
 	// Lock point to actual boundary only if actual reflection occurred
-	lockPointToRegion(nearestIntersectPoint, startRegion, startRegion, regionArray,
+	lockPointToRegion(nearestIntersectPoint, startRegion, reflectRegion, regionArray,
 		nearestFace);
 	// Follow point past reflection. Define new line unit vector
 	defineLine(nearestIntersectPoint, newEndPoint, lineVector, &lineLength);
 	
 	followMolecule(nearestIntersectPoint, newEndPoint, lineVector,
-			lineLength, startRegion, endRegion, transRegion,
+			lineLength, startRegion, endRegion, transRegion, bPointChange,
 			NUM_REGIONS, NUM_MOL_TYPES, regionArray,
 			molType, bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1);
 	
 	endPoint[0] = newEndPoint[0];
 	endPoint[1] = newEndPoint[1];
 	endPoint[2] = newEndPoint[2];
+	*bPointChange = true;
 	return false;
 }
 

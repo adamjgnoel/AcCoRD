@@ -11,3 +11,4 @@
 ./accord_dub_debug.out accord_config_sample_reactor_2nd_order.txt;
 ./accord_dub_debug.out accord_config_sample_reactor_microscopic.txt;
 ./accord_dub_debug.out accord_config_sample_surface.txt;
+./accord_dub_debug.out accord_config_sample_crowding.txt;

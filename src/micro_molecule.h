@@ -20,6 +20,18 @@
  * - added function for placing molecules in microscopic regime when they come from the
  * mesoscopic region
  * - modified random number generation. Now use PCG via a separate interface file.
+ * - added bimolecular chemical reactions in microscopic regime. Transition of reactants
+ * to reaction site is tested if reaction site is not in same region. Transition of
+ * product molecules from reaction site is also tested if unbinding radius is used.
+ * Molecules are compared with all potential reactants in current region and neighboring
+ * regions where the reaction is also valid. A molecule cannot participate in more than
+ * one bimolecular reaction is a single time step (as a reactant or product). Reaction
+ * site and displacement of products depends on relative diffusion coefficients
+ * - added check on total number of chemical reactions in a region before checking for
+ * surface reactions during diffusion validation, since many surface reaction structure
+ * members are not initialized unless there is at least one reaction at the surface
+ * - corrected bug where a molecule is not correctly reflected off of a child region
+ * surface
  *
  * Revision v0.5.1 (2016-05-06)
  * - updated first order reaction functions to account for surface reactions that
@@ -84,7 +96,7 @@
 
 struct molecule_list3D {
 	double x, y, z; // Coordinates of centre of molecule
-	bool bNeedUpdate; // Indicate whether molecule needs to be moved in current
+	bool bNeedUpdate; 	// Indicate whether molecule can still move or react in current
 						// time step
 };
 
@@ -126,7 +138,6 @@ void diffuseMolecules(const short NUM_REGIONS,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D p_listRecent[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
-	struct mesoSubvolume3D mesoSubArray[],
 	struct subvolume3D subvolArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct chem_rxn_struct chem_rxn[],
@@ -200,6 +211,19 @@ unsigned short findDestRegion(const double point[3],
 	const unsigned short curRegion,
 	const struct region regionArray[]);
 
+// Check all second order reactions for region
+void rxnSecondOrder(const unsigned short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct region regionArray[],
+	struct subvolume3D subvolArray[],
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+
+// Compare distance between 2 molecules with threshold
+// Return true if distance is greater than threshold
+bool moleculeSeparation(ItemMol3D * molecule1, ItemMol3D * molecule2, double threshSq);
+
 void transferMolecules(ListMolRecent3D * molListRecent, ListMol3D * molList);
 
 bool validateMolecule(double newPoint[3],
@@ -209,6 +233,7 @@ bool validateMolecule(double newPoint[3],
 	const short curRegion,
 	short * newRegion,
 	short * transRegion,
+	bool * bPointChange,
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
@@ -228,6 +253,7 @@ bool followMolecule(const double startPoint[3],
 	const short startRegion,
 	short * endRegion,
 	short * transRegion,
+	bool * bPointChange,
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],

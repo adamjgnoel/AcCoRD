@@ -62,12 +62,12 @@ chemStruct = struct('label', '', 'bReversible', 0, 'revLabel', '', ...
 config.chemRxn = cell(1, config.numChemRxn);
 for i = 1:config.numChemRxn
     config.chemRxn{i} = chemStruct;
-    if config.numChemRxn == 1
-        curRxn = ...
-            configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification;
-    else
+    if iscell(configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification)
         curRxn = ...
             configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification{i};
+    else
+        curRxn = ...
+            configJSON.Chemical_0x20_Properties.Chemical_0x20_Reaction_0x20_Specification(i);
     end
     
     config.chemRxn{i}.rate = curRxn.Reaction_0x20_Rate;
@@ -133,10 +133,10 @@ regionStruct = struct('label', '', 'parent', '', 'shape', '', ...
 config.region = cell(1, config.numRegion);
 for i = 1:config.numRegion
     config.region{i} = regionStruct;
-    if config.numRegion == 1
-        curRegion = configJSON.Environment.Region_0x20_Specification;
-    else
+    if iscell(configJSON.Environment.Region_0x20_Specification)
         curRegion = configJSON.Environment.Region_0x20_Specification{i};
+    else
+        curRegion = configJSON.Environment.Region_0x20_Specification(i);
     end
     
     config.region{i}.label = curRegion.Label;
@@ -181,10 +181,10 @@ config.numActive = 0;
 config.numPassive = 0;
 for i = 1:config.numActor
     config.actor{i} = actorStruct;
-    if config.numActor == 1
-        curActor = configJSON.Environment.Actor_0x20_Specification;
-    else
+    if iscell(configJSON.Environment.Actor_0x20_Specification)
         curActor = configJSON.Environment.Actor_0x20_Specification{i};
+    else
+        curActor = configJSON.Environment.Actor_0x20_Specification(i);
     end
     
     % How is actor space defined
@@ -258,10 +258,10 @@ passiveStruct = struct('bRecordTime', 0, 'bRecordMolCount', zeros(1,config.numMo
 curActive = 1;
 curPassive = 1;
 for i = 1:config.numActor
-    if config.numActor == 1
-        curActor = configJSON.Environment.Actor_0x20_Specification;
-    else
+    if iscell(configJSON.Environment.Actor_0x20_Specification)
         curActor = configJSON.Environment.Actor_0x20_Specification{i};
+    else
+        curActor = configJSON.Environment.Actor_0x20_Specification(i);
     end
     
     if config.actor{i}.bActive

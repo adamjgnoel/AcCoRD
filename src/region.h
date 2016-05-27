@@ -19,6 +19,8 @@
  * subvolumes. Replaced array for storing coordinates of virtual microscopic
  * subvolume with array of boundary coordinates of boundary mesoscopic subvolumes. These
  * changes needed to accommodate improved hybrid transition algorithms
+ * - added members to implement bimolecular chemical reactions in microscopic regime.
+ * Use a preliminary algorithm where the user must supply the binding and unbinding radii
  * - changed findNearestSub function to return index of subvolume in region's neighID array
  * instead of the global subvolume list. This makes function suitable for more calls.
  * - added case for point boundary when determining intersection with a region
@@ -319,6 +321,16 @@ struct region { // Region boundary parameters
 	unsigned short numFirstRxn;
 	unsigned short numSecondRxn;
 	
+	// ID of reaction in global chemical reaction list
+	// Needed for bimolecular reactions where reactants could be in different regions
+	// Size is numChemRxn
+	unsigned short * globalRxnID;
+	
+	// Can global reaction occur in this region?
+	// Needed for bimolecular reactions where reactants could be in different regions
+	// Size is MAX_RXNS
+	bool * bGlobalRxnID;
+	
 	// Is reaction reversible?
 	// Size is numChemRxn
 	bool * bReversible;
@@ -398,16 +410,16 @@ struct region { // Region boundary parameters
 	// probabilities for each molecule type?
 	
 	// How many first order reactions have the current molecule as the reactant?
-	// TODO: Improve member name
-	unsigned short * numFirstCurReactant; // Length NUM_MOL_TYPES
+	unsigned short * numFirstRxnWithReactant; // Length NUM_MOL_TYPES
 	
-	// What are the IDs of the chemical reactions that have the current molecule
-	// as the reactant.
-	// TODO: Improve member name
-	unsigned short ** firstRxnID; // Length NUM_MOL_TYPES x numChemRxn
+	// What are the IDs of the first order reactions that have the current molecule
+	// as the reactant?
+	unsigned short ** firstRxnWithReactantID; // Length NUM_MOL_TYPES x numChemRxn
+	
+	// How many second order reactions have the current molecule as a reactant?
+	unsigned short * numSecondRxnWithReactant; // Length NUM_MOL_TYPES
 	
 	// For bimolecular reactions, what are the indices of the two reactants?
-	// Undefined for reactions that are not bimolecular.
 	// Size is numChemRxn x 2
 	unsigned short (* biReactants)[2];
 	
@@ -419,6 +431,12 @@ struct region { // Region boundary parameters
 						 // in order to correspond to a reaction time that is less than
 						 // the region's micro time step.
 						 // Length NUM_MOL_TYPES
+	
+	double * rBind;		// Bimolecular reaction binding radius. Length numChemRxn
+	double * rBindSq;	// Bimolecular reaction binding radius squared. Length numChemRxn
+	double * rUnbind;	// Bimolecular reaction Unbinding radius. Length numChemRxn
+	double rBindMax;	// Largest binding radius.
+						// TODO: Use for determining micro subvolume neighbors.
 						 
 	// Type of surface reaction probability calculation
 	// Default is RXN_PROB_NORMAL, which is inaccurate for surface transition reactions

@@ -18,6 +18,7 @@ This document is the CHANGELOG for AcCoRD v0.6 (public beta, 2016-05-30)
 - [FIX] added warnings for unnecessary active actor parameters depending on values of other active actor parameters
 - [FIX] added check for positive radii for spherical regions and actors
 - [UPDATE] new configuration files added to demonstrate improved hybrid transitions (accord_config_sample_hybrid.txt) and microscopic bimolecular reactions (accord_config_sample_crowding.txt)
+- [UPDATE] added scripts to run all sample configuration files
 
 Changes introduced in v0.5.1 (public beta, 2016-05-06)
 - [NEW] chemical reactions have labels

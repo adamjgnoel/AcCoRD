@@ -9,9 +9,15 @@
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
 //
-// Last revised for AcCoRD v0.5.1 (2016-05-06)
+// Last revised for AcCoRD v0.6 (2016-05-30)
 //
 // Revision history:
+//
+// Revision v0.6 (2016-05-30)
+// - added new properties for bimolecular reactions in microscopic regime
+// - added new options for active actors, which can now be points and have
+// constant data sequences
+// - added option for choice of hybrid transition algorithm
 //
 // Revision v0.5.1 (2016-05-06)
 // - describe new properties for chemical reactions (particularly surface reactions)
@@ -40,12 +46,14 @@
 // With that out of the way, welcome to this "tutorial" for preparing proper
 // AcCoRD configuration files.
 //
-// This document is current as of v0.5.1 (2016-05-06).
+// This document is current as of v0.6 (2016-05-30).
 //
 // Please note that valid configuration files cannot have these comments
 // preceded by "//". If you remove these comments and place a copy of
-// this file where AcCoRD can "see" it, then you can run it in AcCoRD.
-// However, this should be unnecessary since the config folder includes
+// this file where AcCoRD can "see" it, then you can (try to) run it in AcCoRD.
+// It probably won't work because this file provides an exhaustive list of
+// configuration options and many of them contradict each other.
+// However, this should be not be a problem since the config folder includes
 // a number of sample valid configuration files.
 // AcCoRD looks for config files first in the current directory, then
 // in a "config" subdirectory, then in a "../config/" directory.
@@ -59,7 +67,7 @@
 // and before a colon, e.g., "Output Filename") MUST be written EXACTLY as they are
 // in this file. These names are hard-coded into AcCoRD.
 //
-// Except where noted, ALL names are mandatory in a configuration file, though some of them may have
+// Most names are mandatory in a configuration file, though some of them may have
 // an empty value associated with them. In particular, "Chemical Reaction Specification"
 // is an empty array if there are no chemical reactions to simulate.
 //
@@ -127,10 +135,26 @@
 		// the simulations can be executed on different machines and the output files aggregated
 		// without needing to worry about the simulations having the same output.
 		
-		"Max Number of Progress Updates": 100
+		"Max Number of Progress Updates": 100,
 		// Control the maximum number of updates
 		// to display in the console. There will be no more
 		// than one update per realization. Will be converted to an integer.
+		
+		"Small Subvolumes at Hybrid Interface?": true,
+		// Choice of transition algorithm at hybrid interfaces (i.e., where a microscopic
+		// region is adjacent to a mesoscopic region). The small time step / large subvolume
+		// algorithm and large time step / small subvolume algorithm are described in
+		// Flegg et al., "Analysis of the two-regime method on square meshes", SIAM Journal
+		// of Scientific Computing, vol. 36, no. 3, pp. 561--588, 2014.
+		// Warning will appear if setting is defined when there isn't both a microscopic
+		// region and mesoscopic region defined, or not defined when there is. Default is true.
+		// Small subvolume assumption is more accurate when characteristic diffusion distance
+		// in microscopic regime is comparable to the mesoscopic subvolume size.
+		
+		"Max Intrastep Micro to Meso Distance": 10e-6
+		// Microscopic molecules that are at least this distance from closest mesoscopic surface
+		// either before or after diffusion step are not considered to have entered mesoscopic
+		// regime with significant probability during diffusion step.
 	},
 	"Chemical Properties": {
 	// Describes the molecules in the system and how they interact
@@ -256,10 +280,31 @@
 				// desorption and partial transmission" Physical Biology, vol. 6,
 				// p.046015, 2009.
 												
-				"Reaction Rate": 1
+				"Reaction Rate": 1,
 				// Chemical reaction rate. Units depend on the order of the reaction.
 				// To have an "infinite" reaction rate (e.g., for perfect absorption),
 				// set to 1e9999.
+				
+				"Binding Radius": 1e-6,
+				// Microscopic reactants that are separated by less than this distance
+				// after diffusion step will react if reaction is 2nd order. A reaction
+				// site is determined based on the reactant's diffusion coefficients.
+				// Reaction will be cancelled if either reactant's path to the reaction
+				// site is impeded (i.e., via a region surface). Molecules will only be
+				// compared with molecules in the same region or neighboring regions
+				// where the same reaction can occur. The region of the reaction site
+				// must also allow the reaction
+				
+				"Unbinding Radius": 5e-6
+				// Separation distance applied to bimolecular reactions in microscopic
+				// regime with more than 1 product. Ignored if there are 1 or 0 products.
+				// If there are 2 products, then they are separated according to this
+				// distance along the line joining the locations of the 2 reactants
+				// at the end of diffusion step. If there are more than 2 products,
+				// then each is placed in a random direction but the sum of the distances
+				// of the products from the reaction site is this value. Transition of 
+				// each product is verified as needed (could be reflected or react with
+				// a surface)
 			}
 		]
 	},
@@ -427,13 +472,14 @@
 				"Shape": "Rectangular Box",
 				// Only define if "Is Actor Location Defined by Regions?" is false.
 				// Shape of the actor. CURRENTLY "Rectangular Box", "Sphere", and
-				// "Rectangle" ARE SUPPORTED
+				// "Rectangle" ARE SUPPORTED. Active actors can also have "Point".
 				
 				"Outer Boundary": [0, 20e-6, 0, 10e-6, 0, 10e-6],
 				// Only define if "Is Actor Location Defined by Regions?" is false.
 				// The coordinates of the actor. For a "Rectangular Box" actor, the format is
 				// [x min, x max, y min, y max, z min, z max].
 				// For a "Sphere" actor, the format is [x center, y center, z center, radius].
+				// For a "Point" actor, the format is [x, y, z].
 				// Consider the size and location of the regions carefully when defining where
 				// to place actors. The outer boundary of a spherical actor can only intersect
 				// microscopic regions but no region boundaries. Mesoscopic regions can be inside
@@ -463,6 +509,8 @@
 				// final time is reached.
 				
 				"Max Number of Actions": 100,
+				// Number of actions performed if "Is There Max Number of Actions?" is true
+				
 				"Is Actor Independent?": true,
 				// If true, actions are started at pre-defined intervals.
 				// CURRENTLY IGNORED. DEPENDENT ACTORS ARE NOT YET IMPLEMENTED,
@@ -474,6 +522,9 @@
 				// If the actor is passive, then molecules within the actor will be immediately
 				// counted.
 				// Units are seconds.
+				
+				"Is Actor Activity Recorded?": true,
+				// If true, actor data will be written to the output file.
 				
 				//
 				//!!!!  The remaining parameters apply to ACTIVE actors ONLY !!!!
@@ -500,8 +551,10 @@
 															
 				"Bits Random?": true,
 				// If true, then the underlying actor bit stream can have 1s or 0s.
-				// If false, then bit stream must be defined.
-				// CURRENTLY IGNORED (VALUE IS ALWAYS SET TO TRUE).
+				// If false, then "Bit Sequence" must be defined.				
+				
+				"Bit Sequence": [0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1],
+				// Constant bit sequence used if "Bits Random?" is false
 															
 				"Probability of Bit 1": 1,
 				// If "Bits Random?" is true, then this is the probability that a given bit will be 1.
@@ -524,6 +577,8 @@
 				// If "Random Molecule Release Times?" is
 				// true and modulation is "CSK", then this defines the number of molecules released per second
 				// if there is one modulation bit and the current bit is 1.
+				// If modulation is "CSK", then only the first true value in "Is Molecule Type Released?" will
+				// be transmitter (the remaining values are ignored)
 															
 				"Is Molecule Type Released?": [true],
 				// An array of length "Number of Molecule Types". Used to indicate which types of
@@ -547,10 +602,6 @@
 				//
 				//!!!!  The remaining parameters apply to PASSIVE actors ONLY !!!!
 				//
-				"Is Actor Activity Recorded?": true,
-				// If true, actor data will be written to the output file.
-				// NOTE: CURRENTLY THE BIT STREAM OF ACTIVE ACTORS WILL ALWAYS BE WRITTEN,
-				// OTHERWISE THIS WOULD BE A COMMON PARAMETER FOR ALL ACTORS
 															
 				"Is Time Recorded with Activity?": false,
 				// If true, there will be an array of observation times written with each realization

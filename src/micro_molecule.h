@@ -10,11 +10,11 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
  * i.e., when molecule is in micro at start and end of diffusion step.
  * - added function for placing molecules in microscopic regime when they come from the

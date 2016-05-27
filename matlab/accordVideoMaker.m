@@ -95,11 +95,11 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.6 (public beta, 2016-05-30)
 % - Created file
 %
 % Created 2016-05-19

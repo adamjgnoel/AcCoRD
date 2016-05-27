@@ -10,11 +10,11 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
  * - added implementation of point shapes. Implementation is not comprehensive, but enough
  * to account for active point actors.

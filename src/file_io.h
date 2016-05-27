@@ -9,11 +9,11 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - added option for user to select small subvolume or big subvolume assumption
  * at hybrid interfaces. Only needed if there is at least 1 microscopic and 1
  * mesoscopic region defined.

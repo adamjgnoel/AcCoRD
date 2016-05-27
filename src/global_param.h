@@ -10,11 +10,11 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - added POINT as a shape
  *
  * Revision v0.5.1 (2016-05-06)

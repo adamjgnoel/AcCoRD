@@ -9,11 +9,11 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - preliminary implementation of bimolecular reactions in microscopic regime
  * (based on binding and unbinding radii). Can also model molecular crowding
  * - added new members to region array structure to facilitate microscopic

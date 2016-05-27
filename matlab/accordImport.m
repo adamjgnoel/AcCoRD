@@ -26,11 +26,11 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.6 (public beta, 2016-05-30)
 % - renamed from accord_import for consistency
 % - added conversion of default config structure, as loaded from the JSON
 % interpreter, into a stucture that is easier to work with

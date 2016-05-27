@@ -82,7 +82,7 @@ Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/
 * Allow dependent actors, whose behavior depends on the observations of passive actors. This would allow implementation of more complex communication networks (e.g., relays)
 * Add actors that track changes to molecule composition in their volumes
 * Improve implementation of 2nd order chemical reactions in microscopic regions
-* Enable surfaces to mesoscopic regions. Can be achieved via extruded regions
+* Enable surfaces to mesoscopic regions. Can be achieved via exclusion regions
 * Write more MATLAB utility functions to perform common tasks with simulation output (e.g., plot average behavior, simulation statistics, bit error probabilities)
 * Specify different diffusion coefficients for different regions
 * Use different microscopic time steps in different microscopic regions

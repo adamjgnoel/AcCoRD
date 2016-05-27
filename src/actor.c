@@ -9,11 +9,11 @@
  *
  * actor.c - operations on array of actors and its elements
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
  * - added active point sources. Can be placed in microscopic or mesoscopic regions.
  * Cannot be on boundary of 2 or more regions or mesoscopic subvolumes

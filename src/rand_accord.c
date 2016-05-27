@@ -9,11 +9,11 @@
  *
  * rand_accord.c - interface to random number generation functions
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - file created to centralize calls to random number generators
  * - replacing RNG via Mersenne Twister with the PCG algorithm
  * (http://www.pcg-random.org/)

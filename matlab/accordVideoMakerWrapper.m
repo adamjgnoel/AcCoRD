@@ -1,4 +1,4 @@
-function [hFig, hAxes] = accordVideoMarkerWrapper()
+function [hFig, hAxes] = accordVideoMakerWrapper()
 %
 % The AcCoRD Simulator
 % (Actor-based Communication via Reaction-Diffusion)
@@ -8,7 +8,7 @@ function [hFig, hAxes] = accordVideoMarkerWrapper()
 % For license details, read LICENSE.txt in the root AcCoRD directory
 % For user documentation, read README.txt in the root AcCoRD directory
 %
-% accordVideoMarkerWrapper.m - Wrapper function for accordVideoMaker, which
+% accordVideoMakerWrapper.m - Wrapper function for accordVideoMaker, which
 %   can generate a video file or sequence of images from AcCoRD simulation
 %   output. This file prepares all of the input arguments needed for
 %   accordVideoMaker.
@@ -24,11 +24,11 @@ function [hFig, hAxes] = accordVideoMarkerWrapper()
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.6 (public beta, 2016-05-30)
 % - Created file
 %
 % Created 2016-05-19

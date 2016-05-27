@@ -6,7 +6,7 @@
 	"Simulation Control": {
 		"Number of Repeats": 1,
 		"Final Simulation Time": 0.05,
-		"Global Microscopic Time Step": 1e-4,
+		"Global Microscopic Time Step": 1e-5,
 		"Random Number Seed": 1,
 		"Max Number of Progress Updates": 100
 	},

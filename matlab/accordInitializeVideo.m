@@ -28,11 +28,11 @@ function videoObj = accordInitializeVideo(videoName, videoFormat, propChange)
 % OUTPUTS
 % videoObj - opened video object.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.6 (public beta, 2016-05-30)
 % - Created file
 %
 % Created 2016-05-19

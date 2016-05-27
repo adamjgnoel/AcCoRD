@@ -10,11 +10,11 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
  * i.e., when molecule is in micro at start and end of diffusion step.
  * - added function for placing molecules in microscopic regime when they come from the
@@ -149,7 +149,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	int curMol = 0;
 	
 	bool bReaction;
-	unsigned short curRxn, curProd;
+	short curRxn, curProd;
 
 	bool bRemove, bValidDiffusion;
 	uint32_t minSub;
@@ -1154,7 +1154,7 @@ unsigned short findDestRegion(const double point[3],
 	return curRegion;
 }
 
-// Check all second order reactions for region
+// Check all second order reactions for microscopic regions
 void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
@@ -1163,13 +1163,13 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
-	unsigned short curRegion, neighRegion, rxnRegion, transRegion, destRegion;
+	short curRegion, neighRegion, rxnRegion, transRegion, destRegion;
 	bool bSameRegion;		// Are current and neighboring molecules in same region?
-	unsigned short curMolType, secondMolType;
-	unsigned short curRxnSecond, curRxnNeighSecond, curRxnRegion, curRxnNeighRegion, curRxn;
-	unsigned short diffRxn; 	// ID of reaction while a reactant is diffusing to site
-							// Only written to
-	unsigned short curProd, curProdRxn;
+	short curMolType, secondMolType;
+	short curRxnSecond, curRxnNeighSecond, curRxnRegion, curRxnNeighRegion, curRxn;
+	short diffRxn; 		// ID of reaction while a reactant or product is diffusing
+						// to/from site
+	short curProd, curProdRxn;
 	NodeMol3D * curNode, * prevNode, * nextNode;
 	NodeMol3D * curNeighNode, * prevNeighNode, * nextNeighNode;
 	double rxnCoor[3];		// Location where reaction "occurs"
@@ -1289,6 +1289,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 				// and allow the reaction to occur?
 				if(!regionArray[neighRegion].spec.bMicro
 					|| isListMol3DEmpty(&p_list[neighRegion][secondMolType])
+					|| regionArray[neighRegion].numChemRxn == 0
 					|| !regionArray[neighRegion].bGlobalRxnID[curRxn])
 					continue;
 				
@@ -1329,54 +1330,55 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 								  // Execute reaction
 									numReactant1Add = 0;
 									numReactant2Add = 0;
-									if(regionArray[curRegion].numRxnProducts[curRxnRegion] > 0)
+									
+									// Find ''central point'' of reaction
+									rxnCoor[0] = curNode->item.x + relDiff*(curNeighNode->item.x
+										- curNode->item.x);
+									rxnCoor[1] = curNode->item.y + relDiff*(curNeighNode->item.y
+										- curNode->item.y);
+									rxnCoor[2] = curNode->item.z + relDiff*(curNeighNode->item.z
+										- curNode->item.z);
+									
+									// Can 1st reactant reach reaction site?
+									reactantPoint[0] = curNode->item.x;
+									reactantPoint[1] = curNode->item.y;
+									reactantPoint[2] = curNode->item.z;
+									validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
+										NUM_MOL_TYPES, curRegion, &rxnRegion, &transRegion,
+										&bPointChange, regionArray, curMolType,
+										&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+										&diffRxn);
+									
+									if(bPointChange)
 									{
-										// Find ''central point'' of reaction
-										rxnCoor[0] = curNode->item.x + relDiff*(curNeighNode->item.x
-											- curNode->item.x);
-										rxnCoor[1] = curNode->item.y + relDiff*(curNeighNode->item.y
-											- curNode->item.y);
-										rxnCoor[2] = curNode->item.z + relDiff*(curNeighNode->item.z
-											- curNode->item.z);
-										
-										// Can 1st reactant reach reaction site?
-										reactantPoint[0] = curNode->item.x;
-										reactantPoint[1] = curNode->item.y;
-										reactantPoint[2] = curNode->item.z;
-										validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
-											NUM_MOL_TYPES, curRegion, &rxnRegion, &transRegion,
-											&bPointChange, regionArray, curMolType,
-											&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
-											&diffRxn);
-										
-										if(bPointChange)
-										{
-											// 1st reactant can't reach reaction site
-											prevNeighNode = curNeighNode;
-											curNeighNode = nextNeighNode;
-											continue;
-										}
-										
-										// Can 1st reactant reach reaction site?
-										reactantPoint[0] = curNeighNode->item.x;
-										reactantPoint[1] = curNeighNode->item.y;
-										reactantPoint[2] = curNeighNode->item.z;
-										validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
-											NUM_MOL_TYPES, neighRegion, &rxnRegion, &transRegion,
-											&bPointChange, regionArray, secondMolType,
-											&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
-											&diffRxn);
-										
-										if(bPointChange
-											|| !regionArray[rxnRegion].bGlobalRxnID[curRxn])
-										{
-											// 2nd reactant can't reach reaction site
-											// Or reaction takes place in an invalid region
-											prevNeighNode = curNeighNode;
-											curNeighNode = nextNeighNode;
-											continue;
-										}
-										
+										// 1st reactant can't reach reaction site
+										prevNeighNode = curNeighNode;
+										curNeighNode = nextNeighNode;
+										continue;
+									}
+									
+									// Can 2nd reactant reach reaction site?
+									reactantPoint[0] = curNeighNode->item.x;
+									reactantPoint[1] = curNeighNode->item.y;
+									reactantPoint[2] = curNeighNode->item.z;
+									validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
+										NUM_MOL_TYPES, neighRegion, &rxnRegion, &transRegion,
+										&bPointChange, regionArray, secondMolType,
+										&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+										&diffRxn);
+									
+									if(bPointChange
+										|| !regionArray[rxnRegion].bGlobalRxnID[curRxn])
+									{
+										// 2nd reactant can't reach reaction site
+										// Or reaction takes place in an invalid region
+										prevNeighNode = curNeighNode;
+										curNeighNode = nextNeighNode;
+										continue;
+									}
+									
+									if(regionArray[curRegion].numRxnProducts[curRxnRegion] > 0)
+									{										
 										for(curProdRxn = 0;
 										curProdRxn < regionArray[curRegion].numRxnProducts[curRxnRegion];
 										curProdRxn++)
@@ -1565,6 +1567,10 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 										curNode->next = nextNeighNode;
 										nextNode = nextNeighNode;
 										prevNeighNode = prevNode;
+										if(prevNode == NULL)
+										{ // Need to correct start of list again
+											p_list[curRegion][curMolType] = nextNode;
+										}
 									}
 									removeItem(prevNode, curNode);
 									removeItem(prevNeighNode, curNeighNode);
@@ -1653,7 +1659,7 @@ bool validateMolecule(double newPoint[3],
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	unsigned short * curRxn)
+	short * curRxn)
 {
 	double trajLine[3];
 	double lineLength;
@@ -1666,6 +1672,7 @@ bool validateMolecule(double newPoint[3],
 	if(regionArray[curRegion].numChildren < 1
 		&& bPointInRegionNotChild(curRegion, regionArray, newPoint, false))
 	{ // This is simplest case. No region boundary interactions
+		*bPointChange = false;
 		return true;
 	} else
 	{ // Molecule may have left region's outer boundary or went through a child region
@@ -1697,7 +1704,7 @@ bool followMolecule(const double startPoint[3],
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
-	unsigned short * curRxn,
+	short * curRxn,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],

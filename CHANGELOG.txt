@@ -2,7 +2,25 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.5.1 (public beta, 2016-05-06)
+This document is the CHANGELOG for AcCoRD v0.6 (public beta, 2016-05-30)
+- [NEW] added bimolecular chemical reactions in the microscopic regime. Current implementation is preliminary and requires user to provide the binding radius. An unbinding radius can also be provided. Potential reactants are compared with other potential reactants in same region and neighboring regions where the reaction could also take place. A molecule cannot participate in more than one bimolecular reaction per time step. Reaction site is found based on relative diffusion of reactants and must be a valid straight line destination for both both reactants. If there is an unbinding radius, trajectory of product molecules is also verified. If 2 products, then they are placed along line between the 2 reactant locations. If more than 2, then each is placed in a random direction. Some implementation concepts derived from Andrews and Bray, "Stochastic simulation of chemical reactions with spatial resolution and single molecule detail", Physical Biology, vol. 1, no. 3-4, pp. 137--151, 2004
+- [NEW] added Matlab functions for visualization. Any subset of the simulation environment can be plotted with very flexible display options. If any passive actors record molecule positions, then figures can be created as snapshots of a simulation or a video can be generated.
+- [NEW] added active point sources as a distinct shape. Can be placed in microscopic or mesoscopic regions, but cannot be on the boundary of 2 or more regions or 2 or more mesoscopic subvolumes. Point shape implementation is sufficient to just handle point active actors
+- [NEW] added option for user to define a constant active actor bit sequence
+- [ENHANCEMENT] updated random number generation to use the PCG (permuted congruential generator) family and replacing the Mersenne twister. Generator is faster and has better statistical quality than the Mersenne twister. More about this generator can be found at www.pcg-random.org. Calls to basic PCG functions are centralized in a single source file for all random number generation
+- [ENHANCEMENT] improved transitions between microscopic and mesoscopic regimes. User can choose between 2 transition algorithms which vary how a molecule is placed from the mesoscopic regime to the microscopic regime (one for small time step / large subvolume and the other for large time step / small subvolume). Algorithms are based on those presented in Flegg et al., "Analysis of the two-regime method on square meshes", SIAM Journal of Scientific Computing, vol. 36, no. 3, pp. 561--588, 2014
+- [ENHANCEMENT] user can define maximum distance beyond which a micro to mesoscopic substep transition will not be considered. Otherwise, molecules in microscopic regions can probablistically enter mesoscopic regime even if molecule is still in microscopic regime at end of diffusion step. Also, molecules must end up in a region that neighbors a mesoscopic region in order for a substep transition to be considered
+- [ENHANCEMENT] improved how simulation configuration file is imported into Matlab. The default JSON-formatted structure is converted into a custom structure with more consistent indexing and simpler field names.
+- [ENHANCEMENT] added active actor data sequence as a user option
+- [ENHANCEMENT] changed format of output filename to match output filename instead of the original configuration file
+- [FIX] corrected molecule reflection off of a child region surface
+- [FIX] corrected checks for surface reactions when a surface has no potential reactions defined (in which case many chemical reaction indicators are never allocated/initialized)
+- [FIX] added warnings for unnecessary active actor parameters depending on values of other active actor parameters
+- [FIX] added check for positive radii for spherical regions and actors
+- [UPDATE] new configuration files added to demonstrate improved hybrid transitions (accord_config_sample_hybrid.txt) and microscopic bimolecular reactions (accord_config_sample_crowding.txt)
+- [UPDATE] added scripts to run all sample configuration files
+
+Changes introduced in v0.5.1 (public beta, 2016-05-06)
 - [NEW] chemical reactions have labels
 - [NEW] chemical reactions can be defined as reversible, where the coupled reaction is specified. The reaction probabilities of coupled surface reactions are determined differently from those that are uncoupled
 - [NEW] added "Desorbing" as a distinct surface reaction type. It is generally the reverse of "Absorbing"

@@ -9,11 +9,11 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - improved placement of molecules from mesoscopic regime into microscopic regime. User
  * can choose between small time step / large subvolume or large time step / small subvolume
  * algorithms via config. Actual placement moved to function in micro_molecule source file
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version LATEST_VERSION\n");
+	printf("Version v0.6 (public beta, 2016-05-30)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	

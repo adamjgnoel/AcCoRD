@@ -10,13 +10,14 @@
  * subvolume.h - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.6 (public beta, 2016-05-30)
  * - improved propensity calculation for molecules to leave mesoscopic subvolume and enter
- * virtual microscopic neighbor
+ * virtual microscopic neighbor. From Flegg et al., "Analysis of the two-regime method on
+ * square meshes", SIAM Journal of Scientific Computing, vol. 36, no. 3, pp. 561--588, 2014
  *
  * Revision v0.5 (2016-04-15)
  * - corrected memory allocation for subvolume helper arrays

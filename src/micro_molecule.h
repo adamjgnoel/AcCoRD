@@ -211,7 +211,7 @@ unsigned short findDestRegion(const double point[3],
 	const unsigned short curRegion,
 	const struct region regionArray[]);
 
-// Check all second order reactions for region
+// Check all second order reactions for microscopic regions
 void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
@@ -241,7 +241,7 @@ bool validateMolecule(double newPoint[3],
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	unsigned short * curRxn);
+	short * curRxn);
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
 // start and end points
@@ -259,7 +259,7 @@ bool followMolecule(const double startPoint[3],
 	const struct region regionArray[],
 	short molType,
 	bool * bReaction,
-	unsigned short * curRxn,
+	short * curRxn,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],

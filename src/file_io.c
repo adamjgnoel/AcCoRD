@@ -1438,7 +1438,7 @@ void loadConfig(const char * CONFIG_NAME,
 			if(cJSON_bItemValid(curObj,"Max Number of Actions", cJSON_Number))
 			{
 				bWarn = true;
-				printf("WARNING %d: Region %d does not need \"Max Number of Actions\" defined. Ignoring.\n", numWarn++, curArrayItem);
+				printf("WARNING %d: Actor %d does not need \"Max Number of Actions\" defined. Ignoring.\n", numWarn++, curArrayItem);
 			}
 		}
 		

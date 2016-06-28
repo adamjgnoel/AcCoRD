@@ -36,9 +36,13 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 % hAxes - handle to axes in plotted figure. Use for making changes to
 %   axes.
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added display of region subvolumes as option (instead of just outer
+%   region boundary).
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - Created file
@@ -71,7 +75,7 @@ hold('on');
 % Extract region display information
 if isempty(regionDispStruct)
     % Display all regions with default settings
-    regionDispStruct = accordBuildDispStruct(1:config.numRegion);
+    regionDispStruct = accordBuildDispStruct(1:config.numRegion,[]);
     regionDispStruct.dispColor{1} = [];
 end
 if isempty(regionDispStruct.dispColor{1})
@@ -97,13 +101,16 @@ for i = 1:regionDispStruct.numToDisp
         scaleDim, plane, ...
         config.region{regionDispStruct.indToDisp(i)}.anchorCoor, ...
         dispStr, regionDispStruct.bDispFace(i), ...
-        regionDispStruct.opaque(i), regionDispStruct.dispColor{1}{i});
+        regionDispStruct.opaque(i), regionDispStruct.dispColor{1}{i}, ...
+        regionDispStruct.bDispSubvolumes(i), ...
+        config.region{regionDispStruct.indToDisp(i)}.subvolSizeInt*...
+        config.subBaseSize);
 end
 
 % Extract actor display information
 if isempty(actorDispStruct)
     % Display all actors with default settings
-    actorDispStruct = accordBuildDispStruct(1:config.numActor);
+    actorDispStruct = accordBuildDispStruct(1:config.numActor,[]);
     actorDispStruct.dispColor{1} = [];
 end
 if isempty(actorDispStruct.dispColor{1})
@@ -133,14 +140,19 @@ for i = 1:actorDispStruct.numToDisp
             actorHandles{i}(j) = accordPlotShape(config.region{regionInd}.shape, scale, ...
                 scaleDim, plane, config.region{regionInd}.anchorCoor, ...
                 dispStr, actorDispStruct.bDispFace(i), ...
-                actorDispStruct.opaque(i), actorDispStruct.dispColor{1}{i});
+                actorDispStruct.opaque(i), actorDispStruct.dispColor{1}{i}, ...
+                actorDispStruct.bDispSubvolumes(i), ...
+                config.region{regionInd}.subvolSizeInt*...
+                config.subBaseSize);
         end
     else
         [scaleDim, plane, anchorCoor] = accordActorPlotParam(config.actor{curActor});
         actorHandles{i} = accordPlotShape(config.actor{curActor}.shape, scale, ...
             scaleDim, plane, anchorCoor, ...
             dispStr, actorDispStruct.bDispFace(i), ...
-            actorDispStruct.opaque(i), actorDispStruct.dispColor{1}{i});
+            actorDispStruct.opaque(i), actorDispStruct.dispColor{1}{i}, ...
+            actorDispStruct.bDispSubvolumes(i), ...
+            scaleDim);
     end
     
     
@@ -214,69 +226,102 @@ end
 
 % Plot one shape (Could be region or part of an actor)
 function h = accordPlotShape(shape, scale, scaleDim, plane, moveDim, ...
-    dispStr, bSurf, opaque, plotColor)
-    % Box structure
-    faces = [1 2 6 5; 2 3 7 6; 3 4 8 7; 4 1 5 8; 1 2 3 4; 5 6 7 8];
-    vertices = [0 0 0; 1 0 0; 1 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1];
-    
-    if strcmp(shape, 'Rectangular Box')
-        % Scale vertices by size
-        curVertices = vertices;
-        curFaces = faces;
-        curVertices([2 3 6 7],1) = ...
-            vertices([2 3 6 7],1)*scaleDim(1);
-        curVertices([3 4 7 8],2) = ...
-            vertices([3 4 7 8],2)*scaleDim(2);
-        curVertices([5 6 7 8],3) = ...
-            vertices([5 6 7 8],3)*scaleDim(3);
-    elseif strcmp(shape, 'Rectangle')
-        % Need to determine which axis rectanle lies in
-        curFaces = [1 2 3 4];
-        if plane == 1
-            curVertices = vertices([1 4 8 5],:);
-            curVertices([2 3],2) = ...
-                vertices([4 8],2)*scaleDim(2);
-            curVertices([4 3],3) = ...
-                vertices([5 8],3)*scaleDim(3);
-        elseif plane == 2
-            curVertices = vertices([1 2 6 5],:);
-            curVertices([2 3],1) = ...
-                vertices([2 6],1)*scaleDim(1);
-            curVertices([4 3],3) = ...
-                vertices([5 6],3)*scaleDim(3);
-        elseif plane == 3
-            curVertices = vertices([1 2 3 4],:);
-            curVertices([2 3],1) = ...
-                vertices([2 3],1)*scaleDim(1);
-            curVertices([3 4],2) = ...
-                vertices([3 4],2)*scaleDim(2);
+    dispStr, bSurf, opaque, plotColor, bSubvolumes, subSize)
+
+    if bSubvolumes
+        % Need to plot subvolumes of shape
+        if strcmp(shape, 'Rectangular Box') || strcmp(shape, 'Rectangle')
+            numSub = scaleDim./subSize;
+            numX = numSub(1);
+            numY = numSub(2);
+            numZ = numSub(3);
+            for x = 1:numX
+                for y = 1:numY
+                    for z = 1:numZ
+                        moveDimCur = moveDim + ...
+                            [subSize*(x-1), subSize*(y-1), subSize*(z-1)];
+                        h = accordPlotShape(shape, scale, ...
+                            [subSize,subSize,subSize], plane, ...
+                            moveDimCur, dispStr, bSurf, opaque, ...
+                            plotColor, false, subSize);
+                    end
+                end
+            end
+        elseif strcmp(shape, 'Sphere')
+            % Shape can only have one subvolume
+            h = accordPlotShape(shape, scale, ...
+                [subSize,subSize,subSize], plane, ...
+                moveDim, dispStr, bSurf, opaque, ...
+                plotColor, false, subSize);
+        else
+            warning('Shape %s not recognized\n',shape);
+            h = 0;
+            return;
         end
-    elseif strcmp(shape, 'Sphere')
-        % Easier to generate sphere points in "surface" mode and then
-        % convert to patch for consistency
-        [X, Y, Z] = sphere(15);
-        X = scaleDim*X;
-        Y = scaleDim*Y;
-        Z = scaleDim*Z;
-        [curFaces, curVertices, ~] = surf2patch(X,Y,Z);
     else
-        warning('Shape %s not recognized\n',shape);
-        h = 0;
-        return;
-    end
-    
-    for j = 1:3
-        curVertices(:,j) = ...
-            scale*(curVertices(:,j) + moveDim(j));
-    end
-    
-    if bSurf
-        h = patch('Vertices',curVertices,'Faces',curFaces, ...
-            'FaceColor', plotColor, 'FaceAlpha', opaque, ...
-            'DisplayName', dispStr);
-    else
-        h = patch('Vertices',curVertices,'Faces',curFaces, 'FaceColor', 'none', ...
-            'EdgeColor', plotColor, 'FaceAlpha', opaque, ...
-            'DisplayName', dispStr);
-    end
+        % Box structure
+        faces = [1 2 6 5; 2 3 7 6; 3 4 8 7; 4 1 5 8; 1 2 3 4; 5 6 7 8];
+        vertices = [0 0 0; 1 0 0; 1 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1];
+
+        if strcmp(shape, 'Rectangular Box')
+            % Scale vertices by size
+            curVertices = vertices;
+            curFaces = faces;
+            curVertices([2 3 6 7],1) = ...
+                vertices([2 3 6 7],1)*scaleDim(1);
+            curVertices([3 4 7 8],2) = ...
+                vertices([3 4 7 8],2)*scaleDim(2);
+            curVertices([5 6 7 8],3) = ...
+                vertices([5 6 7 8],3)*scaleDim(3);
+        elseif strcmp(shape, 'Rectangle')
+            % Need to determine which axis rectanle lies in
+            curFaces = [1 2 3 4];
+            if plane == 1
+                curVertices = vertices([1 4 8 5],:);
+                curVertices([2 3],2) = ...
+                    vertices([4 8],2)*scaleDim(2);
+                curVertices([4 3],3) = ...
+                    vertices([5 8],3)*scaleDim(3);
+            elseif plane == 2
+                curVertices = vertices([1 2 6 5],:);
+                curVertices([2 3],1) = ...
+                    vertices([2 6],1)*scaleDim(1);
+                curVertices([4 3],3) = ...
+                    vertices([5 6],3)*scaleDim(3);
+            elseif plane == 3
+                curVertices = vertices([1 2 3 4],:);
+                curVertices([2 3],1) = ...
+                    vertices([2 3],1)*scaleDim(1);
+                curVertices([3 4],2) = ...
+                    vertices([3 4],2)*scaleDim(2);
+            end
+        elseif strcmp(shape, 'Sphere')
+            % Easier to generate sphere points in "surface" mode and then
+            % convert to patch for consistency
+            [X, Y, Z] = sphere(15);
+            X = scaleDim*X;
+            Y = scaleDim*Y;
+            Z = scaleDim*Z;
+            [curFaces, curVertices, ~] = surf2patch(X,Y,Z);
+        else
+            warning('Shape %s not recognized\n',shape);
+            h = 0;
+            return;
+        end
+
+        for j = 1:3
+            curVertices(:,j) = ...
+                scale*(curVertices(:,j) + moveDim(j));
+        end
+
+        if bSurf
+            h = patch('Vertices',curVertices,'Faces',curFaces, ...
+                'FaceColor', plotColor, 'FaceAlpha', opaque, ...
+                'DisplayName', dispStr);
+        else
+            h = patch('Vertices',curVertices,'Faces',curFaces, 'FaceColor', 'none', ...
+                'EdgeColor', plotColor, 'FaceAlpha', opaque, ...
+                'DisplayName', dispStr);
+        end
+    end    
 end

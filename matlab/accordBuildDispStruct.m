@@ -22,9 +22,13 @@ function dispStruct = accordBuildDispStruct(indToDisp, propChange)
 % OUTPUTS
 % dispStruct - structure with display parameters
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added option to display region subvolumes. Will only apply if object is
+%   a region; will be ignored for actors.
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - Created file
@@ -39,7 +43,8 @@ dispStruct = struct('numToDisp', indLength, ...
     'indToDisp', indToDisp, ...
     'bDispFace', false(1, indLength), ...
     'dispColor', cell(1), ...
-    'opaque', ones(1, indLength));
+    'opaque', ones(1, indLength), ...
+    'bDispSubvolumes', false(1,indLength));
 
 % Cell array needs to be defined as a cell with a cell array in order to
 % suppress the output structure being an array of structures

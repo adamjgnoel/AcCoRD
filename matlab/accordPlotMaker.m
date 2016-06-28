@@ -87,6 +87,7 @@ if hAxes == 0
     end
     hold(hAxes, 'on');
     
+    % Set axes labels based on type of plot
     switch obsSpec.obsType
         case 'Sample'
             xlabel(hAxes, 'Time [s]');
@@ -110,6 +111,7 @@ else
     hFig = get(hAxes, 'Parent');
 end
 
+% Detect whether plot will be 3D
 b3D = false;
 switch obsSpec.obsType
     case {'3D Histogram','3D Empirical CDF'}
@@ -144,6 +146,7 @@ numPlotInd = length(tPlotInd);
 % Determine data to plot
 switch obsSpec.obsType
     case 'Sample'
+        % Plotting (average) time-varying observations
         obsPlotMatrix = obsMatrixSampled;
         xData = tArrayFull(tPlotInd);
         % Determine what repeats to average over (default is all)
@@ -156,10 +159,13 @@ switch obsSpec.obsType
         end
         yData = reshape(mean(obsPlotMatrix(avgInd,:,:),1),1,[]);
     case 'Empirical CDF'
+        % Plotting empirical cumulative distribution function over all
+        % sampled observations
         [yData, xData] = ecdf(obsMatrixSampled(:));
     case '3D Empirical CDF'
-        [~, yDataCur] = ecdf(obsMatrixSampled(:));
-        numYMax = length(yDataCur);
+        % Plotting time-varying empirical cumulative distribution function.
+        % Every sampled time has its own CDF
+        numYMax = max(obsMatrixSampled(:))+1;
         
         xData = zeros(numPlotInd,numYMax);
         yData = zeros(numPlotInd,numYMax);
@@ -170,6 +176,8 @@ switch obsSpec.obsType
             [zDataCur, yDataCur] = ecdf(obsMatrixSampled(:,:,i));
             numY = length(yDataCur);
             if yDataCur > 0
+                % Force first observation to be 0, even if it isn't
+                % observed
                 firstPoint = 2;
                 lastPoint = 1+numY;
             else
@@ -177,14 +185,19 @@ switch obsSpec.obsType
                 lastPoint = numY;
             end
             yData(i,firstPoint:lastPoint) = yDataCur;
-            yData(i,(lastPoint+1):end) = numYMax;
             zData(i,firstPoint:lastPoint) = zDataCur;
+            % "Extend" display of CDF to global maximum observation (so
+            % that CDF appears square from "above")
+            yData(i,(lastPoint+1):end) = numYMax;
             zData(i,(lastPoint+1):end) = zDataCur(end);
         end
     case 'Histogram'
+        % Plotting histogram (i.e., probability distribution function) over
+        % all sampled observations
         [yData, xData] = histcounts(obsMatrixSampled(:), obsSpec.numHistBins);
         numX = length(xData);
         xData = (xData(1:(numX-1))+xData(2:numX))/2; % Convert bin location coordinates to midpoints
+        % Remove 0 points because many appear "between" histogram bars
         i = 1;
         while i < numX
             if yData(i) == 0
@@ -196,6 +209,8 @@ switch obsSpec.obsType
             end
         end
     case '3D Histogram'
+        % Plotting time-varying histogram. Every sampled time has its own
+        % histogram (i.e., probability distribution function)
         numYMax = max(obsMatrixSampled(:))+1;
         
         xData = zeros(numPlotInd,obsSpec.numHistBins);
@@ -207,6 +222,7 @@ switch obsSpec.obsType
             [zDataCur, yDataCur] = histcounts(obsMatrixSampled(:,:,i), obsSpec.numHistBins);
             numY = length(yDataCur);
             yDataCur = (yDataCur(1:(numY-1))+yDataCur(2:numY))/2; % Convert bin location coordinates to midpoints
+            % Remove 0 points because many appear "between" histogram bars
             j = 1;
             while j < numY
                 if zDataCur(j) == 0
@@ -221,13 +237,17 @@ switch obsSpec.obsType
                 firstPoint = 1;
                 lastPoint = numY-1;
             else
+                % Force first observation to be 0, even if it isn't
+                % observed (will have probability 0 in that case)
                 firstPoint = 2;
                 lastPoint = numY;
             end
             yData(i,firstPoint:lastPoint) = yDataCur;
+            zData(i,firstPoint:lastPoint) = zDataCur;
+            % "Extend" display of histogram to global maximum observation (so
+            % that histogram appears square from "above")
             yData(i,(lastPoint+1)) = yDataCur(end)+1;
             yData(i,(lastPoint+2):end) = numYMax;
-            zData(i,firstPoint:lastPoint) = zDataCur;
         end
     otherwise
         error('Observation type "%s" invalid', obsType)
@@ -241,7 +261,6 @@ if obsSpec.bNormalizeX
             maxValX = max(yData(:));
         case 'Custom'
             maxValX = obsSpec.normalizeCustomX;
-        otherwise
     end
 else
     maxValX = 1;
@@ -255,7 +274,6 @@ if obsSpec.bNormalizeY
             maxValY = max(yData(:));
         case 'Custom'
             maxValY = obsSpec.normalizeCustomY;
-        otherwise
     end
 else
     maxValY = 1;
@@ -269,7 +287,6 @@ if obsSpec.bNormalizeZ
             maxValZ = max(zData(:));
         case 'Custom'
             maxValZ = obsSpec.normalizeCustomZ;
-        otherwise
     end
 else
     maxValZ = 1;
@@ -289,5 +306,4 @@ if ~isempty(curveSpec)
     end
 end
 
-%% Cleanup
 end

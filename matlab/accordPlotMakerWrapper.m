@@ -47,6 +47,8 @@ fileToLoad = 'accord_sample_out';
 % customFigProp - structure of figure properties to change from AcCoRD
 %   defaults. Can be passed as empty if no defaults are to be changed. See
 %   accordBuildFigureStruct for structure fields and their default values.
+%   If plot will be a surface, and face colors are being set by the figure
+%   colormap, then the Colormap can be set here.
 customFigProp = [];
 
 % customAxesProp - structure of axes properties to change from AcCoRD

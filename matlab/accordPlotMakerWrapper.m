@@ -76,10 +76,16 @@ molID = 1;
 %   default values.
 customObsProp = [];
 
-% customCurveProp - structure of curve display properties to change
+% customCurveProp - structure of display properties to change
 %   from AcCoRD defaults. Can be passed as empty if no defaults are to be
-%   changed. See accordBuildCurveStruct for structure fields and their
-%   default values.
+%   changed. The specific properties depend on the definition of
+% customObsProp.obsType, which is 'Sample' by default
+%
+% If the data to display is 2D, then see accordBuildCurveStruct for
+%   structure fields and their default values.
+% If the data to display is 3D, then see accordBuildSurfStruct for
+%   structure fields and their default values. Applies to '3D Histogram'
+%   and '3D Empirical CDF'
 customCurveProp = [];
 
 %% Call accordPlotMaker

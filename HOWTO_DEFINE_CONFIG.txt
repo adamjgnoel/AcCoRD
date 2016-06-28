@@ -250,14 +250,14 @@
 				"Reactants": [0],
 				// An array of length "Number of Molecule Types". Indicates how many of each type of molecule are
 				// reactants. THERE MUST BE NO MORE THAN TWO REACTANTS, AND NO MORE THAN ONE
-				// REACTANT IF THE REACTION CAN TAKE PLACE IN A MICROSCOPIC REGION
+				// REACTANT IF THE REACTION IS A SURFACE REACTION THAT IS NOT NORMAL
 				// Will be converted to integers.
 												
 				"Products": [0],
 				// An array of length "Number of Molecule Types". Indicates how many of each
 				// type of molecule are products. There is no limit to the number of products.
 				// Will be converted to integers.
-				// Non-zero values are ignoted for membrane reactions.
+				// Non-zero values are ignored for membrane reactions.
 				
 				"Products Released?": [false],
 				// Boolean array of length "Number of Molecule Types". Defined for

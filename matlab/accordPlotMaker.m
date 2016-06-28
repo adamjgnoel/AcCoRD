@@ -29,7 +29,12 @@ function [hFig, hAxes, hCurve] = accordPlotMaker(hAxes, fileToLoad,...
 
 %% Load Default Display Properties and Apply Specified Changes
 obsSpec = accordBuildObserverStruct(customObsProp);
-curveSpec = accordBuildCurveStruct(customCurveProp);
+if strcmp(obsSpec.obsType, '3D Histogram') || ...
+        strcmp(obsSpec.obsType, '3D Empirical CDF')
+    curveSpec = accordBuildSurfStruct(customCurveProp);
+else
+    curveSpec = accordBuildCurveStruct(customCurveProp);
+end
 
 %% Create figure and apply properties if it does not exist
 if hAxes == 0
@@ -63,12 +68,26 @@ if hAxes == 0
         case 'Empirical CDF'
             xlabel(hAxes, 'Number of Molecules');
             ylabel(hAxes, 'Cumulative Distribution Function');
+        case '3D Empirical CDF'
+            xlabel(hAxes, 'Time [s]');
+            ylabel(hAxes, 'Number of Molecules');
+            zlabel(hAxes, 'Cumulative Distribution Function');
         case 'Histogram'
             xlabel(hAxes, 'Number of Molecules');
             ylabel(hAxes, 'Frequency');
+        case '3D Histogram'
+            xlabel(hAxes, 'Time [s]');
+            ylabel(hAxes, 'Number of Molecules');
+            zlabel(hAxes, 'Frequency');
     end
 else
     hFig = get(hAxes, 'Parent');
+end
+
+b3D = false;
+switch obsSpec.obsType
+    case {'3D Histogram','3D Empirical CDF'}
+        b3D = true;
 end
 
 
@@ -94,6 +113,7 @@ else
     tPlotInd = obsSpec.firstSample:obsSpec.sampleInterval:obsSpec.lastSample;
 end
 obsMatrixSampled = obsMatrix(:,:,tPlotInd);
+numPlotInd = length(tPlotInd);
 
 % Determine data to plot
 switch obsSpec.obsType
@@ -111,11 +131,34 @@ switch obsSpec.obsType
         yData = reshape(mean(obsPlotMatrix(avgInd,:,:),1),1,[]);
     case 'Empirical CDF'
         [yData, xData] = ecdf(obsMatrixSampled(:));
+    case '3D Empirical CDF'
+        [~, yDataCur] = ecdf(obsMatrixSampled(:));
+        numYMax = length(yDataCur);
+        
+        xData = zeros(numPlotInd,numYMax);
+        yData = zeros(numPlotInd,numYMax);
+        zData = zeros(numPlotInd,numYMax);
+        
+        for i = 1:numPlotInd
+            xData(i,:) = tArrayFull(tPlotInd(i));
+            [zDataCur, yDataCur] = ecdf(obsMatrixSampled(:,:,i));
+            numY = length(yDataCur);
+            if yDataCur > 0
+                firstPoint = 2;
+                lastPoint = 1+numY;
+            else
+                firstPoint = 1;
+                lastPoint = numY;
+            end
+            yData(i,firstPoint:lastPoint) = yDataCur;
+            yData(i,(lastPoint+1):end) = numYMax;
+            zData(i,firstPoint:lastPoint) = zDataCur;
+            zData(i,(lastPoint+1):end) = zDataCur(end);
+        end
     case 'Histogram'
-        % yData and xData will be calculated later
         [yData, xData] = histcounts(obsMatrixSampled(:), obsSpec.numHistBins);
         numX = length(xData);
-        xData = (xData(1:(numX-1))+xData(2:numX))/2;
+        xData = (xData(1:(numX-1))+xData(2:numX))/2; % Convert bin location coordinates to midpoints
         i = 1;
         while i < numX
             if yData(i) == 0
@@ -126,8 +169,40 @@ switch obsSpec.obsType
                 i = i + 1;
             end
         end
+    case '3D Histogram'
+        numYMax = max(obsMatrixSampled(:))+1;
         
-            
+        xData = zeros(numPlotInd,obsSpec.numHistBins);
+        yData = zeros(numPlotInd,obsSpec.numHistBins);
+        zData = zeros(numPlotInd,obsSpec.numHistBins);
+        
+        for i = 1:numPlotInd
+            xData(i,:) = tArrayFull(tPlotInd(i));
+            [zDataCur, yDataCur] = histcounts(obsMatrixSampled(:,:,i), obsSpec.numHistBins);
+            numY = length(yDataCur);
+            yDataCur = (yDataCur(1:(numY-1))+yDataCur(2:numY))/2; % Convert bin location coordinates to midpoints
+            j = 1;
+            while j < numY
+                if zDataCur(j) == 0
+                    zDataCur(j) = [];
+                    yDataCur(j) = [];
+                    numY = numY - 1;
+                else
+                    j = j + 1;
+                end
+            end
+            if yDataCur(1) < 1
+                firstPoint = 1;
+                lastPoint = numY-1;
+            else
+                firstPoint = 2;
+                lastPoint = numY;
+            end
+            yData(i,firstPoint:lastPoint) = yDataCur;
+            yData(i,(lastPoint+1)) = yDataCur(end)+1;
+            yData(i,(lastPoint+2):end) = numYMax;
+            zData(i,firstPoint:lastPoint) = zDataCur;
+        end
     otherwise
         error('Observation type "%s" invalid', obsType)
 end
@@ -137,7 +212,7 @@ if obsSpec.bNormalizeX
     % Normalize with respect to what?
     switch obsSpec.normalizeTypeX
         case 'Max'
-            maxValX = max(yData);
+            maxValX = max(yData(:));
         case 'Custom'
             maxValX = obsSpec.normalizeCustomX;
         otherwise
@@ -151,7 +226,7 @@ if obsSpec.bNormalizeY
     % Normalize with respect to what?
     switch obsSpec.normalizeTypeY
         case 'Max'
-            maxValY = max(yData);
+            maxValY = max(yData(:));
         case 'Custom'
             maxValY = obsSpec.normalizeCustomY;
         otherwise
@@ -160,8 +235,26 @@ else
     maxValY = 1;
 end
 
+% Normalize the z-data?
+if obsSpec.bNormalizeZ
+    % Normalize with respect to what?
+    switch obsSpec.normalizeTypeZ
+        case 'Max'
+            maxValZ = max(zData(:));
+        case 'Custom'
+            maxValZ = obsSpec.normalizeCustomZ;
+        otherwise
+    end
+else
+    maxValZ = 1;
+end
+
 %% Plot Curve and Format it
-hCurve = plot(hAxes, xData./maxValX, yData./maxValY);
+if b3D
+    hCurve = surf(hAxes, xData./maxValX, yData./maxValY, zData./maxValZ);
+else
+    hCurve = plot(hAxes, xData./maxValX, yData./maxValY);
+end
 if ~isempty(curveSpec)
     curvePropFields = fieldnames(curveSpec);
     numProp = numel(curvePropFields);

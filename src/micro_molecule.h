@@ -10,9 +10,17 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - set microscopic partial time step to 0 when creating new molecule from meso
+ * diffusion.
+ * - corrected what region is indexed when new microscopic molecule diffuses away
+ * from hybrid interface
+ * - use molecule's partial time step when determining whether it entered and exited
+ * mesoscopic regime within a time step
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - added check for molecules entering mesoscopic regime "during" a microscopic time step,

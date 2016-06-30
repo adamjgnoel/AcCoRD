@@ -159,6 +159,7 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	const double newPoint[3],
 	uint32_t * newSub,
 	const double HYBRID_DIST_MAX,
+	const double tLeft,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 // Place a molecule entering microscopic region from a mesoscopic subvolume

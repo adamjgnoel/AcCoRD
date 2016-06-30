@@ -10,9 +10,17 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - set microscopic partial time step to 0 when creating new molecule from meso
+ * diffusion.
+ * - corrected what region is indexed when new microscopic molecule diffuses away
+ * from hybrid interface
+ * - use molecule's partial time step when determining whether it entered and exited
+ * mesoscopic regime within a time step
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - added check for molecules entering mesoscopic regime "during" a microscopic time step,
@@ -220,7 +228,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 						if(regionArray[newRegion].bHasMesoNeigh
 							&& bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
 							regionArray,	 curType, newRegion, &transRegion, oldPoint, newPoint,
-							&minSub, HYBRID_DIST_MAX, DIFF_COEF))
+							&minSub, HYBRID_DIST_MAX, regionArray[curRegion].spec.dt, DIFF_COEF))
 						{
 							newSub = regionArray[transRegion].neighID[newRegion][minSub];
 							subvolArray[newSub].num_mol[curType]++;							
@@ -356,7 +364,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 					if(regionArray[newRegion].bHasMesoNeigh
 						&& bEnterMesoIndirect(NUM_REGIONS, NUM_MOL_TYPES,
 						regionArray,	 curType, newRegion, &transRegion, oldPoint, newPoint,
-						&minSub, HYBRID_DIST_MAX, DIFF_COEF))
+						&minSub, HYBRID_DIST_MAX, curNodeR->item.dt_partial, DIFF_COEF))
 					{
 						newSub = regionArray[transRegion].neighID[newRegion][minSub];
 						subvolArray[newSub].num_mol[curType]++;							
@@ -458,6 +466,7 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	const double newPoint[3],
 	uint32_t * newSub,
 	const double HYBRID_DIST_MAX,
+	const double tLeft,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	double minDistSq, curDistSq, initDist, finalDist, minDist, curProb;
@@ -494,7 +503,7 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 			continue;
 		
 		curProb = exp(-finalDist * initDist
-			/DIFF_COEF[curRegion][curType]/regionArray[curRegion].spec.dt);
+			/DIFF_COEF[curRegion][curType]/tLeft);
 		if(generateUniform()<curProb)
 		{ // Molecule enters Meso region
 			*mesoRegion = newRegion;
@@ -531,7 +540,7 @@ void placeInMicroFromMeso(const unsigned short curRegion,
 		faceDir = 0;
 	
 	curRand = generateUniform();
-	randCoor[0] = sqrt(2*DIFF_COEF*regionArray[curRegion].spec.dt)*
+	randCoor[0] = sqrt(2*DIFF_COEF*regionArray[destRegion].spec.dt)*
 		(0.729614*curRand - 0.70252*curRand*curRand)/
 		(1 - 1.47494*curRand + 0.484371*curRand*curRand);
 	if(bSmallSub)
@@ -611,7 +620,7 @@ void placeInMicroFromMeso(const unsigned short curRegion,
 			exit(EXIT_FAILURE);
 	}
 	if(!addMoleculeRecent(pRecentList,
-		newPoint[0], newPoint[1], newPoint[2], regionArray[curRegion].spec.dt))
+		newPoint[0], newPoint[1], newPoint[2], 0))
 	{ // Creation of molecule failed
 		fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
 			curMolType, curRegion, destRegion);

@@ -948,7 +948,7 @@ double calculateMembraneProb(const short curRegion,
 			kFor = regionArray[curRegion].rxnRate[curRegionRxn]*
 				sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
 			if(regionArray[curRegion].bReversible[curRegionRxn])
-			{ // S.S. Andrews Physical Biology 2009 Eq. 37
+			{ // S.S. Andrews Physical Biology 2009 Eq. 47
 				kBack =
 					regionArray[curRegion].rxnRate[regionArray[curRegion].reverseRxnID[curRegionRxn]]*
 					sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);

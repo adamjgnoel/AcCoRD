@@ -1,0 +1,109 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "This configuration is a simple hybrid environment, with 1 microscopic
+		region and 1 mesoscopic region. Both regions are rectangular boxes and they are
+		adjacent. There are 10 molecules initialized uniformaly, so about one half
+		of the molecules should remain in each region over time.",
+	"Output Filename": "bsc_hybrid2",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 100,
+		"Final Simulation Time": 10,
+		"Global Microscopic Time Step": 1e-2,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100,
+		"Small Subvolumes at Hybrid Interface?": true,
+		"Max Intrastep Micro to Meso Distance": 8.25e-6
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 2,
+		"Diffusion Coefficients": [2e-9, 5e-11],
+		"Chemical Reaction Specification": []
+	},
+	"Environment":	{
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "",
+				"Label": "Far Left",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor X Coordinate": -50e-6,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 25,
+				"Is Region Microscopic?": false,
+				"Number of Subvolumes Along X": 2,
+				"Number of Subvolumes Along Y": 2,
+				"Number of Subvolumes Along Z": 2
+			},
+			{
+				"Notes": "",
+				"Label": "Left",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Integer Subvolume Size": 10,
+				"Is Region Microscopic?": false,
+				"Number of Subvolumes Along X": 5,
+				"Number of Subvolumes Along Y": 5,
+				"Number of Subvolumes Along Z": 5
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Observer of left",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["Left"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, false],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of right",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["Far Left"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-2,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, false],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Transmitter 1. 1000 molecules",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["Far Left", "Left"],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1000000,
+				"Is Actor Activity Recorded?": true,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": true,
+				"Probability of Bit 1": 1,
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 200,
+				"Is Molecule Type Released?": [true, false]
+		}
+		]		
+	}
+}

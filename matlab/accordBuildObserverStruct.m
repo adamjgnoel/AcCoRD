@@ -13,8 +13,7 @@ function obsSpec = accordBuildObserverStruct(propChange)
 %
 % INPUTS
 % propChange - cell array of structure of properties to modify from their
-%   default values. Any field must match one in obsSpec and be the
-%   same size.
+%   default values. Any field should match one in obsSpec
 %
 % OUTPUTS
 % obsSpec - structure with observer display parameters
@@ -30,9 +29,27 @@ function obsSpec = accordBuildObserverStruct(propChange)
 
 %% Set Default Values
 obsSpec = struct('obsType', 'Sample', ...           % Type of data to plot. Options are 'Sample',
-    ...                                             % 'Empirical CDF', '3D Empirical CDF',
-    ...                                             % 'Histogram', and '3D Histogram'
-    'numHistBins', 100, ...                         % # of histogram bins if obsType == 'Histogram' or '3D Histogram'
+    ...                                             %   'Empirical CDF', '3D Empirical CDF',
+    ...                                             %   'Empirical PMF', '3D Empirical PMF',
+    ...                                             %   'Expected', 'Expected PMF', '3D Expected PMF',
+    ...                                             %   'Expected CDF', '3D Expected CDF',
+    ...                                             %   'Mutual Information', '3D Mutual Information'
+    ...                                             %   'Monte Carlo Mutual Information', '3D Monte Carlo Mutual Information'
+    'distribution', 'Binomial', ...                 % Statistical distribution if obsType is an Expected CDF or PMF
+    ...                                             %   or expected CDF
+    'trialProbability', 0, ...                      % Event probability for Expected CDF or PDF. Should be a vector for 3D versions
+    'numTrials', 0, ...                             % Number of event trails for Expected CDF or PDF
+    ...                                             %   or Monte Carlo Mutual Information
+    'numMeasurements', 100, ...                     % # of bins if obsType == 'Expected CDF', '3D Expected CDF'
+    ...                                             %   # of repeated mutual information measurements for Monte Carlo Mutual Information
+    'data1', [], ...                                % Custom data vector 1
+    ...                                             %   Defines xData if obsType == 'Expected'
+    ...                                             %   Overwrites distribution bin values if obsType is an expected PMF or CDF
+    ...                                             %   Determines plotting x-coordinate if obsType == 'Monte Carlo Mutual Information'
+    'data2', [], ...                                % Custom data vector 2
+    ...                                             %   Defines yData if obsType == 'Expected'
+    'data3', 1, ...                                 % Custom data vector 3
+    ...                                             %   Also used for superposition of 2D data over 3D surfaces
     'firstSample', 1, ...                           % Index of first observation to sample
     'sampleInterval', 1, ...                        % Frequency of observation sampling
     'bMaxSample', true, ...                         % Keep sampling until last observation?

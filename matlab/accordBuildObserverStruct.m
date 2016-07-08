@@ -24,11 +24,13 @@ function obsSpec = accordBuildObserverStruct(propChange)
 %   sample the observations stored in the simulation output file from the
 %   indices 'firstSample':'sampleInterval':'lastSample', where 'lastSample' is
 %   replaced with 'end' if 'bMaxSample' == true. The simulation realizations
-%   to use are set via 'iterType' and (optionally) 'iterCustom'
+%   to use are set via 'iterType' and (optionally) 'iterCustom'.
+%   All plot types that do not use simulation data will ignore the sampling
+%   and realization properties
 % 
 % 'Sample'
 % - 2D curve of (average) time-varying simulation observations
-% - choose 'iterType' to 'Custom' and 'iterCustom' to a single index to
+% - set 'iterType' to 'Custom' and 'iterCustom' to a single index to
 % plot a single realization (i.e., without averaging)
 %
 % 'Expected', '3D Expected'

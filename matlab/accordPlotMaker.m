@@ -14,7 +14,9 @@ function [hFig, hAxes, hCurve] = accordPlotMaker(hAxes, fileToLoad,...
 %   cumulative
 %   distribution functions (CDFs). Any or all realizations in the imported
 %   simulation output file can be included. This function can be called
-%   repeatedly to draw multiple curves on one axes
+%   repeatedly to draw multiple curves on one axes. 2D plots are made using
+%   the plot3 function (so that lines can be overlaid over 3D surfaces). 3D
+%   plots are made use the surf function.
 %
 % INPUTS
 % hAxes - axes to plot data. Should be "0" if figure does not yet exist
@@ -164,8 +166,17 @@ switch obsSpec.obsType
             tPlotInd = obsSpec.firstSample:obsSpec.sampleInterval:obsSpec.lastSample;
         end
         
+        % Determine what repeats to use (default is all)
+        switch obsSpec.iterType
+            case 'All'
+                iter = 1:numRepeat;
+            case 'Custom'
+                iter = obsSpec.iterCustom;
+            otherwise
+        end
+        
         % Extract the sampled observations
-        obsMatrixSampled = obsMatrix(:,:,tPlotInd);
+        obsMatrixSampled = obsMatrix(iter,:,tPlotInd);
         numPlotInd = length(tPlotInd);
     otherwise
 end
@@ -174,17 +185,8 @@ end
 switch obsSpec.obsType
     case 'Sample'
         % Plotting (average) time-varying observations
-        obsPlotMatrix = obsMatrixSampled;
         xData = tArrayFull(tPlotInd);
-        % Determine what repeats to average over (default is all)
-        switch obsSpec.avgType
-            case 'All'
-                avgInd = 1:numRepeat;
-            case 'Custom'
-                avgInd = obsSpec.avgCustom;
-            otherwise
-        end
-        yData = reshape(mean(obsPlotMatrix(avgInd,:,:),1),1,[]);
+        yData = reshape(mean(obsMatrixSampled(:,:),1),1,[]);
     case 'Expected'
         % Plotting specified data
         xData = obsSpec.data1;
@@ -444,15 +446,15 @@ switch obsSpec.obsType
             for i = 1:numOffset
                 % 'current' samples are obsMatrixSampled(:,1,1)
                 % 'future' samples are obsMatrixSampled(:,1,i)
-                futureMin = min(obsMatrix(:,1,tPlotInd(t)+obsSpec.data1(i)));
-                futureMax = max(obsMatrix(:,1,tPlotInd(t)+obsSpec.data1(i)));
+                futureMin = min(obsMatrix(iter,1,tPlotInd(t)+obsSpec.data1(i)));
+                futureMax = max(obsMatrix(iter,1,tPlotInd(t)+obsSpec.data1(i)));
                 numFuture = futureMax-futureMin+1;
             
                 % Calculate joint PMF between current and future sample times
                 jointPMF = zeros(numCur,numFuture);
                 for r = 1:numRepeat
-                    curInd = obsMatrixSampled(r,1,t)-curMin+1;
-                    futureInd = obsMatrix(r,1,tPlotInd(t)+obsSpec.data1(i))-futureMin+1;
+                    curInd = obsMatrixSampled(iter(r),1,t)-curMin+1;
+                    futureInd = obsMatrix(iter(r),1,tPlotInd(t)+obsSpec.data1(i))-futureMin+1;
                     jointPMF(curInd,futureInd) = jointPMF(curInd,futureInd) + 1;
                 end
                 jointPMF = jointPMF ./ numRepeat;

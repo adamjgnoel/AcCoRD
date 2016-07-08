@@ -17,3 +17,4 @@ bin/accord_torque_ppp.sh
 bin/accord_ppp.pbs
 *.asv
 *.mp4
+bsc*

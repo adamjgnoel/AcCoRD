@@ -2,7 +2,15 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.6 (public beta, 2016-05-30)
+This document is the CHANGELOG for AcCoRD v0.7 (public beta, 2016-07-09)
+- [NEW] added functions for plotting simulation data in Matlab, based on passive actor observations or known probability distributions.
+- [NEW] added option to display all of region's subvolumes when drawing instead of just the outer boundary. This makes display of multiscale and hybrid environments easier to understand
+- [ENHANCEMENT] initialize microscopic partial time step to 0 when creating new microscopic molecule from mesoscopic regime
+- [FIX] corrected indirect entry of microscopic molecules into mesoscopic regime by using molecule's current partial time step (if applicable) instead of the global microscopic time step. This is more accurate for molecules that were just created within current time step
+- [FIX] corrected what diffusion coefficient is used when new microscopic molecule enters from mesoscopic regime
+- [UPDATE] (WILL NEED TO UPDATE DOCUMENTATION FOR MATLAB USE)
+
+Changes introduced in AcCoRD v0.6 (public beta, 2016-05-30)
 - [NEW] added bimolecular chemical reactions in the microscopic regime. Current implementation is preliminary and requires user to provide the binding radius. An unbinding radius can also be provided. Potential reactants are compared with other potential reactants in same region and neighboring regions where the reaction could also take place. A molecule cannot participate in more than one bimolecular reaction per time step. Reaction site is found based on relative diffusion of reactants and must be a valid straight line destination for both both reactants. If there is an unbinding radius, trajectory of product molecules is also verified. If 2 products, then they are placed along line between the 2 reactant locations. If more than 2, then each is placed in a random direction. Some implementation concepts derived from Andrews and Bray, "Stochastic simulation of chemical reactions with spatial resolution and single molecule detail", Physical Biology, vol. 1, no. 3-4, pp. 137--151, 2004
 - [NEW] added Matlab functions for visualization. Any subset of the simulation environment can be plotted with very flexible display options. If any passive actors record molecule positions, then figures can be created as snapshots of a simulation or a video can be generated.
 - [NEW] added active point sources as a distinct shape. Can be placed in microscopic or mesoscopic regions, but cannot be on the boundary of 2 or more regions or 2 or more mesoscopic subvolumes. Point shape implementation is sufficient to just handle point active actors

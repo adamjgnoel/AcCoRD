@@ -10,11 +10,11 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7 (public beta, 2016-07-09)
  * - set microscopic partial time step to 0 when creating new molecule from meso
  * diffusion.
  * - corrected what region is indexed when new microscopic molecule diffuses away

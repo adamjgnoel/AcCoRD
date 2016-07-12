@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v0.6 (public beta, 2016-05-30)
+This document is the README for AcCoRD v0.7 (public beta, 2016-07-09)
 
 # Introduction
 
@@ -62,7 +62,7 @@ A complete version history can be found in CHANGELOG.txt
 
 # Known Issues and Limitations
 
-This list is current as of v0.6. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
+This list is current as of v0.7. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
 * Full 2D simulations are mostly untested
 * 2nd order chemical reactions in microscopic regions need a binding radius specified.
 * molecules keep diffusing at same rate when they are "bound" to a surface region. This can be prevented for now by making bound molecules a different type of molecule with diffusion coefficient 0

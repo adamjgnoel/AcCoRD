@@ -140,11 +140,11 @@ function obsSpec = accordBuildObserverStruct(propChange)
 % y-axis values. 'trialProbability' must have length('data1') rows and
 % length('data2') columns.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.7 (public beta, 2016-07-09)
 % - Created file
 %
 % Created 2016-06-03

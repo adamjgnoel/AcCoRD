@@ -46,11 +46,11 @@ function [hFig, hAxes, hCurve] = accordPlotMaker(hAxes, fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.7 (public beta, 2016-07-09)
 % - Created file
 %
 % Created 2016-06-03

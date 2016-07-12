@@ -22,11 +22,11 @@ function dispStruct = accordBuildDispStruct(indToDisp, propChange)
 % OUTPUTS
 % dispStruct - structure with display parameters
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.7 (public beta, 2016-07-09)
 % - added option to display region subvolumes. Will only apply if object is
 %   a region; will be ignored for actors.
 %

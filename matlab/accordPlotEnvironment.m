@@ -36,11 +36,11 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 % hAxes - handle to axes in plotted figure. Use for making changes to
 %   axes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.7 (public beta, 2016-07-09)
 % - added display of region subvolumes as option (instead of just outer
 %   region boundary).
 %

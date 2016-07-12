@@ -25,11 +25,11 @@ function [hFig, hAxes] = accordEmptyEnvironmentWrapper()
 % hFig - handle to plotted figure. Use for making changes.
 % hAxes - handle to axes in plotted figure. Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.7 (public beta, 2016-07-09)
 % - Created file
 %
 % Created 2016-06-28

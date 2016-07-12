@@ -18,11 +18,11 @@ function curveSpec = accordBuildSurfStruct(propChange)
 % OUTPUTS
 % curveSpec - structure with surface parameters
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v0.7 (public beta, 2016-07-09)
 % - Created file
 %
 % Created 2016-06-03

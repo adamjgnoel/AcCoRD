@@ -44,8 +44,8 @@ AcCoRD currently has the following "mature" features:
 * Environment described as union of cubes and spheres. Cubes can be microscopic (track individual molecules) or mesoscopic (assume uniform molecule density throughout the cube). Spheres must be microscopic but can be infinite in size (i.e., unbounded environment).
 * Chemical reactions of 0th, 1st, and 2nd order (though 2nd order reactions in microscopic regime have a preliminary implementation that relies on specification of a binding radius)
 * Surfaces can surround all or part of 3D regions and be sites for local chemical reactions, such as molecule generation or absorption. User can choose how reaction probabilities are determined for these reactions.
-* Readable configuration and simulation output files. Configuration is described using the JSON interchange format. An import function can load output into MATLAB.
-* Visualization functions to view the simulation environment (before or after running a simulation) and generate figures or video.
+* Readable configuration and simulation output files. Configuration is described using the JSON interchange format.
+* Utility functions in MATLAB for post-processing. Features include importing simulation output, generating figures and video of simulation progress, and plotting simulation data and distributions. Simulation environments can be plotted without running the simulation first.
 * Flexible placement of molecule sources and observers, whose location can be defined as their own shapes or as the union of a set of regions. Molecule sources can also be defined as points.
 * Molecule sources based on "Concentration Shift Keying" (CSK) modulation of independent symbols, with user-defined pulse widths and switches for stochastic or deterministic molecule release. Symbols can also be pre-defined.
 * Molecule observers record number of specified types of molecules (and optionally their positions) over a subset of the simulation environment.
@@ -60,7 +60,7 @@ The following features have had very limited testing and are considered "alpha":
 
 A complete version history can be found in CHANGELOG.txt
 
-# Known Issues
+# Known Issues and Limitations
 
 This list is current as of v0.6. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
 * Full 2D simulations are mostly untested
@@ -164,7 +164,9 @@ Examples:
 
 If you have the original configuration file accessible and one of the passive actors recorded molecule positions, then you can watch the simulation progress by generating a video or sequence of figures. To get started, import the simulation output using accordImport, then copy and rename accordVideoMakerWrapper. This wrapper function creates all of the arguments needed for the accordVideoMaker function. You should modify the copy for your particular simulation. There are dozens of options that can be tweaked (practically any Matlab option for plotting figures, axes, patch objects, and markers, plus deciding what to display and at what times). When you run the copy of accordVideoMakerWrapper, accordVideoMaker will pause before making a video or sequence of figures so that you can manually tweak the camera and axes settings as desired.
 
-A future release of AcCoRD will include more utilities for post-processing simulation results.
+To plot the simulation environment in MATLAB without needing to simulate (i.e., to plot just the regions or actors without showing molecules), then use a copy of accordEmptyEnvironmentWrapper. This function calls accordEmptyEnvironment, which loads the specified configuration file.
+
+To plot passive actor observation data in MATLAB, then use a copy of accordPlotMakerWrapper, which calls accordPlotMaker. Complete details of the kinds of plots and how to define them can be found in the header of accordBuildObserverStruct. Options include time-varying signals, probability mass and cumulative distribution functions, and mutual information. Plots also have "Expected" versions that are based on Binominal, Poisson, or Gaussian distributions.
 
 
 # Licensing

@@ -9,9 +9,13 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added measurement of simulation runtime to be written to simulation output
+ * - fixed bug in writing index of active actor in simulation summary
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - added option for user to select small subvolume or big subvolume assumption
@@ -2168,7 +2172,8 @@ void printTextEnd(FILE * out,
 	short * passiveRecordID,
 	short * activeRecordID,
 	uint32_t maxActiveBits[],
-	uint32_t maxPassiveObs[])
+	uint32_t maxPassiveObs[],
+	double runTime)
 {
 	time_t timer;
 	char timeBuffer[26];
@@ -2193,8 +2198,7 @@ void printTextEnd(FILE * out,
 	{
 		curActor = activeRecordID[curActorRecord];
 		newActor = cJSON_CreateObject();
-		cJSON_AddNumberToObject(newActor, "ID",
-			actorActiveArray[curActor].actorID);
+		cJSON_AddNumberToObject(newActor, "ID", curActor);
 		cJSON_AddNumberToObject(newActor, "MaxBitLength",
 			maxActiveBits[curActorRecord]);
 		cJSON_AddItemToArray(curArray, newActor);
@@ -2209,8 +2213,7 @@ void printTextEnd(FILE * out,
 		curPassive = actorCommonArray[curActor].passiveID;
 		newActor = cJSON_CreateObject();
 		// Record Passive Actor IDs that are being recorded
-		cJSON_AddNumberToObject(newActor, "ID",
-			curActor);
+		cJSON_AddNumberToObject(newActor, "ID", curActor);
 		cJSON_AddNumberToObject(newActor, "bRecordTime",
 			actorCommonArray[curActor].spec.bRecordTime);
 		// Record maximum number of observations made by each recorded actor
@@ -2238,6 +2241,8 @@ void printTextEnd(FILE * out,
 	}
 	
 	cJSON_AddStringToObject(root, "EndTime", timeBuffer);
+	
+	cJSON_AddNumberToObject(root, "RunTime", runTime);
 	
 	outText = cJSON_Print(root);
 	fprintf(out, "%s", outText);

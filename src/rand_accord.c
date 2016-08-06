@@ -9,9 +9,13 @@
  *
  * rand_accord.c - interface to random number generation functions
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - modified range of uniform RV generation to be [0, 1) instead of [0,1].
+ * 	Allowing 1 was causing problems when RV was being used for indexing
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - file created to centralize calls to random number generators
@@ -32,8 +36,8 @@ void rngInitialize(const uint32_t SEED)
 // Return a uniform random number between 0 and 1 INCLUSIVE
 double generateUniform()
 {	
-	// Using a "dumb" conversion, which gives us range of [0, 1]
-	return (double) pcg32_random()/UINT32_MAX;
+	// Using conversion which gives us range of [0, 1)
+	return (double) pcg32_random()/(UINT32_MAX + 1.);
 }
 
 // Return a triangular random number

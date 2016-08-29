@@ -118,7 +118,7 @@ function obsSpec = accordBuildObserverStruct(propChange)
 % probability of success is probability of given molecule being observed.
 % - set data1 as vector to list x-axis values (would be reference times in
 % corresponding simulation curve). In 2D, this can be any number of values
-% if 'trialProbability' has length less than 3 since only calculation will
+% if 'trialProbability' has length less than 3 since only 1 calculation will
 % be made and the same value will be plotted for each point.
 % - in 2D, set 'data2' to format [val1, val2], where val1 is the number of
 % random numbers to generate (i.e., observe) for each variable in the

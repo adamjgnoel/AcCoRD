@@ -10,9 +10,12 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - corrected calculation for spherical volume (was partially integer)
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -1354,7 +1357,7 @@ double boundaryVolume(const int boundary1Type,
 		case CIRCLE:
 			return PI*squareDBL(boundary1[3]);
 		case SPHERE:
-			return 4/3*PI*boundary1[3]*boundary1[3]*boundary1[3];
+			return 4./3.*PI*boundary1[3]*boundary1[3]*boundary1[3];
 		case LINE:
 			return sqrt(squareDBL(boundary1[1]-boundary1[0])
 				+ squareDBL(boundary1[3]-boundary1[2])

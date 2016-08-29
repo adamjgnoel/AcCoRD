@@ -9,11 +9,11 @@
  *
  * rand_accord.c - interface to random number generation functions
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - modified range of uniform RV generation to be [0, 1) instead of [0,1].
  * 	Allowing 1 was causing problems when RV was being used for indexing
  *

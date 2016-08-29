@@ -10,11 +10,11 @@
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - corrected calculation for spherical volume (was partially integer)
  *
  * Revision v0.6 (public beta, 2016-05-30)

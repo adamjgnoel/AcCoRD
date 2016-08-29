@@ -10,11 +10,11 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - fixed bug where a molecule with diffusion rate 0 would have an invalid reaction
  * propensity at hybrid interface
  *

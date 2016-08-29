@@ -9,11 +9,11 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
  * - corrected passive actor indexing
  *
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v0.7 (public beta, 2016-07-09)\n");
+	printf("Version v0.7.0.1 (public beta, 2016-08-30)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	

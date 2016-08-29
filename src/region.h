@@ -10,11 +10,11 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - corrected calculating region volume when a normal region has a surface child
  * inside
  *

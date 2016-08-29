@@ -56,6 +56,9 @@ function [hFig, hAxes, hCurve] = accordPlotMaker(hAxes, fileToLoad,...
 % Created 2016-06-03
 
 
+% Add subdirectory with JSONlab files to path (needed for loadjson)
+addpath('JSONlab');
+
 %% Load Default Display Properties and Apply Specified Changes
 obsSpec = accordBuildObserverStruct(customObsProp);
 

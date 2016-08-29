@@ -192,6 +192,9 @@ function [scaleDim, plane, anchorCoor] = accordActorPlotParam(actor)
                 plane = 3;
             end
         end
+    elseif strcmp(actor.shape, 'Point')
+        anchorCoor = [actor.boundary(1) actor.boundary(2) actor.boundary(3)];
+        scaleDim = 0;
     elseif strcmp(actor.shape, 'Sphere')
         anchorCoor = [actor.boundary(1) actor.boundary(2) actor.boundary(3)];
         scaleDim = actor.boundary(4);

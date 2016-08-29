@@ -10,9 +10,13 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - fixed bug where a molecule with diffusion rate 0 would have an invalid reaction
+ * propensity at hybrid interface
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - improved propensity calculation for molecules to leave mesoscopic subvolume and enter
@@ -940,7 +944,8 @@ void buildSubvolArray(const uint32_t numSub,
 							subvolArray[curID].diffRateNeigh[curMolType][curNeighID] *=
 								(boundOverlap[5] - boundOverlap[4])/h_i;
 						
-						if(regionArray[neighRegion].spec.bMicro)
+						if(regionArray[neighRegion].spec.bMicro &&
+							DIFF_COEF[curRegion][curMolType] > 0.)
 						{ // Include multiplier on propensity
 							subvolArray[curID].diffRateNeigh[curMolType][curNeighID]
 								*= 2*h_i/sqrt(DIFF_COEF[curRegion][curMolType]

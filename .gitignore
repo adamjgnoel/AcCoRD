@@ -18,3 +18,4 @@ bin/accord_ppp.pbs
 *.asv
 *.mp4
 bsc*
+accord_config_0*

@@ -9,9 +9,13 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added measurement of simulation runtime to be written to simulation output
+ * - corrected passive actor indexing
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - improved placement of molecules from mesoscopic regime into microscopic regime. User
@@ -194,6 +198,7 @@ int main(int argc, char *argv[])
 						   // TODO: Should these IDs be from actor list or passive list?
 	
 	clock_t startTime, endTime; // Time record keeping
+	double runTime; 				// Runtime for realizations
 	
 	double DIFF_COEF [spec.NUM_REGIONS][spec.NUM_MOL_TYPES];
 	for(i = 0; i < spec.NUM_REGIONS; i++)
@@ -570,7 +575,7 @@ int main(int argc, char *argv[])
 							actorPassiveArray[curPassive].molRecordID[curMolPassive];
 						// Will molecule coordinates be recorded
 						bRecordPos =
-							actorCommonArray[heapTimer[0]].spec.bRecordPos[curMolPassive];
+							actorCommonArray[heapTimer[0]].spec.bRecordPos[curMolType];
 												
 						actorPassiveArray[curPassive].curMolObs[curMolPassive] = 0ULL;
 						// Search for molecules in each region in actor
@@ -988,7 +993,8 @@ int main(int argc, char *argv[])
 	strftime(timeBuffer, 26, "%Y-%m-%d %H:%M:%S", timeInfo);
 	printf("Ending simulation at %s.\n", timeBuffer);
 	endTime = clock();
-	printf("Simulation ran in %f seconds\n", (double) (endTime-startTime)/CLOCKS_PER_SEC);
+	runTime = (double) (endTime-startTime)/CLOCKS_PER_SEC;
+	printf("Simulation ran in %f seconds\n", runTime);
 	
 	//
 	// STEP 5: Save Output Summary
@@ -999,7 +1005,7 @@ int main(int argc, char *argv[])
 	// Print end time and info used to help Matlab importing
 	printTextEnd(outSummary, numActiveRecord, numPassiveRecord, actorCommonArray,
 		actorActiveArray, actorPassiveArray,
-		passiveRecordID, activeRecordID, maxActiveBits, maxPassiveObs);
+		passiveRecordID, activeRecordID, maxActiveBits, maxPassiveObs, runTime);
 		
 	//
 	// STEP 6: Free Memory

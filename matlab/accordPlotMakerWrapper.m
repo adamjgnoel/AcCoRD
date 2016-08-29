@@ -24,9 +24,13 @@ function [hFig, hAxes] = accordPlotMakerWrapper()
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - changed axes clipping to 'on'
+% - Minor updates to comments
 %
 % Revision v0.7 (public beta, 2016-07-09)
 % - Created file
@@ -59,12 +63,12 @@ customFigProp = [];
 %   generation and not curve plotting
 customAxesProp.Visible = 'on';
 customAxesProp.Projection = 'orthographic';
+customAxesProp.Clipping = 'on';
 
 % passiveActorToPlot - index of passive recording actors whose
-%   molecules are to be plotted. Indexing matches the list of passive
+%   signals are to be plotted. Indexing matches the list of passive
 %   actors whose observations are recorded (as stored in the data structure
-%   in fileToLoad). Actors listed here will NOT have their shapes plotted
-%   (use actorToPlot to plot specific actors).
+%   in fileToLoad).
 passiveID = 1;
 
 % molID - index of molecules to display. Indexing corresponds to the

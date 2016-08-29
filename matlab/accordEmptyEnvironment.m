@@ -58,6 +58,9 @@ function [hFig, hAxes] = accordEmptyEnvironment(fileToLoad, scale, ...
 %
 % Created 2016-06-28
 
+% Add subdirectory with JSONlab files to path (needed for loadjson)
+addpath('JSONlab');
+
 %% Load Configuration File
 % Config file is in JSON format
 opt.SimplifyCell = 1;

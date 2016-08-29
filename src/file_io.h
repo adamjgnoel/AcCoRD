@@ -9,9 +9,13 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added measurement of simulation runtime to be written to simulation output
+ * - fixed bug in writing index of active actor in simulation summary
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - added option for user to select small subvolume or big subvolume assumption
@@ -171,6 +175,7 @@ void printTextEnd(FILE * out,
 	short * passiveRecordID,
 	short * activeRecordID,
 	uint32_t maxActiveBits[],
-	uint32_t maxPassiveObs[]);
+	uint32_t maxPassiveObs[],
+	double runTime);
 
 #endif // FILE_IO_H

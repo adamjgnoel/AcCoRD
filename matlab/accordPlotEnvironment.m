@@ -41,6 +41,7 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 % Revision history:
 %
 % Revision v0.7.0.1 (public beta, 2016-08-30)
+% - corrected plotting of rectangle surfaces
 % - added (empty) case for plotting point objects (won't cause error)
 %
 % Revision v0.7 (public beta, 2016-07-09)
@@ -238,9 +239,9 @@ function h = accordPlotShape(shape, scale, scaleDim, plane, moveDim, ...
         % Need to plot subvolumes of shape
         if strcmp(shape, 'Rectangular Box') || strcmp(shape, 'Rectangle')
             numSub = scaleDim./subSize;
-            numX = numSub(1);
-            numY = numSub(2);
-            numZ = numSub(3);
+            numX = max([numSub(1),1]);
+            numY = max([numSub(2),1]);
+            numZ = max([numSub(3),1]);
             for x = 1:numX
                 for y = 1:numY
                     for z = 1:numZ

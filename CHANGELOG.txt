@@ -2,7 +2,20 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v0.7 (public beta, 2016-07-09)
+This document is the CHANGELOG for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+- [NEW] added plotting of rectangle regions
+- [NEW] added measurement of simulation run time to the output summary file
+- [FIX] corrected diffusion event propensity at hybrid interface when molecule has a diffusion coefficient of 0
+- [FIX] corrected calculation of region volume when a normal region has a surface child region inside
+- [FIX] modified range of uniform RV generation from [0,1] to [0,1). Allowing the generation of 1 was causing problems when the RV was being used for indexing
+- [FIX] corrected cases of incorrect indexing of active and passive actors
+- [FIX] corrected calculation of spherical volume from integer to double (the fraction 4/3 was being evaluated as 4/3 = 1)
+- [FIX] added calls to addpath in some MATLAB files to make the JSON code visible
+- [FIX] added (empty) plotting of point actors. Will not cause error, although nothing will actually be plotted
+- [FIX] corrected MATLAB import when a surface reaction is "Normal" and so has no defined surface reaction probability type
+- [FIX] changed default axis clipping setting from 'off' to 'on' in the wrapper function for plotting simulation results
+
+Changes introduced in AcCoRD v0.7 (public beta, 2016-07-09)
 - [NEW] added functions for plotting simulation data in Matlab, based on passive actor observations or known probability distributions. Options include time-varying signals (either single realizations or averaged signals), probability mass functions, cumulative distribution functions, and mutual information. Figures can be in 2D or 3D as appropriate
 - [NEW] added option to display all of region's subvolumes when drawing instead of just the outer boundary. This makes display of multiscale and hybrid environments easier to understand
 - [NEW] added function to immediately plot the system described by a configuration file without needing to simulate it first

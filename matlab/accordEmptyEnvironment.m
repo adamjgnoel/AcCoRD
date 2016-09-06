@@ -49,9 +49,12 @@ function [hFig, hAxes] = accordEmptyEnvironment(fileToLoad, scale, ...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
+% Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
 %
 % Revision history:
+%
+% Revision v0.7.0.1 (public beta, 2016-08-30)
+% - added call to addpath to make JSON code visible if not already added
 %
 % Revision v0.7 (public beta, 2016-07-09)
 % - Created file

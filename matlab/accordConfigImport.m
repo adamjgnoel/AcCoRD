@@ -25,9 +25,13 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
 %
 % Revision history:
+%
+% Revision v0.7.0.1 (public beta, 2016-08-30)
+% - corrected import of surface reaction probability type when the surface
+% reaction type is normal
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - Created file
@@ -82,8 +86,10 @@ for i = 1:config.numChemRxn
     if config.chemRxn{i}.bSurface
         config.chemRxn{i}.surfRxnType = ...
             curRxn.Surface_0x20_Reaction_0x20_Type;
-        config.chemRxn{i}.surfTransProb = ...
-            curRxn.Surface_0x20_Transition_0x20_Probability;
+        if ~strcmp(config.chemRxn{i}.surfRxnType, 'Normal')
+            config.chemRxn{i}.surfTransProb = ...
+                curRxn.Surface_0x20_Transition_0x20_Probability;
+        end
     end
     
     config.chemRxn{i}.bEverywhere = curRxn.Default_0x20_Everywhere_0x3F_;

@@ -9,11 +9,11 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
  * - fixed bug in writing index of active actor in simulation summary
  *

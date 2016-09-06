@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v0.7 (public beta, 2016-07-09)
+This document is the README for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
 
 # Introduction
 
@@ -52,8 +52,6 @@ AcCoRD currently has the following "mature" features:
 * Even in the microscopic regime, molecule creation and chemical reactions can occur on a time scale smaller than the microscopic time step.
 
 The following features have not been as extensively tested and are considered in "beta":
-* 2nd order chemical reactions in microscopic regions, which requires a specified binding radius.
-* Membrane surfaces control transitions between neighboring 3D regions
 
 The following features have had very limited testing and are considered "alpha":
 * Environments described entirely in 2D, with diffusion across a union of 2D rectangles
@@ -62,7 +60,7 @@ A complete version history can be found in CHANGELOG.txt
 
 # Known Issues and Limitations
 
-This list is current as of v0.7. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
+This list is current as of v0.7.0.1. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
 * Full 2D simulations are mostly untested
 * 2nd order chemical reactions in microscopic regions need a binding radius specified.
 * molecules keep diffusing at same rate when they are "bound" to a surface region. This can be prevented for now by making bound molecules a different type of molecule with diffusion coefficient 0
@@ -82,8 +80,8 @@ Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/
 * Allow dependent actors, whose behavior depends on the observations of passive actors. This would allow implementation of more complex communication networks (e.g., relays)
 * Add actors that track changes to molecule composition in their volumes
 * Improve implementation of 2nd order chemical reactions in microscopic regions
-* Enable surfaces to mesoscopic regions. Can be achieved via exclusion regions
-* Write more MATLAB utility functions to perform common tasks with simulation output (e.g., plot average behavior, simulation statistics, bit error probabilities)
+* Enable surfaces to mesoscopic regions. Could be achieved via exclusion regions
+* Write more MATLAB utility functions to perform common tasks with simulation output (e.g., bit error probabilities)
 * Specify different diffusion coefficients for different regions
 * Use different microscopic time steps in different microscopic regions
 * Add checks on subvolume size relative to diffusion coefficients

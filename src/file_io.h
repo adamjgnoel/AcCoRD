@@ -18,6 +18,8 @@
  * vice versa.
  * - added "BURST" modulation, which does not rely on bits and always releases molecules
  * in every action interval. Also is able to release multiple types of molecules.
+ * - added simpler methods for defining region anchor coordinates and the number of
+ * subvolumes along each dimension of rectangular regions.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output

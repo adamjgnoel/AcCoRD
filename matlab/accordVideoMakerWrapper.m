@@ -24,9 +24,13 @@ function [hFig, hAxes] = accordVideoMakerWrapper()
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - expanded the bMakeVideo bool to also be an int to specify how many
+% times to repeat each frame. Use to reduce the apparent frame rate
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - Created file
@@ -41,8 +45,10 @@ function [hFig, hAxes] = accordVideoMakerWrapper()
 fileToLoad = 'accord_sample_out';
 
 % bMakeVideo - if true, plot all simulation in a single figure and stich
-%   images into a video file. If false, plot each observation in its own
-%   figure and include an empty initial figure
+%   images into a video file. Set to positive integer to repeat each frame
+% 	the specified number of times (to decrease apparent frame rate)
+%   If false, plot each observation in its own
+%   figure and include an empty initial figure.
 bMakeVideo = true;
 
 % videoName - filename to save the video to. File extension will be added

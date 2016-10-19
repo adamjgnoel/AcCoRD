@@ -9,9 +9,12 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added BURST modulation
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
@@ -509,7 +512,8 @@ int main(int argc, char *argv[])
 						actorCommonArray[heapTimer[0]].curAction++;
 						
 						newRelease(&actorCommonArray[heapTimer[0]],
-							&actorActiveArray[curActive], timerArray[heapTimer[0]].nextTime);
+							&actorActiveArray[curActive], timerArray[heapTimer[0]].nextTime,
+							spec.NUM_MOL_TYPES);
 						if (actorCommonArray[heapTimer[0]].spec.bIndependent)
 						{
 							if(!actorCommonArray[heapTimer[0]].spec.bMaxAction

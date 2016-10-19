@@ -10,9 +10,12 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added BURST modulation
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - added POINT as a shape
@@ -98,6 +101,7 @@
 // Modulation schemes
 // NOTE: Changes to list of names must be reflected in file_io.c
 #define CSK 0
+#define BURST 1
 
 // 1st Order Surface reaction types
 // NOTE: Changes to list of names must be reflected in file_io.c

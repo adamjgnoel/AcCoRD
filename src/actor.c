@@ -9,9 +9,13 @@
  *
  * actor.c - operations on array of actors and its elements
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added BURST modulation, which does not modulate binary data but always releases
+ * molecules (of all types specified)
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -1062,7 +1066,8 @@ void deleteActor(const short NUM_ACTORS,
 // Generate a new release and, if necessary, add it to the list
 void newRelease(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
-	double curTime)
+	double curTime,
+	unsigned short NUM_MOL_TYPES)
 {
 	int i; // loop index
 	NodeRelease * curRelease;
@@ -1137,6 +1142,22 @@ void newRelease(const struct actorStruct3D * actorCommon,
 			}
 			molType = actorActive->molType[0]; // There is only one kind of molecule in CSK
 			break;
+		case BURST:
+			// BURST: Like CSK but always 1 bit-1.
+			// Also, can release multiple types of molecules
+			strength = ((double) binaryToDecimal(&newData, actorActive->alphabetSize))
+				* actorCommon->spec.modStrength;
+			startTime = 0.;
+			endTime = actorCommon->spec.releaseInterval;
+			frequency = 0.;
+			if(actorCommon->spec.bTimeReleaseRand)
+			{ // Emission times are stochastic. First emission time must be generated.
+				startTime = generateExponential(1)/strength;
+			} else
+			{ // Emission times are deterministic. First emission will be at start of interval
+				startTime = 0.;
+			}
+			break;
 		default:
 			fprintf(stderr,
 				"ERROR: Modulation scheme %d invalid.\n",
@@ -1147,11 +1168,30 @@ void newRelease(const struct actorStruct3D * actorCommon,
 	// Append release information to list of current releases
 	if(strength > 0.)
 	{
-		if(!addRelease(&actorActive->releaseList, strength, molType,
-			curTime + startTime, curTime + endTime, frequency))
+		switch (actorCommon->spec.modScheme)
 		{
-			fprintf(stderr,"ERROR: Memory allocation for new active actor release.\n");
-			exit(EXIT_FAILURE);
+			case BURST:
+				// This modulation types can release multiple types of molecules
+				for(i = 0; i < NUM_MOL_TYPES; i++)
+				{
+					if(actorActive->bReleaseMol[i])
+					{
+						if(!addRelease(&actorActive->releaseList, strength, i,
+							curTime + startTime, curTime + endTime, frequency))
+						{
+							fprintf(stderr,"ERROR: Memory allocation for new active actor release.\n");
+							exit(EXIT_FAILURE);
+						}
+					}
+				}
+				break;
+			default:
+				if(!addRelease(&actorActive->releaseList, strength, molType,
+					curTime + startTime, curTime + endTime, frequency))
+				{
+					fprintf(stderr,"ERROR: Memory allocation for new active actor release.\n");
+					exit(EXIT_FAILURE);
+				}
 		}
 		
 		// Update time of next emission event

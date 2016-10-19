@@ -95,9 +95,19 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - expanded the bMakeVideo bool to also be an int to specify how many
+% times to repeat each frame. Use to reduce the apparent frame rate
+% - added option to display a molecule counter for any specified passive
+% actor and recorded molecule type. Facilitated by subfunction
+% accordAddObservationCount(PASSIVE_ACTOR_INDEX,MOLECULE_INDEX,TEXT).
+% Counter also includes custom prefix text.
+% - changed default annotation background color to white (previously
+% transparent)
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - Created file
@@ -139,6 +149,13 @@ if bMakeVideo
 
     %% Create and Open Video Object
     videoObj = accordInitializeVideo(videoName, videoFormat, customVideoProp);
+    
+    %% Check repeat factor
+    if ~isa(bMakeVideo, 'logical')
+        repeatFactor = bMakeVideo;
+    else
+        repeatFactor = 1;
+    end
 else
     %% Generating Series of Figures Instead of a Video. Plot Empty Environment
     hFig = gobjects(1,1+numFrames);
@@ -146,17 +163,26 @@ else
     [curFig, curAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
         regionDispStruct, actorDispStruct, scale);
     hFig(1) = curFig;
-    hAxes(1) = curAxes;    
+    hAxes(1) = curAxes;  
 end
+
+numObs = length(data.passiveRecordCount{passiveActorToPlot(1)}(curRepeat,molToPlot{1},:));
 
 %% Allow User To Adjust Environment View and Set Dynamic Behavior
 disp('Adjust figure camera angles or annotations if desired.');
 
 bDispTime = false;
+numCounter = 0;
 numPt = 0;
 disp('Call accordAddTimeDisplay(NUM_DECIMAL_PLACES) to print dynamic simulation time in seconds,');
 disp(' where NUM_DECIMAL_PLACES is the number of decimal places.');
 disp(' The default is 4 places.');
+
+disp('Call accordAddObservationCount(PASSIVE_ACTOR_INDEX,MOLECULE_INDEX,TEXT) to print a molecule counter.');
+disp(' PASSIVE_ACTOR_INDEX is the index of passive actor to count, from recorded passive actor list.');
+disp(' MOLECULE_INDEX is the index of molecule to count, from actor''s molecule list.');
+disp(' TEXT is the prefix text that will appear before the counter value.');
+disp(' Counter will only display a number and no text.');
 
 disp('Call accordAddCameraAnchor(FRAME_INDICES) to anchor the camera display settings,');
 disp('	for the video frames defined by FRAME_INDICES.');
@@ -242,6 +268,20 @@ if bDynamicAnnotation || ~bMakeVideo
                 end
             end
         end
+        if numCounter > 0            
+            if iscell(hAnnot)
+                hAnnot = [hAnnot{:}];
+            end
+            % Find and exclude counter displays
+            for curCounter = 1:numCounter
+                for hCur = 1:length(hAnnot)
+                    if strcmp(['Counter ' num2str(numCounter)], get(hAnnot(hCur),'Tag'))
+                        hAnnot(hCur) = [];
+                        break
+                    end
+                end
+            end
+        end
         set(hAnnot, 'Tag', 'Static Annotation');
         copyobj(hAnnot, hAnnotInvisAxes);
     end
@@ -251,11 +291,17 @@ if bDispTime
     hDispTimeCopy = copyobj(hTimer,hAnnotInvisAxes);
     hTimerArray = zeros(1,numFrames);
 end
+if numCounter > 0
+    hDispCounterCopy = zeros(1,numCounter);
+    for i = 1:numCounter
+        hDispCounterCopy(i) = copyobj(hObsCount(i),hAnnotInvisAxes);
+    end
+    hCounterArray = zeros(numCounter,numFrames);
+end
 
 %% Make the Movie
 % Assume that number of observations of first actor is same as number for
 % all other passive actors being recorded
-numObs = length(data.passiveRecordCount{passiveActorToPlot(1)}(curRepeat,molToPlot{1},:));
 hPoints = cell(1,numPassiveObservers);
 for i = 1:numPassiveObservers
     hPoints{i} = length(molToPlot{i});
@@ -328,11 +374,21 @@ for i = 1:numFrames
                 set(hTimerArray(i), 'String', sprintf('%.*f s',numPt, tArray(i)));
             end
         end
+        for curCounter = 1:numCounter
+            if bMakeVideo
+                set(hObsCount(curCounter), 'String', [counterText{curCounter} num2str(counterArray{curCounter}(i))]);
+            else
+                hCounterArray(curCounter,i) = copyobj(hDispCounterCopy(curCounter),hCurAnnotAxes);
+                set(hCounterArray(curCounter), 'String', [counterText{curCounter} num2str(counterArray{curCounter}(i))]);
+            end
+        end
         if bMakeVideo
             % Capture frame and add to video
             drawnow
-            frame = getframe(curFig);
-            writeVideo(videoObj,frame);
+            for r = 1:repeatFactor
+                frame = getframe(curFig);
+                writeVideo(videoObj,frame);
+            end
             % Remove plots of molecules
             for j = 1:numPassiveObservers
                 delete(hPoints{j});
@@ -375,7 +431,8 @@ end
             'FontName', axesProp.FontName, ...
             'FontSize', axesProp.FontSize, ...
             'FontWeight', axesProp.FontWeight, ...            
-            'Interpreter', axesProp.TickLabelInterpreter);
+            'Interpreter', axesProp.TickLabelInterpreter, ...
+            'BackgroundColor', 'w');
         firstObsID = ...
             config.passiveActor{passiveActorToPlot(1)}.actorID;
         tArray = config.actor{firstObsID}.startTime + ...
@@ -385,6 +442,22 @@ end
         else
             numPt = numPtUser;
         end
+    end
+
+    function accordAddObservationCount(passiveActorInd, molInd, customTxt)
+        numCounter = numCounter + 1;
+        hObsCount(numCounter) = annotation(hFig(1), ...
+            'textbox', [0.01 0.01 0.1 0.1], ...
+            'Tag', ['Counter ' num2str(numCounter)], ...
+            'String', [customTxt ' VALUE'], ...
+            'FontName', axesProp.FontName, ...
+            'FontSize', axesProp.FontSize, ...
+            'FontWeight', axesProp.FontWeight, ...            
+            'Interpreter', axesProp.TickLabelInterpreter, ...
+            'BackgroundColor', 'w');
+        counterArray{numCounter} = ...
+            squeeze(data.passiveRecordCount{passiveActorInd}(curRepeat,molInd,observationToPlot(1:numObs)));
+        counterText{numCounter} = customTxt;
     end
 
     % Add anchor camera point to apply at specified frames

@@ -19,3 +19,4 @@ bin/accord_ppp.pbs
 *.mp4
 bsc*
 accord_config_0*
+accord_plot_*

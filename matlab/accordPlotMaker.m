@@ -46,9 +46,13 @@ function [hFig, hAxes, hCurve] = accordPlotMaker(hAxes, fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - changed mutual information calculations to use log2 (i.e., bits) instead of
+% log (i.e., nats)
 %
 % Revision v0.7.0.1 (public beta, 2016-08-30)
 % - added call to addpath to make JSON code visible if not already added
@@ -430,7 +434,7 @@ switch obsSpec.obsType
                     futureInd = futureVal - futureMin + 1;
                     if jointPMF(curInd,futureInd) > 0
                         yData(i) = yData(i) + jointPMF(curInd,futureInd) * ...
-                            log(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
+                            log2(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
                     end
                 end
             end
@@ -476,7 +480,7 @@ switch obsSpec.obsType
                         futureInd = futureVal - futureMin + 1;
                         if jointPMF(curInd,futureInd) > 0
                             zData(t,i) = zData(t,i) + jointPMF(curInd,futureInd) * ...
-                                log(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
+                                log2(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
                         end
                     end
                 end
@@ -553,7 +557,7 @@ switch obsSpec.obsType
                         futureInd = futureVal - futureMin + 1;
                         if jointPMF(curInd,futureInd) > 0
                             yData(yInd) = yData(yInd) + jointPMF(curInd,futureInd) * ...
-                                log(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
+                                log2(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
                         end
                     end
                 end
@@ -620,7 +624,7 @@ switch obsSpec.obsType
                             futureInd = futureVal - futureMin + 1;
                             if jointPMF(curInd,futureInd) > 0
                                 zData(a,i) = zData(a,i) + jointPMF(curInd,futureInd) * ...
-                                    log(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
+                                    log2(jointPMF(curInd,futureInd)/curPMF(curInd)/futurePMF(futureInd));
                             end
                         end
                     end

@@ -22,9 +22,13 @@ function dispStruct = accordBuildDispStruct(indToDisp, propChange)
 % OUTPUTS
 % dispStruct - structure with display parameters
 %
-% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added option to control the number of visible faces in spherical objects
+% - added options to set object outline line width and line style
 %
 % Revision v0.7 (public beta, 2016-07-09)
 % - added option to display region subvolumes. Will only apply if object is
@@ -42,16 +46,20 @@ indLength = length(indToDisp);
 dispStruct = struct('numToDisp', indLength, ...
     'indToDisp', indToDisp, ...
     'bDispFace', false(1, indLength), ...
+    'sphereSize', 15*ones(1, indLength), ...   % Number of points along dimension of sphere plot (only applies to spherical objects)
     'dispColor', cell(1), ...
     'opaque', ones(1, indLength), ...
+    'LineWidth', 0.5*ones(1, indLength), ...
     'bDispSubvolumes', false(1,indLength));
 
 % Cell array needs to be defined as a cell with a cell array in order to
 % suppress the output structure being an array of structures
 dispStruct.dispColor{1} = cell(1,indLength);
+dispStruct.LineStyle{1} = cell(1,indLength);
 
 for i = 1:indLength
     dispStruct.dispColor{1}{i} = 'black';
+    dispStruct.LineStyle{1}{i} = '-';
 end
 
 %% Make Specified Changes to Defaults

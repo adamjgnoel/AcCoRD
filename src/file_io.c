@@ -18,6 +18,8 @@
  * vice versa.
  * - added "BURST" modulation, which does not rely on bits and always releases molecules
  * in every action interval. Also is able to release multiple types of molecules.
+ * - added simpler methods for defining region anchor coordinates and the number of
+ * subvolumes along each dimension of rectangular regions.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
@@ -972,38 +974,83 @@ void loadConfig(const char * CONFIG_NAME,
 		}
 		
 		// Region Position
-		if(!cJSON_bItemValid(curObj,"Anchor X Coordinate", cJSON_Number))
-		{ // Region does not have a valid Anchor X Coordinate
-			bWarn = true;
-			printf("WARNING %d: Region %d does not have a valid \"Anchor X Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-			curSpec->subvol_spec[curArrayItem].xAnch = 0;
+		if(!cJSON_bItemValid(curObj,"Anchor Coordinate", cJSON_Array) ||
+			cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Anchor Coordinate")) != 3)
+		{ // Region is not using ``newer'' anchor definition format
+			printf("Region %d does not correctly use the new format for \"Anchor Coordinate\". Checking for old format.\n", curArrayItem);
+			
+			if(!cJSON_bItemValid(curObj,"Anchor X Coordinate", cJSON_Number))
+			{ // Region does not have a valid Anchor X Coordinate
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Anchor X Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].xAnch = 0;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].xAnch = 
+					cJSON_GetObjectItem(curObj, "Anchor X Coordinate")->valuedouble;
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Anchor Y Coordinate", cJSON_Number))
+			{ // Region does not have a valid Anchor Y Coordinate
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Anchor Y Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].yAnch = 0;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].yAnch = 
+					cJSON_GetObjectItem(curObj, "Anchor Y Coordinate")->valuedouble;
+			}
+			
+			if(!cJSON_bItemValid(curObj,"Anchor Z Coordinate", cJSON_Number))
+			{ // Region does not have a valid Anchor Z Coordinate
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid \"Anchor Z Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].zAnch = 0;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].zAnch = 
+					cJSON_GetObjectItem(curObj, "Anchor Z Coordinate")->valuedouble;
+			}
+			
 		} else
 		{
-			curSpec->subvol_spec[curArrayItem].xAnch = 
-				cJSON_GetObjectItem(curObj, "Anchor X Coordinate")->valuedouble;
+			curObjInner = cJSON_GetObjectItem(curObj,"Anchor Coordinate");
+			
+			if(!cJSON_bArrayItemValid(curObjInner,0, cJSON_Number))
+			{ // Region does not have a valid Anchor X Coordinate
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid X coordinate in \"Anchor Coordinate\" array. Assigning default value \"0\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].xAnch = 0;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].xAnch = 
+					cJSON_GetArrayItem(curObjInner, 0)->valuedouble;
+			}
+			
+			if(!cJSON_bArrayItemValid(curObjInner,1, cJSON_Number))
+			{ // Region does not have a valid Anchor Y Coordinate
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid Y coordinate in \"Anchor Coordinate\" array. Assigning default value \"0\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].yAnch = 0;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].yAnch = 
+					cJSON_GetArrayItem(curObjInner, 1)->valuedouble;
+			}
+			
+			if(!cJSON_bArrayItemValid(curObjInner,2, cJSON_Number))
+			{ // Region does not have a valid Anchor Z Coordinate
+				bWarn = true;
+				printf("WARNING %d: Region %d does not have a valid Z coordinate in \"Anchor Coordinate\" array. Assigning default value \"0\".\n", numWarn++, curArrayItem);
+				curSpec->subvol_spec[curArrayItem].zAnch = 0;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].zAnch = 
+					cJSON_GetArrayItem(curObjInner, 2)->valuedouble;
+			}
 		}
 		
-		if(!cJSON_bItemValid(curObj,"Anchor Y Coordinate", cJSON_Number))
-		{ // Region does not have a valid Anchor Y Coordinate
-			bWarn = true;
-			printf("WARNING %d: Region %d does not have a valid \"Anchor Y Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-			curSpec->subvol_spec[curArrayItem].yAnch = 0;
-		} else
-		{
-			curSpec->subvol_spec[curArrayItem].yAnch = 
-				cJSON_GetObjectItem(curObj, "Anchor Y Coordinate")->valuedouble;
-		}
 		
-		if(!cJSON_bItemValid(curObj,"Anchor Z Coordinate", cJSON_Number))
-		{ // Region does not have a valid Anchor Z Coordinate
-			bWarn = true;
-			printf("WARNING %d: Region %d does not have a valid \"Anchor Z Coordinate\". Assigning default value \"0\".\n", numWarn++, curArrayItem);
-			curSpec->subvol_spec[curArrayItem].zAnch = 0;
-		} else
-		{
-			curSpec->subvol_spec[curArrayItem].zAnch = 
-				cJSON_GetObjectItem(curObj, "Anchor Z Coordinate")->valuedouble;
-		}
 		
 		if(cJSON_bItemValid(curObj,"Time Step", cJSON_Number))
 		{
@@ -1060,40 +1107,88 @@ void loadConfig(const char * CONFIG_NAME,
 			else
 				minSubDim = 1;
 			
-			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Number of Subvolumes Along X")->valueint < minSubDim)
-			{ // Region does not have a valid Number of Subvolumes Along X
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along X\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].numX = 1;
+			// Number of subvolumes along each dimension
+			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Per Dimension", cJSON_Array) ||
+				cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Number of Subvolumes Per Dimension")) != 3)
+			{ // Region is not using ``newer'' subvolume definition format
+				printf("Region %d does not correctly use the new format for \"Number of Subvolumes Per Dimension\". Checking for old format.\n", curArrayItem);
+				
+				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along X", cJSON_Number) ||
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along X")->valueint < minSubDim)
+				{ // Region does not have a valid Number of Subvolumes Along X
+					bWarn = true;
+					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along X\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numX = 1;
+				} else
+				{
+					curSpec->subvol_spec[curArrayItem].numX = 
+						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along X")->valueint;
+				}
+				
+				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number) ||
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Y")->valueint < minSubDim)
+				{ // Region does not have a valid Number of Subvolumes Along Y
+					bWarn = true;
+					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Y\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numY = 1;
+				} else
+				{
+					curSpec->subvol_spec[curArrayItem].numY = 
+						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Y")->valueint;
+				}
+				
+				if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number) ||
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Z")->valueint < minSubDim)
+				{ // Region does not have a valid Number of Subvolumes Along Z
+					bWarn = true;
+					printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Z\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numZ = 1;
+				} else
+				{
+					curSpec->subvol_spec[curArrayItem].numZ = 
+						cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Z")->valueint;
+				}
+				
 			} else
 			{
-				curSpec->subvol_spec[curArrayItem].numX = 
-					cJSON_GetObjectItem(curObj, "Number of Subvolumes Along X")->valueint;
-			}
-			
-			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Y", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Y")->valueint < minSubDim)
-			{ // Region does not have a valid Number of Subvolumes Along Y
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Y\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].numY = 1;
-			} else
-			{
-				curSpec->subvol_spec[curArrayItem].numY = 
-					cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Y")->valueint;
-			}
-			
-			if(!cJSON_bItemValid(curObj,"Number of Subvolumes Along Z", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Number of Subvolumes Along Z")->valueint < minSubDim)
-			{ // Region does not have a valid Number of Subvolumes Along Z
-				bWarn = true;
-				printf("WARNING %d: Region %d does not have a valid \"Number of Subvolumes Along Z\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
-				curSpec->subvol_spec[curArrayItem].numZ = 1;
-			} else
-			{
-				curSpec->subvol_spec[curArrayItem].numZ = 
-					cJSON_GetObjectItem(curObj, "Number of Subvolumes Along Z")->valueint;
+				curObjInner =
+					cJSON_GetObjectItem(curObj,"Number of Subvolumes Per Dimension");
+				
+				if(!cJSON_bArrayItemValid(curObjInner, 0, cJSON_Number) ||
+					cJSON_GetArrayItem(curObjInner, 0)->valueint < minSubDim)
+				{ // Region does not have a valid Number of Subvolumes Along X
+					bWarn = true;
+					printf("WARNING %d: Region %d does not have a valid X-value in \"Number of Subvolumes Per Dimension\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numX = 1;
+				} else
+				{
+					curSpec->subvol_spec[curArrayItem].numX = 
+						cJSON_GetArrayItem(curObjInner, 0)->valueint;
+				}
+				
+				if(!cJSON_bArrayItemValid(curObjInner, 1, cJSON_Number) ||
+					cJSON_GetArrayItem(curObjInner, 1)->valueint < minSubDim)
+				{ // Region does not have a valid Number of Subvolumes Along Y
+					bWarn = true;
+					printf("WARNING %d: Region %d does not have a valid Y-value in \"Number of Subvolumes Per Dimension\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numY = 1;
+				} else
+				{
+					curSpec->subvol_spec[curArrayItem].numY = 
+						cJSON_GetArrayItem(curObjInner, 1)->valueint;
+				}
+				
+				if(!cJSON_bArrayItemValid(curObjInner, 2, cJSON_Number) ||
+					cJSON_GetArrayItem(curObjInner, 2)->valueint < minSubDim)
+				{ // Region does not have a valid Number of Subvolumes Along Z
+					bWarn = true;
+					printf("WARNING %d: Region %d does not have a valid Z-value in \"Number of Subvolumes Per Dimension\". Assigning default value \"1\".\n", numWarn++, curArrayItem);
+					curSpec->subvol_spec[curArrayItem].numZ = 1;
+				} else
+				{
+					curSpec->subvol_spec[curArrayItem].numZ = 
+						cJSON_GetArrayItem(curObjInner, 2)->valueint;
+				}
 			}
 			
 			// Confirm that a rectangle region is actually 2D
@@ -1153,6 +1248,11 @@ void loadConfig(const char * CONFIG_NAME,
 			{
 				bWarn = true;
 				printf("WARNING %d: Region %d does not need \"Number of Subvolumes Along Z\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Number of Subvolumes Per Dimension", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d does not need \"Number of Subvolumes Per Dimension.\n", numWarn++, curArrayItem);
 			}
 		
 			// Region radius

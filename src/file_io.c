@@ -9,9 +9,13 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added warnings for defining passive actor parameters for active actors or
+ * vice versa.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
@@ -1482,6 +1486,25 @@ void loadConfig(const char * CONFIG_NAME,
 		
 		if(curSpec->actorSpec[curArrayItem].bActive)
 		{ // Actor is active. Check for all active parameters
+	
+			// Check for existence of unnecessary parameters and display
+			// warnings if they are defined.
+			if(cJSON_bItemValid(curObj,"Is Time Recorded with Activity?", cJSON_True))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Is Time Recorded with Activity?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Is Molecule Type Observed?", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Is Molecule Type Observed?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Is Molecule Position Observed?", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Is Molecule Position Observed?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			
 			if(!cJSON_bItemValid(curObj,"Random Number of Molecules?", cJSON_True))
 			{ // Actor does not have a valid value for Random Number of Molecules?
 				bWarn = true;
@@ -1716,6 +1739,65 @@ void loadConfig(const char * CONFIG_NAME,
 			}
 		} else
 		{ // Actor is passive. Check for all passive parameters
+				
+			// Check for existence of unnecessary parameters and display
+			// warnings if they are defined.
+			if(cJSON_bItemValid(curObj,"Random Number of Molecules?", cJSON_True))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Random Number of Molecules?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_True))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Random Molecule Release Times?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Release Interval", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Release Interval\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Slot Interval\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Bits Random?", cJSON_True))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Bits Random?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Bit Sequence", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Bit Sequence\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Probability of Bit 1", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Probability of Bit 1\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Modulation Scheme", cJSON_String))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Modulation Scheme\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Modulation Bits", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Modulation Bits\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Modulation Strength", cJSON_Number))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Modulation Strength\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			if(cJSON_bItemValid(curObj,"Is Molecule Type Released?", cJSON_Array))
+			{
+				bWarn = true;
+				printf("WARNING %d: Actor %d does not need \"Is Molecule Type Released?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+			}
+			
 			
 			if(!cJSON_bItemValid(curObj,"Is Time Recorded with Activity?", cJSON_True))
 			{ // Actor does not have a valid Is Time Recorded with Activity?

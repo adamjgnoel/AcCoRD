@@ -442,8 +442,7 @@ void deleteActor(const short NUM_ACTORS,
 	
 void newRelease(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
-	double curTime,
-	unsigned short NUM_MOL_TYPES);
+	double curTime);
 
 void findNextEmission(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive);

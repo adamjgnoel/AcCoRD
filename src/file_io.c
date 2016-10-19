@@ -1567,7 +1567,7 @@ void loadConfig(const char * CONFIG_NAME,
 			
 			if(strcmp(tempString,"CSK") == 0)
 				curSpec->actorSpec[curArrayItem].modScheme = CSK;
-			else if(strcmp(tempString,"BURST") == 0)
+			else if(strcmp(tempString,"Burst") == 0)
 				curSpec->actorSpec[curArrayItem].modScheme = BURST;
 			else
 			{

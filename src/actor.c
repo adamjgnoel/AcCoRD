@@ -1066,8 +1066,7 @@ void deleteActor(const short NUM_ACTORS,
 // Generate a new release and, if necessary, add it to the list
 void newRelease(const struct actorStruct3D * actorCommon,
 	struct actorActiveStruct3D * actorActive,
-	double curTime,
-	unsigned short NUM_MOL_TYPES)
+	double curTime)
 {
 	int i; // loop index
 	NodeRelease * curRelease;
@@ -1172,16 +1171,13 @@ void newRelease(const struct actorStruct3D * actorCommon,
 		{
 			case BURST:
 				// This modulation types can release multiple types of molecules
-				for(i = 0; i < NUM_MOL_TYPES; i++)
+				for(i = 0; i < actorActive->numMolType; i++)
 				{
-					if(actorActive->bReleaseMol[i])
+					if(!addRelease(&actorActive->releaseList, strength, actorActive->molType[i],
+						curTime + startTime, curTime + endTime, frequency))
 					{
-						if(!addRelease(&actorActive->releaseList, strength, i,
-							curTime + startTime, curTime + endTime, frequency))
-						{
-							fprintf(stderr,"ERROR: Memory allocation for new active actor release.\n");
-							exit(EXIT_FAILURE);
-						}
+						fprintf(stderr,"ERROR: Memory allocation for new active actor release.\n");
+						exit(EXIT_FAILURE);
 					}
 				}
 				break;

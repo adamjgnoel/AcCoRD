@@ -9,9 +9,13 @@
  *
  * actor.h - operations on array of actors and its elements
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added BURST modulation, which does not modulate binary data but always releases
+ * molecules (of all types specified)
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.

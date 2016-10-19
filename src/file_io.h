@@ -9,9 +9,15 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added warnings for defining passive actor parameters for active actors or
+ * vice versa.
+ * - added "BURST" modulation, which does not rely on bits and always releases molecules
+ * in every action interval. Also is able to release multiple types of molecules.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output

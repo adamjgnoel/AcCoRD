@@ -13,12 +13,13 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %
 % INPUTS
 % fileName - "root" filename of simulation output, without the "_SEED##" suffix
-% 			or "_summary" suffix. File location is relative
-% 			to the AcCoRD "results" directory
+% 			or "_SEED##_summary" suffix. File path must be included if the
+% 			output is not in the current directory.
 % seedRange - array of integers listing the seed values to read in. Generally, the
 % 			independent realizations of a single simulation can be stored in multiple
 % 			files, and each file has a "_SEED##" suffix. The results from all files
 % 			specified are aggregated here into a single set of output parameters.
+% bWrite - boolean to generate an output file or not.
 %
 % OUTPUTS
 % data - structure with simulation parameters and output. Outputs are also saved to the
@@ -26,9 +27,12 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - corrected opening comments about where the output file(s) need to be
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - renamed from accord_import for consistency

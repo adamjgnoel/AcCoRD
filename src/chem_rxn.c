@@ -9,9 +9,15 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - enabled local diffusion coefficients. Chemical reactions involving surface
+ * interactions can specify the diffusion coefficient to use in transition
+ * probabilities as a reaction parameter (default is the molecule's default
+ * diffusion coefficient)
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - preliminary implementation of bimolecular reactions in microscopic regime
@@ -222,6 +228,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			malloc(regionArray[i].numChemRxn*sizeof(unsigned short [2]));
 		regionArray[i].rxnProbType =
 			malloc(regionArray[i].numChemRxn*sizeof(short));
+		regionArray[i].rxnDiffCoef =
+			malloc(regionArray[i].numChemRxn*sizeof(double));
 		regionArray[i].bSurfRxnIn =
 			malloc(NUM_MOL_TYPES*sizeof(bool));
 		regionArray[i].rxnInID =
@@ -268,6 +276,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			|| regionArray[i].rUnbind == NULL
 			|| regionArray[i].biReactants == NULL
 			|| regionArray[i].rxnProbType == NULL
+			|| regionArray[i].rxnDiffCoef == NULL
 			|| regionArray[i].bSurfRxnIn == NULL
 			|| regionArray[i].rxnInID == NULL
 			|| regionArray[i].surfRxnInProb == NULL
@@ -369,6 +378,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				regionArray[i].rBindMax = regionArray[i].rBind[j]; // Found new maximum binding radius
 			
 			regionArray[i].rxnProbType[j] = chem_rxn[curRxn].rxnProbType;
+			regionArray[i].rxnDiffCoef[j] = chem_rxn[curRxn].diffusion;
 			regionArray[i].releaseType[j] = chem_rxn[curRxn].releaseType;
 			
 			if((chem_rxn[curRxn].surfRxnType == RXN_MEMBRANE_IN
@@ -577,7 +587,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 									regionArray[i].surfRxnInProb[j] =
 										calculateAbsorptionProb(i, j, k,
 										regionArray[i].spec.dt, NUM_REGIONS,
-										regionArray, NUM_MOL_TYPES, DIFF_COEF);
+										regionArray, NUM_MOL_TYPES);
 									break;
 								case RXN_MEMBRANE_IN:
 									if(regionArray[i].bSurfRxnIn[j])
@@ -593,7 +603,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 									regionArray[i].surfRxnInProb[j] =
 										calculateMembraneProb(i, j, k,
 										regionArray[i].spec.dt, NUM_REGIONS,
-										regionArray, NUM_MOL_TYPES, DIFF_COEF);
+										regionArray, NUM_MOL_TYPES);
 									break;
 								case RXN_MEMBRANE_OUT:
 									if(regionArray[i].bSurfRxnOut[j])
@@ -609,7 +619,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 									regionArray[i].surfRxnOutProb[j] =
 										calculateMembraneProb(i, j, k,
 										regionArray[i].spec.dt, NUM_REGIONS,
-										regionArray, NUM_MOL_TYPES, DIFF_COEF);
+										regionArray, NUM_MOL_TYPES);
 									break;
 								case RXN_DESORBING:
 									if(regionArray[i].bSurfRxnOut[j])
@@ -625,8 +635,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 									regionArray[i].bUseRxnOutProb[j] =
 										calculateDesorptionProb(&regionArray[i].surfRxnOutProb[j],
 										i, j, k, regionArray[i].spec.dt,
-										NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-										DIFF_COEF);
+										NUM_REGIONS, regionArray, NUM_MOL_TYPES);
 									if(regionArray[i].bUseRxnOutProb[j])
 										continue;
 									// No break here because most desorbing cases have
@@ -798,6 +807,7 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		if(regionArray[i].rUnbind != NULL) free(regionArray[i].rUnbind);
 		if(regionArray[i].biReactants != NULL) free(regionArray[i].biReactants);
 		if(regionArray[i].rxnProbType != NULL) free(regionArray[i].rxnProbType);
+		if(regionArray[i].rxnDiffCoef != NULL) free(regionArray[i].rxnDiffCoef);
 		if(regionArray[i].bSurfRxnIn != NULL) free(regionArray[i].bSurfRxnIn);
 		if(regionArray[i].rxnInID != NULL) free(regionArray[i].rxnInID);
 		if(regionArray[i].surfRxnInProb != NULL) free(regionArray[i].surfRxnInProb);
@@ -815,8 +825,7 @@ double calculateAbsorptionProb(const short curRegion,
 	const double dt,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
-	const unsigned short NUM_MOL_TYPES,
-	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+	const unsigned short NUM_MOL_TYPES)
 {
 	double kPrime, kminus1Prime;
 	complex double c1, c2;
@@ -834,12 +843,12 @@ double calculateAbsorptionProb(const short curRegion,
 			// Use well-mixed reaction probability
 			// S.S. Andrews Physical Biology 2009 Eq. 1
 			rxnProb = regionArray[curRegion].rxnRate[curRegionRxn] *
-				sqrt(PI*dt/DIFF_COEF[curRegion][curMolType]);
+				sqrt(PI*dt/regionArray[curRegion].rxnDiffCoef[curRegionRxn]);
 			break;
 		case RXN_PROB_STEADY_STATE:
 			// Use steady state reaction probabilities
 			kPrime = regionArray[curRegion].rxnRate[curRegionRxn]*
-				sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
+				sqrt(dt/regionArray[curRegion].rxnDiffCoef[curRegionRxn]/2);
 			if(regionArray[curRegion].bReversible[curRegionRxn])
 			{ // S.S. Andrews Physical Biology 2009 Eq. 37
 				kminus1Prime =
@@ -876,8 +885,7 @@ bool calculateDesorptionProb(double * rxnProb,
 	const double dt,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
-	const unsigned short NUM_MOL_TYPES,
-	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+	const unsigned short NUM_MOL_TYPES)
 {
 	unsigned short curProd;
 	double kPrime, kminus1Prime;
@@ -898,10 +906,10 @@ bool calculateDesorptionProb(double * rxnProb,
 				
 				* rxnProb = calculateAbsorptionProb(curRegion,
 					curProd, regionArray[curRegion].reverseRxnID[curRegionRxn],
-					dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES, DIFF_COEF)
+					dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES)
 					* regionArray[curRegion].rxnRate[curRegionRxn]
 					/ regionArray[curRegion].rxnRate[regionArray[curRegion].reverseRxnID[curRegionRxn]]
-					*sqrt(DIFF_COEF[curRegion][curProd]*dt/PI);
+					*sqrt(regionArray[curRegion].rxnDiffCoef[curRegionRxn]*dt/PI);
 				return true;
 			} else
 			{ // No need to calculate this probability separately
@@ -923,8 +931,7 @@ double calculateMembraneProb(const short curRegion,
 	const double dt,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
-	const unsigned short NUM_MOL_TYPES,
-	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
+	const unsigned short NUM_MOL_TYPES)
 {
 	double kFor, kBack, kSum;
 	double rxnProb;
@@ -941,17 +948,17 @@ double calculateMembraneProb(const short curRegion,
 			// Use well-mixed reaction probability
 			// S.S. Andrews Physical Biology 2009 Eq. 1
 			rxnProb = regionArray[curRegion].rxnRate[curRegionRxn] *
-				sqrt(PI*dt/DIFF_COEF[curRegion][curMolType]);
+				sqrt(PI*dt/regionArray[curRegion].rxnDiffCoef[curRegionRxn]);
 			break;
 		case RXN_PROB_STEADY_STATE:
 			// Use steady state reaction probabilities
 			kFor = regionArray[curRegion].rxnRate[curRegionRxn]*
-				sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
+				sqrt(dt/regionArray[curRegion].rxnDiffCoef[curRegionRxn]/2);
 			if(regionArray[curRegion].bReversible[curRegionRxn])
 			{ // S.S. Andrews Physical Biology 2009 Eq. 47
 				kBack =
 					regionArray[curRegion].rxnRate[regionArray[curRegion].reverseRxnID[curRegionRxn]]*
-					sqrt(dt/DIFF_COEF[curRegion][curMolType]/2);
+					sqrt(dt/regionArray[curRegion].rxnDiffCoef[curRegionRxn]/2);
 				kSum = kFor + kBack;
 				rxnProb = kFor/kSum/kSum*(2*kSum - sqrt(PI/2)
 					+ sqrt(PI/2)*erfcx(sqrt(2)*kSum));

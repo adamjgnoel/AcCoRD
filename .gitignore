@@ -17,6 +17,7 @@ bin/accord_torque_ppp.sh
 bin/accord_ppp.pbs
 *.asv
 *.mp4
+*.avi
 bsc*
 accord_config_0*
 accord_plot_*

@@ -10,9 +10,14 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added local diffusion coefficients that can apply to particular region
+ * - added specifying diffusion coefficient that applies to specific surface
+ * interaction reactions.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - corrected calculating region volume when a normal region has a surface child
@@ -98,6 +103,12 @@ struct spec_region3D { // Used to define a region of subvolumes
 	
 	// Is the region microscopic?
 	bool bMicro;
+	
+	// Does this region use different diffusion coefficients?
+	bool bLocalDiffusion;
+	
+	// Local diffusion coefficients (if applicable)
+	double * diffusion;
 	
 	// Region shape. There are specific restrictions on shape, depending on
 	// whether it is micro, whether its parent is micro, and whether it is
@@ -446,6 +457,10 @@ struct region { // Region boundary parameters
 	// Default is RXN_PROB_NORMAL, which is inaccurate for surface transition reactions
 	// Length numChemRxn
 	short * rxnProbType;
+	
+	// Diffusion coefficient used for surface reaction probability calculation
+	// Length numChemRxn
+	double * rxnDiffCoef;
 	
 	// Does an absorbing or membrane reaction exist for a given molecule?
 	// Membrane reaction is for passing from the "inner" direction

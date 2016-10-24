@@ -20,6 +20,13 @@
  * in every action interval. Also is able to release multiple types of molecules.
  * - added simpler methods for defining region anchor coordinates and the number of
  * subvolumes along each dimension of rectangular regions.
+ * - added local diffusion coefficients as region parameters. Any region can
+ * over-ride the default diffusion coefficients defined for all molecules
+ * - added specifying diffusion coefficient to use for surface reaction transition
+ * probabilities. By default, the reactant's default diffusion coefficient is used
+ * for absorption and membrane reactions, and the first product's default diffusion
+ * coefficient is used for desorption reactions. Warning appears if coefficient is
+ * defined for reaction types that cannot use it.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output

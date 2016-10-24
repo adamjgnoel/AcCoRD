@@ -9,9 +9,12 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - enabled local diffusion coefficients
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
@@ -203,9 +206,18 @@ int main(int argc, char *argv[])
 	double DIFF_COEF [spec.NUM_REGIONS][spec.NUM_MOL_TYPES];
 	for(i = 0; i < spec.NUM_REGIONS; i++)
 	{
-		for(j = 0; j < spec.NUM_MOL_TYPES; j++)
+		if(spec.subvol_spec[i].bLocalDiffusion)
 		{
-			DIFF_COEF[i][j] = spec.DIFF_COEF[j];
+			for(j = 0; j < spec.NUM_MOL_TYPES; j++)
+			{
+				DIFF_COEF[i][j] = spec.subvol_spec[i].diffusion[j];
+			}
+		} else
+		{
+			for(j = 0; j < spec.NUM_MOL_TYPES; j++)
+			{
+				DIFF_COEF[i][j] = spec.DIFF_COEF[j];
+			}
 		}
 	}
 		
@@ -371,7 +383,6 @@ int main(int argc, char *argv[])
 	// Initialize random number generation
 	printf("Starting up random number generator with seed offset: %u\n", spec.SEED);
 	rngInitialize(spec.SEED);
-	//mt_seed32(spec.SEED + 5489UL); // Offset by mersenne twister default seed
 	
 	//
 	// STEP 4: Run Simulation

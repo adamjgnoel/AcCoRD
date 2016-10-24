@@ -36,6 +36,8 @@ function config =  accordConfigImport(configJSON)
 % "burst" modulation, which does not modulate data
 % - enable import of multiple diffusion coefficients for each molecule type
 % (one per region)
+% - added import of surface reaction diffusion coefficient when it has been
+% specified
 %
 % Revision v0.7.0.1 (public beta, 2016-08-30)
 % - corrected import of surface reaction probability type when the surface
@@ -99,6 +101,10 @@ for i = 1:config.numChemRxn
         if ~strcmp(config.chemRxn{i}.surfRxnType, 'Normal')
             config.chemRxn{i}.surfTransProb = ...
                 curRxn.Surface_0x20_Transition_0x20_Probability;
+        end
+        if isfield(curRxn, 'Surface_0x20_Reaction_0x20_Diffusion_0x20_Coefficient')
+            config.chemRxn{i}.diffusion = ...
+                curRxn.Surface_0x20_Reaction_0x20_Diffusion_0x20_Coefficient;
         end
     end
     

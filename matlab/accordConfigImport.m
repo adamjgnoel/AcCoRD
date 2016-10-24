@@ -25,9 +25,17 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - modified import of region placement parameters to accommodate simpler
+% definitions allowed in config files
+% - modified import of modulation parameters to accommodate addition of
+% "burst" modulation, which does not modulate data
+% - enable import of multiple diffusion coefficients for each molecule type
+% (one per region)
 %
 % Revision v0.7.0.1 (public beta, 2016-08-30)
 % - corrected import of surface reaction probability type when the surface
@@ -40,6 +48,8 @@ function config =  accordConfigImport(configJSON)
 
 config.outputFilename = configJSON.Output_0x20_Filename;
 
+config.numRegion = length(configJSON.Environment.Region_0x20_Specification);
+
 %% Extract simulation control parameters
 config.numRepeatPerSeed = configJSON.Simulation_0x20_Control.Number_0x20_of_0x20_Repeats;
 config.dt = configJSON.Simulation_0x20_Control.Global_0x20_Microscopic_0x20_Time_0x20_Step;
@@ -49,9 +59,9 @@ config.tFinal = configJSON.Simulation_0x20_Control.Final_0x20_Simulation_0x20_Ti
 config.numMolTypes = ...
     configJSON.Chemical_0x20_Properties.Number_0x20_of_0x20_Molecule_0x20_Types;
 
-config.diffusionCoeff = zeros(1,config.numMolTypes);
+config.diffusionCoeff = zeros(config.numRegion,config.numMolTypes);
 for i = 1:config.numMolTypes
-    config.diffusionCoeff(i) = ...
+    config.diffusionCoeff(:,i) = ...
         configJSON.Chemical_0x20_Properties.Diffusion_0x20_Coefficients(i);
 end
 
@@ -131,7 +141,7 @@ end
 
 %% Extract Region Properties
 config.subBaseSize = configJSON.Environment.Subvolume_0x20_Base_0x20_Size;
-config.numRegion = length(configJSON.Environment.Region_0x20_Specification);
+
 regionStruct = struct('label', '', 'parent', '', 'shape', '', ...
     'type', '', 'surfaceType', '', 'bMicro', 0,...
     'anchorCoor', zeros(1,3), 'subvolSizeInt', 0, ...
@@ -157,10 +167,18 @@ for i = 1:config.numRegion
     if strcmp(config.region{i}.shape, 'Rectangle') || ...
         strcmp(config.region{i}.shape, 'Rectangular Box')
         config.region{i}.bMicro = curRegion.Is_0x20_Region_0x20_Microscopic_0x3F_;
-        config.region{i}.numSubDim = ...
-            [curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_X ...
-            curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_Y ...
-            curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_Z];
+        if isfield(curRegion, 'Number_0x20_of_0x20_Subvolumes_0x20_Per_0x20_Dimension')
+            config.region{i}.numSubDim = zeros(1,3);
+            for j = 1:3
+                config.region{i}.numSubDim(j) = ...
+                    curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Per_0x20_Dimension(j);
+            end
+        else
+            config.region{i}.numSubDim = ...
+                [curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_X ...
+                curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_Y ...
+                curRegion.Number_0x20_of_0x20_Subvolumes_0x20_Along_0x20_Z];
+        end
         config.region{i}.subvolSizeInt = curRegion.Integer_0x20_Subvolume_0x20_Size;
         config.region{i}.radius = 0;
     elseif strcmp(config.region{i}.shape, 'Sphere')
@@ -171,9 +189,17 @@ for i = 1:config.numRegion
         warning('Region %d shape %s not recognized\n', i-1, config.region{i}.shape);
     end
     
-    config.region{i}.anchorCoor = [curRegion.Anchor_0x20_X_0x20_Coordinate ...
-        curRegion.Anchor_0x20_Y_0x20_Coordinate ...
-        curRegion.Anchor_0x20_Z_0x20_Coordinate];
+    if isfield(curRegion, 'Anchor_0x20_Coordinate')
+        config.region{i}.anchorCoor = zeros(1,3);
+        for j = 1:3
+            config.region{i}.anchorCoor(j) = ...
+                curRegion.Anchor_0x20_Coordinate(j);
+        end
+    else
+        config.region{i}.anchorCoor = [curRegion.Anchor_0x20_X_0x20_Coordinate ...
+            curRegion.Anchor_0x20_Y_0x20_Coordinate ...
+            curRegion.Anchor_0x20_Z_0x20_Coordinate];
+    end
 end
 
 %% Extract Actor Properties
@@ -282,25 +308,33 @@ for i = 1:config.numActor
             curActor.Release_0x20_Interval;
         config.activeActor{curActive}.slotInterval = ...
             curActor.Slot_0x20_Interval;
-        config.activeActor{curActive}.bBitsRandom = ...
-            curActor.Bits_0x20_Random_0x3F_;
-        if config.activeActor{curActive}.bBitsRandom
-            config.activeActor{curActive}.probBitOne = ...
-                curActor.Probability_0x20_of_0x20_Bit_0x20_1;
-        else
-            config.activeActor{curActive}.numBits = ...
-                length(curActor.Bit_0x20_Sequence);
-            config.activeActor{curActive}.bitSequence = ...
-                zeros(1, config.activeActor{curActive}.numBits);
-            for j = 1:config.activeActor{curActive}.numBits
-                config.activeActor{curActive}.bitSequence(j) = ...
-                    curActor.Bit_0x20_Sequence(j);
-            end
-        end
+        
         config.activeActor{curActive}.modScheme = ...
             curActor.Modulation_0x20_Scheme;
-        config.activeActor{curActive}.numModBits = ...
-            curActor.Modulation_0x20_Bits;
+        switch config.activeActor{curActive}.modScheme
+            case 'Burst'
+                % "Burst" modulation does not modulate bits
+            otherwise
+                config.activeActor{curActive}.bBitsRandom = ...
+                    curActor.Bits_0x20_Random_0x3F_;
+                if config.activeActor{curActive}.bBitsRandom
+                    config.activeActor{curActive}.probBitOne = ...
+                        curActor.Probability_0x20_of_0x20_Bit_0x20_1;
+                else
+                    config.activeActor{curActive}.numBits = ...
+                        length(curActor.Bit_0x20_Sequence);
+                    config.activeActor{curActive}.bitSequence = ...
+                        zeros(1, config.activeActor{curActive}.numBits);
+                    for j = 1:config.activeActor{curActive}.numBits
+                        config.activeActor{curActive}.bitSequence(j) = ...
+                            curActor.Bit_0x20_Sequence(j);
+                    end
+                end
+                config.activeActor{curActive}.numModBits = ...
+                    curActor.Modulation_0x20_Bits;
+        end
+        
+        
         config.activeActor{curActive}.modStrength = ...
             curActor.Modulation_0x20_Strength;
         

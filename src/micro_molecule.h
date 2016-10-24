@@ -10,9 +10,13 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added specifying diffusion coefficient that applies to specific surface
+ * interaction reactions.
  *
  * Revision v0.7 (public beta, 2016-07-09)
  * - set microscopic partial time step to 0 when creating new molecule from meso

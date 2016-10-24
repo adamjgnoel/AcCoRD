@@ -10,9 +10,13 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added specifying diffusion coefficient that applies to specific surface
+ * interaction reactions.
  *
  * Revision v0.7 (public beta, 2016-07-09)
  * - set microscopic partial time step to 0 when creating new molecule from meso
@@ -798,7 +802,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 			calculateDesorptionProb(&curProb, curRegion, curMolType,
 				regionArray[curRegion].rxnOutID[curMolType],
 				curNode->item.dt_partial, NUM_REGIONS,
-				regionArray, NUM_MOL_TYPES, DIFF_COEF);
+				regionArray, NUM_MOL_TYPES);
 			curRand = generateUniform();
 			if(curRand < curProb)
 			{				
@@ -1863,8 +1867,7 @@ bool followMolecule(const double startPoint[3],
 								// Need to calculate absorption probability
 								rxnProb = calculateAbsorptionProb(*endRegion,
 									molType, *curRxn,
-									dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-									DIFF_COEF);
+									dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES);
 							} else
 							{ // Use pre-calculated probability
 								rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
@@ -1888,8 +1891,7 @@ bool followMolecule(const double startPoint[3],
 									if(bRecent)
 										rxnProb = calculateMembraneProb(*endRegion,
 											molType, *curRxn,
-											dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-											DIFF_COEF);
+											dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES);
 									else
 										rxnProb = regionArray[*endRegion].surfRxnInProb[molType];
 								} else
@@ -1903,8 +1905,7 @@ bool followMolecule(const double startPoint[3],
 									if(bRecent)
 										rxnProb = calculateMembraneProb(*endRegion,
 											molType, *curRxn,
-											dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES,
-											DIFF_COEF);
+											dt, NUM_REGIONS, regionArray, NUM_MOL_TYPES);
 									else
 										rxnProb = regionArray[*endRegion].surfRxnOutProb[molType];
 								} else

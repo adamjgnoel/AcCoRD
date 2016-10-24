@@ -9,9 +9,15 @@
  *
  * chem_rxn.h - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - enabled local diffusion coefficients. Chemical reactions involving surface
+ * interactions can specify the diffusion coefficient to use in transition
+ * probabilities as a reaction parameter (default is the molecule's default
+ * diffusion coefficient)
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - preliminary implementation of bimolecular reactions in microscopic regime
@@ -117,6 +123,11 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// as indicated by bEverywhere
 	bool bSurface;
 	
+	// Diffusion coefficient used for calculating surface reaction probabilities
+	// Default value is the reactant's default diffusion coefficient.
+	// Can be over-ridden by the reaction configuration
+	double diffusion;
+	
 	// Are products of a surface reaction released from surface?
 	// If true for given product, then the product molecule is placed in closest neighboring
 	// region when it is created.
@@ -180,8 +191,7 @@ bool calculateDesorptionProb(double * rxnProb,
 	const double dt,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
-	const unsigned short NUM_MOL_TYPES,
-	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+	const unsigned short NUM_MOL_TYPES);
 
 // Calculate probability of absorption reaction for specified time step
 double calculateAbsorptionProb(const short curRegion,
@@ -190,8 +200,7 @@ double calculateAbsorptionProb(const short curRegion,
 	const double dt,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
-	const unsigned short NUM_MOL_TYPES,
-	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+	const unsigned short NUM_MOL_TYPES);
 
 // Calculate probability of membrane transition for specified time step
 double calculateMembraneProb(const short curRegion,
@@ -200,7 +209,6 @@ double calculateMembraneProb(const short curRegion,
 	const double dt,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
-	const unsigned short NUM_MOL_TYPES,
-	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
+	const unsigned short NUM_MOL_TYPES);
 
 #endif // CHEM_RXN_H

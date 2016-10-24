@@ -20,6 +20,13 @@
  * in every action interval. Also is able to release multiple types of molecules.
  * - added simpler methods for defining region anchor coordinates and the number of
  * subvolumes along each dimension of rectangular regions.
+ * - added local diffusion coefficients as region parameters. Any region can
+ * over-ride the default diffusion coefficients defined for all molecules
+ * - added specifying diffusion coefficient to use for surface reaction transition
+ * probabilities. By default, the reactant's default diffusion coefficient is used
+ * for absorption and membrane reactions, and the first product's default diffusion
+ * coefficient is used for desorption reactions. Warning appears if coefficient is
+ * defined for reaction types that cannot use it.
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
@@ -564,7 +571,7 @@ void loadConfig(const char * CONFIG_NAME,
 									"Products Released?")) != curSpec->NUM_MOL_TYPES)
 								{ // Reaction does not have a valid Products Released? array
 									bWarn = true;
-									printf("WARNING %d: Chemical reaction %d does not have a defined \"Products Released?\" array. Setting all values to \"false\".\n", numWarn++, curArrayItem);	
+									printf("WARNING %d: Chemical reaction %d does not have a valid \"Products Released?\" array. Setting all values to \"false\".\n", numWarn++, curArrayItem);	
 									for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
 									curMolType++)
 									{
@@ -786,6 +793,52 @@ void loadConfig(const char * CONFIG_NAME,
 								cJSON_GetArrayItem(curObjInner, curMolType)->valueint;
 						}
 					}
+					
+					// Determine diffusion coefficient to use for surface reactions
+					if(curSpec->chem_rxn[curArrayItem].bSurface)
+					{
+						if(cJSON_bItemValid(curObj,"Surface Reaction Diffusion Coefficient", cJSON_Number) &&
+						cJSON_GetObjectItem(curObj,"Surface Reaction Diffusion Coefficient")->valuedouble > 0.)
+						{ // Read specified diffusion coefficient
+							curSpec->chem_rxn[curArrayItem].diffusion =
+								cJSON_GetObjectItem(curObj,"Surface Reaction Diffusion Coefficient")->valuedouble;
+						} else
+						{ // Determine diffusion coefficient from reactant or product
+							switch(curSpec->chem_rxn[curArrayItem].surfRxnType)
+							{
+								case RXN_DESORBING:
+									// Find product
+									for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
+										curMolType++)
+									{
+										if(curSpec->chem_rxn[curArrayItem].products[curMolType] > 0)
+										{
+											curSpec->chem_rxn[curArrayItem].diffusion =
+												curSpec->DIFF_COEF[curMolType];
+											break;
+										}
+									}
+									break;
+								default:
+									// Find reactant
+									for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
+										curMolType++)
+									{
+										if(curSpec->chem_rxn[curArrayItem].reactants[curMolType] > 0)
+										{
+											curSpec->chem_rxn[curArrayItem].diffusion =
+												curSpec->DIFF_COEF[curMolType];
+											break;
+										}
+									}
+									break;
+							}
+						}
+					} else if(cJSON_bItemValid(curObj,"Surface Reaction Diffusion Coefficient", cJSON_Number))
+					{
+						bWarn = true;
+						printf("WARNING %d: Reaction %d is not a surface reaction and so does not need \"Surface Reaction Diffusion Coefficient\" defined. Ignoring.\n", numWarn++, curArrayItem);
+					}
 				}
 			}
 		}
@@ -858,6 +911,37 @@ void loadConfig(const char * CONFIG_NAME,
 		} else{
 			curSpec->subvol_spec[curArrayItem].label =
 				stringWrite(cJSON_GetObjectItem(curObj,"Label")->valuestring);
+		}
+		
+		// Local diffusion coefficients
+		curSpec->subvol_spec[curArrayItem].bLocalDiffusion = false;
+		if(cJSON_bItemValid(curObj,"Local Diffusion Coefficients", cJSON_Array))
+		{ // Region has custom local diffusion coefficients
+			if(cJSON_GetArraySize(cJSON_GetObjectItem(curObj,"Local Diffusion Coefficients")) != curSpec->NUM_MOL_TYPES)
+			{
+				bWarn = true;
+				printf("WARNING %d: Region %d has defined \"Local Diffusion Coefficients\" but not of the correct length. Ignoring.\n", numWarn++, curArrayItem);
+			} else{
+				curSpec->subvol_spec[curArrayItem].bLocalDiffusion = true;
+				diffCoef = cJSON_GetObjectItem(curObj, "Local Diffusion Coefficients");
+				curSpec->subvol_spec[curArrayItem].diffusion =
+					malloc(curSpec->NUM_MOL_TYPES * sizeof(double));
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES;
+				curMolType++)
+				{
+					if(!cJSON_bArrayItemValid(diffCoef,curMolType, cJSON_Number) ||
+						cJSON_GetArrayItem(diffCoef,curMolType)->valuedouble < 0)
+					{
+						bWarn = true;
+						printf("WARNING %d: \"Diffusion Coefficients\" item %d not defined or has an invalid value. Assigning default value of \"0\".\n", numWarn++, curMolType);
+						curSpec->subvol_spec[curArrayItem].diffusion[curMolType] = 0;
+					} else
+					{
+						curSpec->subvol_spec[curArrayItem].diffusion[curMolType] =
+							cJSON_GetArrayItem(diffCoef, curMolType)->valuedouble;
+					}
+				}
+			}
 		}
 		
 		// Region Parent
@@ -2076,6 +2160,9 @@ void deleteConfig(struct simSpec3D curSpec)
 				free(curSpec.subvol_spec[curRegion].label);
 			if(curSpec.subvol_spec[curRegion].parent != NULL)
 				free(curSpec.subvol_spec[curRegion].parent);
+			if(curSpec.subvol_spec[curRegion].bLocalDiffusion &&
+				curSpec.subvol_spec[curRegion].diffusion != NULL)
+				free(curSpec.subvol_spec[curRegion].diffusion);
 		}
 		free(curSpec.subvol_spec);
 	}

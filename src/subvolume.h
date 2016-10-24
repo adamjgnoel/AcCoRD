@@ -66,8 +66,6 @@ struct subvolume3D {
 	// identifying transitions between regions (both mesoscopic and microscopic)
 	unsigned short regionID;
 	
-	//double location[3]; // Coordinates of center of subvolume [ONLY NEEDED FOR INTERFACE]
-	
 	// The number of subvolumes that are neighbors to current one.
 	// More important for mesoscopic subvolumes
 	// To be neighbors, two subvolumes must (at least partially) share a common
@@ -78,13 +76,8 @@ struct subvolume3D {
 	// Length is maximum value of num_neigh for all subvolumes in current region
 	uint32_t * neighID;
 	
-	// Total number of reactions (including diffusion) that molecules in this
-	// subvolume can participate in
-	//unsigned short num_rxn;
-	
 	// Is subvolume along boundary of region?
 	bool bBoundary;
-	//uint32_t boundaryID; // (If applicable) Index of subvolume in boundary list
 	
 	// Diffusion transition rate from a (mesoscopic) boundary subvolume to all
 	// of its neighbours

@@ -10,9 +10,16 @@
  * subvolume.h - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
+ *
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
+ * - fixed bug where a molecule with diffusion rate 0 would have an invalid reaction
+ * propensity at hybrid interface
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - improved propensity calculation for molecules to leave mesoscopic subvolume and enter
@@ -87,9 +94,6 @@ struct subvolume3D {
 	// Each element gives the diffusion rate to the corresponding
 	// neighbour in the neighID array.
 	double ** diffRateNeigh;
-		
-	// Pointers to arrays
-	uint64_t * num_mol;
 	
 	// FUTURE MEMBERS
 };

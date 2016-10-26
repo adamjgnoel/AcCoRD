@@ -10,9 +10,12 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - fixed bug where a molecule with diffusion rate 0 would have an invalid reaction
@@ -243,10 +246,6 @@ void deleteSubvolArray(const uint32_t numSub,
 	for(curSub; curSub < numSub; curSub++)
 	{
 		if(subvolArray[curSub].neighID != NULL)	free(subvolArray[curSub].neighID);
-		if(!regionArray[subvolArray[curSub].regionID].spec.bMicro)
-		{
-			if(subvolArray[curSub].num_mol != NULL)	free(subvolArray[curSub].num_mol);
-		}
 		if(NUM_REGIONS > 1 && subvolArray[curSub].bBoundary
 			&& !regionArray[subvolArray[curSub].regionID].spec.bMicro
 			&& subvolArray[curSub].diffRateNeigh != NULL)
@@ -517,12 +516,6 @@ void buildSubvolArray(const uint32_t numSub,
 					// Assign memory to array parameters					
 					if(!regionArray[i].spec.bMicro)
 					{ // Parameter only needed for mesoscopic regions
-						subvolArray[curID].num_mol = malloc(NUM_MOL_TYPES*sizeof(uint64_t));
-						if(subvolArray[curID].num_mol == NULL)
-						{
-							fprintf(stderr, "ERROR: Memory allocation for number of molecules in subvolume %" PRIu32 ".\n", curID);
-							exit(EXIT_FAILURE);
-						}
 						subvolArray[curID].mesoID = curMesoID;
 						curMesoID++;
 					} else{

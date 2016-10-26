@@ -245,7 +245,9 @@ void deleteSubvolArray(const uint32_t numSub,
 	
 	for(curSub; curSub < numSub; curSub++)
 	{
-		if(subvolArray[curSub].neighID != NULL)	free(subvolArray[curSub].neighID);
+		if(!regionArray[subvolArray[curSub].regionID].spec.bMicro &&
+			subvolArray[curSub].neighID != NULL)
+			free(subvolArray[curSub].neighID);
 	}
 	
 	free(subvolArray);
@@ -708,6 +710,9 @@ void buildSubvolArray(const uint32_t numSub,
 	// Allocate space to store IDs of each subvolumes neighbors
 	for(curID = 0; curID < numSub; curID++)
 	{
+		if(regionArray[subvolArray[curID].regionID].spec.bMicro)
+			continue; // Don't need to store neighbor IDs for microscopic subvolumes
+		
 		subvolArray[curID].neighID =
 			malloc(subvolArray[curID].num_neigh*sizeof(uint32_t));
 		if(subvolArray[curID].neighID == NULL)
@@ -735,7 +740,7 @@ void buildSubvolArray(const uint32_t numSub,
 			length[2] = regionArray[curRegion].spec.numZ;
 		}
 				
-		if(regionArray[curRegion].spec.shape != SPHERE)
+		if(!regionArray[curRegion].spec.bMicro)
 		{
 			if(regionArray[curRegion].numFace == 0)
 			{ // Neighbors along first dimension only possible for normal 3D regions
@@ -805,17 +810,16 @@ void buildSubvolArray(const uint32_t numSub,
 				{
 					// One subvolume is in a box while the other is in a sphere.
 					// The subvolumes can be neighbors along multiple faces
-					subvolArray[sphSub].neighID[curSubNeigh[sphSub]++] = rectSub;
-					if (regionArray[rectRegion].spec.bMicro)
-						subvolArray[rectSub].neighID[curSubNeigh[rectSub]++] = sphSub;
-					else
+					if (!regionArray[rectRegion].spec.bMicro)
 						for(i = 0; i < numFaceSph; i++)
 							subvolArray[rectSub].neighID[curSubNeigh[rectSub]++] = sphSub;
 					numFaceSph = 0; // Reset value
 				} else
 				{
-					subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;			
-					subvolArray[curNeighID].neighID[curSubNeigh[curNeighID]++] = curID;
+					if(!regionArray[curRegion].spec.bMicro)
+						subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;			
+					if(!regionArray[neighRegion].spec.bMicro)
+						subvolArray[curNeighID].neighID[curSubNeigh[curNeighID]++] = curID;
 				}
 			}
 		}

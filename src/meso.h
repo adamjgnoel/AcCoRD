@@ -70,18 +70,6 @@ struct mesoSubvolume3D {
 	// to chemical reactions
 	unsigned short firstChemRxn;
 	
-	// MAY NEED TO BE MICRO AND MESO
-	// The number of subvolumes that are neighbors to current one.
-	// More important for mesoscopic subvolumes
-	// To be neighbors, two subvolumes must (at least partially) share a common
-	// face.
-	unsigned short num_neigh;
-	
-	// MAY NEED TO BE MICRO AND MESO
-	// Array of IDs of subvolumes that are neighbors to current subvolume.
-	// Length is maximum value of num_neigh for all subvolumes in current region
-	uint32_t * neighID;
-	
 	// Diffusion transition rate from a boundary subvolume to all
 	// of its neighbours
 	// (whether or not each neighbour is in a different region)

@@ -86,15 +86,6 @@ struct subvolume3D {
 	// Is subvolume along boundary of region?
 	bool bBoundary;
 	
-	// Diffusion transition rate from a (mesoscopic) boundary subvolume to all
-	// of its neighbours
-	// (whether or not each neighbour is in a different region)
-	// Only allocated if bBoundary == true AND bMicro == false
-	// Size is NUM_MOL_TYPES x num_neigh.
-	// Each element gives the diffusion rate to the corresponding
-	// neighbour in the neighID array.
-	double ** diffRateNeigh;
-	
 	// FUTURE MEMBERS
 };
 

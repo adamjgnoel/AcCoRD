@@ -82,13 +82,13 @@ struct mesoSubvolume3D {
 	// Length is maximum value of num_neigh for all subvolumes in current region
 	uint32_t * neighID;
 	
-	// Diffusion transition rate from a (mesoscopic) boundary subvolume to all
+	// Diffusion transition rate from a boundary subvolume to all
 	// of its neighbours
 	// (whether or not each neighbour is in a different region)
-	// Only allocated if bBoundary == true AND bMicro == false
+	// Only allocated if subvolume bBoundary == true
 	// Size is NUM_MOL_TYPES x num_neigh.
 	// Each element gives the diffusion rate to the corresponding
-	// neighbour in the neighID array (in subvolume structure.
+	// neighbour in the neighID array (in subvolume structure).
 	double ** diffRateNeigh;
 		
 	// Number of each type of molecule in subvolume
@@ -114,16 +114,23 @@ void allocateMesoHeapArray(const uint32_t numMesoSub,
 
 // Free memory allocated to array of Mesoscopic subvolume structures
 void deleteMesoSubArray(const uint32_t numMesoSub,
-	struct mesoSubvolume3D mesoSubArray[]);
+	struct mesoSubvolume3D mesoSubArray[],
+	const struct subvolume3D subvolArray[],
+	const unsigned short NUM_MOL_TYPES,
+	const short NUM_REGIONS);
 
 // Initialize Array of pointers to Mesoscopic subvolume structures
 void initializeMesoSubArray(const uint32_t numMesoSub,
 	const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	const struct subvolume3D subvolArray[],
+	const double SUBVOL_BASE_SIZE,
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
-	struct region regionArray[]);
+	struct region regionArray[],
+	const short NUM_REGIONS,
+	uint32_t subCoorInd[numSub][3],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 	
 // Reset propensities and reaction times for all subvolumes
 void resetMesoSubArray(const uint32_t numMesoSub,

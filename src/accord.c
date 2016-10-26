@@ -280,7 +280,8 @@ int main(int argc, char *argv[])
 	struct mesoSubvolume3D * mesoSubArray;
 	allocateMesoSubArray(numMesoSub,&mesoSubArray);
 	initializeMesoSubArray(numMesoSub, numSub, mesoSubArray, subvolArray,
-		spec.NUM_MOL_TYPES, spec.MAX_RXNS, regionArray);
+		spec.SUBVOL_BASE_SIZE, spec.NUM_MOL_TYPES, spec.MAX_RXNS, regionArray,
+		spec.NUM_REGIONS, subCoorInd, DIFF_COEF);
 	
 	// Build heap for mesoscopic subvolumes and associated arrays
 	uint32_t * heap_subvolID;
@@ -1048,8 +1049,8 @@ int main(int argc, char *argv[])
 	heapMesoDelete(numSub, heap_subvolID, heap_childID, b_heap_childValid);
 	heapTimerDelete(heapTimer, heapTimerChildID, b_heapTimerChildValid);
 	deleteTimerHeapArray(timerArray);
+	deleteMesoSubArray(numMesoSub, mesoSubArray, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS);
 	deleteSubvolArray(numSub, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS, regionArray);
-	deleteMesoSubArray(numMesoSub, mesoSubArray);
 	delete_boundary_region_(spec.NUM_REGIONS,
 		spec.NUM_MOL_TYPES, regionArray);
 	

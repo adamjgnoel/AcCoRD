@@ -8,7 +8,7 @@
 		Of particular note, this simulation is configured to use Steady State surface transition probabilities. You can see the change in accuracy by changing these values to Mixed or Normal. The Andrews paper demonstrated that using Steady State transition probabilities is accurate for large time steps and over transient time scales. However, please note that these probabilities were originally derived for 1D systems with flat surfaces. The system here can be considered as 1D.
 		
 		Takes about 30 seconds to run on a PC.",
-	"Output Filename": "accord_config_sample_surface",
+	"Output Filename": "accord_sample_surface",
 	"Warning Override": false,
 	"Simulation Control": {
 		"Number of Repeats": 10,
@@ -178,14 +178,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 2,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [2, 1, 1]
 			},
 			{
 				"Notes": "Adsorbing surface.",
@@ -194,14 +190,10 @@
 				"Shape": "Rectangle",
 				"Type": "3D Surface",
 				"Surface Type": "Inner",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 0,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [0, 1, 1]
 			},
 			{
 				"Notes": "Second Box.",
@@ -209,14 +201,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 2e-6,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [2e-6, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 2,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [2, 1, 1]
 			},
 			{
 				"Notes": "Membrane placed between A and B regions.",
@@ -225,14 +213,10 @@
 				"Shape": "Rectangle",
 				"Type": "3D Surface",
 				"Surface Type": "Membrane",
-				"Anchor X Coordinate": 2e-6,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [2e-6, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 0,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [0, 1, 1]
 			}
 		],
 		"Actor Specification": [

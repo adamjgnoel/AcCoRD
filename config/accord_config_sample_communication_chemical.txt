@@ -68,9 +68,7 @@
 				"Parent Label": "",
 				"Shape": "Sphere",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Radius": 1e9999
 			},
 			{
@@ -81,9 +79,7 @@
 				"Shape": "Sphere",
 				"Type": "3D Surface",
 				"Surface Type": "Outer",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 2e-6,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 2e-6, 0],
 				"Radius": 0.5e-6
 			}
 		],

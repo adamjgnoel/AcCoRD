@@ -40,14 +40,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 10,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [10, 1, 1]
 			},
 			{
 				"Notes": "Region where conversion reaction can occur.",
@@ -55,14 +51,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 10e-6,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [10e-6, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 1,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [1, 1, 1]
 			}
 		],
 		"Actor Specification": [

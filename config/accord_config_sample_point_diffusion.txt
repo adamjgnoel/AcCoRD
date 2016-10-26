@@ -34,9 +34,7 @@
 				"Parent Label": "",
 				"Shape": "Sphere",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Radius": 1e9999
 			}
 		],

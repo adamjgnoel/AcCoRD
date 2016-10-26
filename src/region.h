@@ -18,6 +18,7 @@
  * - added local diffusion coefficients that can apply to particular region
  * - added specifying diffusion coefficient that applies to specific surface
  * interaction reactions.
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - corrected calculating region volume when a normal region has a surface child
@@ -280,7 +281,7 @@ struct region { // Region boundary parameters
 	
 	// 2D array of IDs of subvolumes in current region that border each neighbor.
 	// Only needed if region is mesoscopic and neighbor is microscopic.
-	// ID is from GLOBAL subvolume list and NOT mesoscopic list
+	// ID is from mesoscopic subvolume list and NOT GLOBAL list
 	// Size is NUM_REGIONS x numSubRegionNeigh
 	// For details of memory allocation to 2D array with a different number of
 	// columns for each row: http://c-faq.com/aryptr/dynmuldimary.html

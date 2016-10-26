@@ -9,9 +9,12 @@
  *
  * meso.h - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -66,6 +69,31 @@ struct mesoSubvolume3D {
 	// and to act as a reference for finding elements corresponding
 	// to chemical reactions
 	unsigned short firstChemRxn;
+	
+	// MAY NEED TO BE MICRO AND MESO
+	// The number of subvolumes that are neighbors to current one.
+	// More important for mesoscopic subvolumes
+	// To be neighbors, two subvolumes must (at least partially) share a common
+	// face.
+	unsigned short num_neigh;
+	
+	// MAY NEED TO BE MICRO AND MESO
+	// Array of IDs of subvolumes that are neighbors to current subvolume.
+	// Length is maximum value of num_neigh for all subvolumes in current region
+	uint32_t * neighID;
+	
+	// Diffusion transition rate from a (mesoscopic) boundary subvolume to all
+	// of its neighbours
+	// (whether or not each neighbour is in a different region)
+	// Only allocated if bBoundary == true AND bMicro == false
+	// Size is NUM_MOL_TYPES x num_neigh.
+	// Each element gives the diffusion rate to the corresponding
+	// neighbour in the neighID array (in subvolume structure.
+	double ** diffRateNeigh;
+		
+	// Number of each type of molecule in subvolume
+	// Length NUM_MOL_TYPES
+	uint64_t * num_mol;
 	
 	// FUTURE MEMBERS
 };

@@ -9,9 +9,12 @@
  *
  * meso.c - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -93,6 +96,8 @@ void deleteMesoSubArray(const uint32_t numMesoSub,
 	{
 		if(mesoSubArray[curMesoSub].rxnProp != NULL)
 			free(mesoSubArray[curMesoSub].rxnProp);
+		if(mesoSubArray[curMesoSub].num_mol != NULL)
+			free(mesoSubArray[curMesoSub].num_mol);
 	}
 		
 	free(mesoSubArray);
@@ -126,7 +131,10 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 			mesoSubArray[curMesoSub].rxnProp = 
 				malloc((mesoSubArray[curMesoSub].firstChemRxn + MAX_RXNS)
 				*sizeof(double));
-			if(mesoSubArray[curMesoSub].rxnProp == NULL)
+			mesoSubArray[curMesoSub].num_mol = 
+				malloc(NUM_MOL_TYPES*sizeof(uint64_t));
+			if(mesoSubArray[curMesoSub].rxnProp == NULL ||
+				mesoSubArray[curMesoSub].num_mol == NULL)
 			{
 				fprintf(stderr, "ERROR: Memory allocation to mesoscopic structure parameters for mesoscopic subvolume %" PRIu32 " (subvolume ID %" PRIu32 ").\n", curMesoSub, curSub);
 				exit(EXIT_FAILURE);
@@ -172,7 +180,7 @@ void resetMesoSubArray(const uint32_t numMesoSub,
 				else
 					curDiffRate = subvolArray[curSub].diffRateNeigh[curMolType][curNeigh];
 				mesoSubArray[curMeso].rxnProp[curMolType*subvolArray[curSub].num_neigh+curNeigh] =
-					curDiffRate * subvolArray[curSub].num_mol[curMolType];
+					curDiffRate * mesoSubArray[curMeso].num_mol[curMolType];
 				mesoSubArray[curMeso].totalProp +=
 					mesoSubArray[curMeso].rxnProp[curMolType*subvolArray[curSub].num_neigh+curNeigh];
 			}
@@ -194,21 +202,21 @@ void resetMesoSubArray(const uint32_t numMesoSub,
 					// number of reacting molecules
 					mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn + curRxn] =
 						regionArray[curRegion].rxnRate[curRxn] *
-						subvolArray[curSub].num_mol[regionArray[curRegion].uniReactant[curRxn]];
+						mesoSubArray[curMeso].num_mol[regionArray[curRegion].uniReactant[curRxn]];
 					break;
 				case 2:
 					// Reaction is 2nd order. Propensity will depend on
 					// number of both types of reacting molecules
 					mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn + curRxn] =
 						regionArray[curRegion].rxnRate[curRxn] *
-						subvolArray[curSub].num_mol[regionArray[curRegion].biReactants[curRxn][0]];
+						mesoSubArray[curMeso].num_mol[regionArray[curRegion].biReactants[curRxn][0]];
 					if(regionArray[curRegion].biReactants[curRxn][0]
 						== regionArray[curRegion].biReactants[curRxn][1])
 					{ // Reactants are the same type
-						if(subvolArray[curSub].num_mol[regionArray[curRegion].biReactants[curRxn][0]] > 0)
+						if(mesoSubArray[curMeso].num_mol[regionArray[curRegion].biReactants[curRxn][0]] > 0)
 						{ // There must be two reactants to have a reaction
 							mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn + curRxn] *=
-								(subvolArray[curSub].num_mol[regionArray[curRegion].biReactants[curRxn][0]] - 1);
+								(mesoSubArray[curMeso].num_mol[regionArray[curRegion].biReactants[curRxn][0]] - 1);
 						} else
 						{ // Propensity formula not valid; reaction not possible
 							mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn + curRxn] = 0;
@@ -216,7 +224,7 @@ void resetMesoSubArray(const uint32_t numMesoSub,
 					} else
 					{ // Reactants are different types
 						mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn + curRxn] *=
-							subvolArray[curSub].num_mol[regionArray[curRegion].biReactants[curRxn][1]];						
+							mesoSubArray[curMeso].num_mol[regionArray[curRegion].biReactants[curRxn][1]];						
 					}
 					break;
 			}
@@ -314,7 +322,7 @@ void updateMesoSub(const uint32_t curSub,
 					curDiffRate = subvolArray[curSub].diffRateNeigh[j][i];
 				
 				mesoSubArray[curMeso].rxnProp[j*subvolArray[curSub].num_neigh+i]
-					= curDiffRate*curMolChange[j]*subvolArray[curSub].num_mol[j];
+					= curDiffRate*curMolChange[j]*mesoSubArray[curMeso].num_mol[j];
 			}
 					
 			// Update Chemical reaction propensities
@@ -326,7 +334,7 @@ void updateMesoSub(const uint32_t curSub,
 				{ // Current reaction is 1st order and jth molecule is reactant
 			
 					mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn+curRxn]
-						= regionArray[curRegion].rxnRate[curRxn]*subvolArray[curSub].num_mol[j];
+						= regionArray[curRegion].rxnRate[curRxn]*mesoSubArray[curMeso].num_mol[j];
 				}
 			}			
 			
@@ -354,8 +362,8 @@ void updateMesoSub(const uint32_t curSub,
 				
 				mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn+curRxn] =
 					regionArray[curRegion].rxnRate[curRxn] *
-					subvolArray[curSub].num_mol[reactantA] *
-					(subvolArray[curSub].num_mol[reactantA] - 1);
+					mesoSubArray[curMeso].num_mol[reactantA] *
+					(mesoSubArray[curMeso].num_mol[reactantA] - 1);
 				mesoSubArray[curMeso].totalProp =
 					updateTotalProp(mesoSubArray[curMeso].rxnProp,
 					regionArray[curRegion].numChemRxn + mesoSubArray[curMeso].firstChemRxn);
@@ -364,8 +372,8 @@ void updateMesoSub(const uint32_t curSub,
 		{ // Propensity must be updated
 			mesoSubArray[curMeso].rxnProp[mesoSubArray[curMeso].firstChemRxn+curRxn] =
 				regionArray[curRegion].rxnRate[curRxn] *
-				subvolArray[curSub].num_mol[reactantA] *
-				subvolArray[curSub].num_mol[reactantB];
+				mesoSubArray[curMeso].num_mol[reactantA] *
+				mesoSubArray[curMeso].num_mol[reactantB];
 			mesoSubArray[curMeso].totalProp =
 				updateTotalProp(mesoSubArray[curMeso].rxnProp,
 				regionArray[curRegion].numChemRxn + mesoSubArray[curMeso].firstChemRxn);
@@ -430,7 +438,7 @@ void updateMesoSubBoundary(const uint32_t numSub,
 						// Reset signals for new molecules from micro regime
 						for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
 						{
-							updateMesoSub(regionArray[curRegion].neighID[neighRegion][curSub], false, 
+							updateMesoSub(mesoSubArray[regionArray[curRegion].neighID[neighRegion][curSub]].subID, false, 
 								(uint64_t []){regionArray[curRegion].numMolFromMicro[neighRegion][curSub][curMolType]},
 								bTrue, curMolType,
 								true, numMesoSub, mesoSubArray, subvolArray,
@@ -439,7 +447,7 @@ void updateMesoSubBoundary(const uint32_t numSub,
 						}
 						regionArray[curRegion].bNeedUpdate[neighRegion][curSub] = false;
 						heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID,
-							mesoSubArray[subvolArray[regionArray[curRegion].neighID[neighRegion][curSub]].mesoID].heapID, heap_childID, heap_childValid);
+							mesoSubArray[regionArray[curRegion].neighID[neighRegion][curSub]].heapID, heap_childID, heap_childValid);
 							
 						regionArray[curRegion].bNeedUpdate[neighRegion][curSub] = false;
 					}

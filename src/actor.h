@@ -16,6 +16,7 @@
  * Revision LATEST_VERSION
  * - added BURST modulation, which does not modulate binary data but always releases
  * molecules (of all types specified)
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -398,6 +399,7 @@ void initializeActorCommon(const short NUM_ACTORS,
 	short * NUM_ACTORS_PASSIVE,
 	short * numPassiveRecord,
 	short ** passiveRecordID,
+	const struct subvolume3D subvolArray[],
 	uint32_t **** subID,
 	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE);
@@ -412,6 +414,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
 	const short NUM_REGIONS,
+	const struct mesoSubvolume3D mesoSubArray[],
 	const short NUM_ACTORS_ACTIVE,
 	struct actorActiveStruct3D actorActiveArray[],
 	const short NUM_ACTORS_PASSIVE,
@@ -503,7 +506,7 @@ void placeMoleculesInSub(struct region regionArray[],
 	const uint32_t numMesoSub,
 	uint64_t numNewMol,
 	const unsigned short curMolType,
-	const uint32_t curSub,
+	const uint32_t curMeso,
 	const unsigned short NUM_MOL_TYPES,
 	double tCur,
 	const short NUM_REGIONS,

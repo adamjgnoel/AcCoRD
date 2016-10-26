@@ -18,6 +18,7 @@
  * - added local diffusion coefficients that can apply to particular region
  * - added specifying diffusion coefficient that applies to specific surface
  * interaction reactions.
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - corrected calculating region volume when a normal region has a surface child
@@ -432,7 +433,7 @@ void initializeRegionSubNeighbor(struct region regionArray[],
 						exit(EXIT_FAILURE);
 					}
 					
-					regionArray[i].neighID[j][curBoundID] = curID;
+					regionArray[i].neighID[j][curBoundID] = subvolArray[curID].mesoID;
 					regionArray[i].boundSubCenterCoor[j][curBoundID][0] =
 						(curSubBound[0] + curSubBound[1])/2;
 					regionArray[i].boundSubCenterCoor[j][curBoundID][1] =

@@ -15,6 +15,7 @@
  *
  * Revision LATEST_VERSION
  * - enabled local diffusion coefficients
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - added measurement of simulation runtime to be written to simulation output
@@ -160,7 +161,7 @@ int main(int argc, char *argv[])
 	
 	// MESO parameters
 	uint32_t numMesoSub;
-	uint32_t curMeso;
+	uint32_t curMeso, curDestMeso;
 	double new_time, old_prop, old_time;
 	double prop_sum, rand_prop;
 	unsigned short curRxn;		// Index of current reaction to fire
@@ -279,7 +280,8 @@ int main(int argc, char *argv[])
 	struct mesoSubvolume3D * mesoSubArray;
 	allocateMesoSubArray(numMesoSub,&mesoSubArray);
 	initializeMesoSubArray(numMesoSub, numSub, mesoSubArray, subvolArray,
-		spec.NUM_MOL_TYPES, spec.MAX_RXNS, regionArray);
+		spec.SUBVOL_BASE_SIZE, spec.NUM_MOL_TYPES, spec.MAX_RXNS, regionArray,
+		spec.NUM_REGIONS, subCoorInd, DIFF_COEF);
 	
 	// Build heap for mesoscopic subvolumes and associated arrays
 	uint32_t * heap_subvolID;
@@ -302,12 +304,12 @@ int main(int argc, char *argv[])
 		regionArray, spec.NUM_REGIONS,
 		&NUM_ACTORS_ACTIVE, &numActiveRecord, &activeRecordID,
 		&NUM_ACTORS_PASSIVE, &numPassiveRecord, &passiveRecordID,
-		subID, subCoorInd, spec.SUBVOL_BASE_SIZE);
+		subvolArray, subID, subCoorInd, spec.SUBVOL_BASE_SIZE);
 	allocateActorActivePassiveArray(NUM_ACTORS_ACTIVE, &actorActiveArray,
 		NUM_ACTORS_PASSIVE, &actorPassiveArray);
 	initializeActorActivePassive(spec.NUM_ACTORS, actorCommonArray,
 		spec.NUM_MOL_TYPES,
-		regionArray, spec.NUM_REGIONS, NUM_ACTORS_ACTIVE, actorActiveArray,
+		regionArray, spec.NUM_REGIONS, mesoSubArray, NUM_ACTORS_ACTIVE, actorActiveArray,
 		NUM_ACTORS_PASSIVE, actorPassiveArray, subCoorInd);
 	printf("Number of active actors: %u\n", NUM_ACTORS_ACTIVE);
 	printf("Number of passive actors: %u\n", NUM_ACTORS_PASSIVE);
@@ -407,13 +409,10 @@ int main(int argc, char *argv[])
 		
 		// Perform initial placement of molecules
 		// FILL IN mesoscopic subvolumes with 0 molecules
-		for(i = 0; i < numSub; i++)
+		for(i = 0; i < numMesoSub; i++)
 		{
 			for(j = 0; j < spec.NUM_MOL_TYPES; j++)
-				if(!regionArray[subvolArray[i].regionID].spec.bMicro)
-				{
-					subvolArray[i].num_mol[j] = 0ULL;
-				}
+				mesoSubArray[i].num_mol[j] = 0ULL;
 		}
 		
 		// Determine Reaction propensities based on subvolArray[].num_mol
@@ -610,7 +609,7 @@ int main(int argc, char *argv[])
 									curSubID++)
 								{
 									curSub = actorCommonArray[heapTimer[0]].subID[curRegionID][curSubID];
-									numMol = subvolArray[curSub].num_mol[curMolType];
+									numMol = mesoSubArray[curSub].num_mol[curMolType];
 									if(actorPassiveArray[curPassive].fracSubInActor[curRegionID][curSubID] < 1.)
 									{ // Roll die to see whether each molecule is in actor
 										for(curMol = 0;
@@ -824,12 +823,12 @@ int main(int argc, char *argv[])
 				// Diffuse all microscopic molecules to valid locations and merge
 				// 2 sets of molecule lists into 1
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
-					microMolListRecent, regionArray, subvolArray,
+					microMolListRecent, regionArray, mesoSubArray,
 					micro_sigma, spec.chem_rxn, spec.MAX_HYBRID_DIST, DIFF_COEF);
 				
 				// Execute 2nd Order Reactions
 				rxnSecondOrder(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
-					regionArray, subvolArray, spec.chem_rxn, DIFF_COEF);
+					regionArray, mesoSubArray, spec.chem_rxn, DIFF_COEF);
 				
 				if(numMesoSub > 0)
 				{
@@ -888,7 +887,7 @@ int main(int argc, char *argv[])
 					}
 					
 					// Remove molecule from current subvolume
-					subvolArray[curSub].num_mol[curMolType] -= 1ULL;
+					mesoSubArray[curMeso].num_mol[curMolType] -= 1ULL;
 					numMolChange[0] = 1ULL;
 					
 					// Update next reaction time and heap structure location
@@ -911,7 +910,7 @@ int main(int argc, char *argv[])
 						// Find ID of current subvolume in region boundary list
 						destRegion = subvolArray[destSub].regionID;
 						curBoundSub = findSubInBoundaryList(curRegion, destRegion, regionArray,
-							curSub);
+							curMeso);
 						
 						if(curBoundSub < UINT32_MAX)
 						{ // Add new molecule to random location next to source subvolume
@@ -928,7 +927,8 @@ int main(int argc, char *argv[])
 						}
 					} else
 					{ // Destination is also a mesoscopic subvolume
-						subvolArray[destSub].num_mol[curMolType] += 1ULL;
+						curDestMeso = subvolArray[destSub].mesoID;
+						mesoSubArray[curDestMeso].num_mol[curMolType] += 1ULL;
 						numMolChange[0] = 1ULL;
 						
 						// Update propensities of destination subvolume
@@ -953,10 +953,10 @@ int main(int argc, char *argv[])
 					for(curMolType = 0; curMolType < spec.NUM_MOL_TYPES; curMolType++)
 					{
 						if(regionArray[curRegion].bMolAdd[curRxn][curMolType])
-							subvolArray[curSub].num_mol[curMolType] +=
+							mesoSubArray[curMeso].num_mol[curMolType] +=
 								regionArray[curRegion].numMolChange[curRxn][curMolType];
 						else
-							subvolArray[curSub].num_mol[curMolType] -=
+							mesoSubArray[curMeso].num_mol[curMolType] -=
 								regionArray[curRegion].numMolChange[curRxn][curMolType];
 					}
 										
@@ -1049,8 +1049,8 @@ int main(int argc, char *argv[])
 	heapMesoDelete(numSub, heap_subvolID, heap_childID, b_heap_childValid);
 	heapTimerDelete(heapTimer, heapTimerChildID, b_heapTimerChildValid);
 	deleteTimerHeapArray(timerArray);
+	deleteMesoSubArray(numMesoSub, mesoSubArray, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS);
 	deleteSubvolArray(numSub, subvolArray, spec.NUM_MOL_TYPES, spec.NUM_REGIONS, regionArray);
-	deleteMesoSubArray(numMesoSub, mesoSubArray);
 	delete_boundary_region_(spec.NUM_REGIONS,
 		spec.NUM_MOL_TYPES, regionArray);
 	

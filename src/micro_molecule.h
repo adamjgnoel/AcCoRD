@@ -17,6 +17,7 @@
  * Revision LATEST_VERSION
  * - added specifying diffusion coefficient that applies to specific surface
  * interaction reactions.
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7 (public beta, 2016-07-09)
  * - set microscopic partial time step to 0 when creating new molecule from meso
@@ -150,7 +151,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D p_listRecent[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
-	struct subvolume3D subvolArray[],
+	struct mesoSubvolume3D mesoSubArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct chem_rxn_struct chem_rxn[],
 	const double HYBRID_DIST_MAX,
@@ -229,7 +230,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
-	struct subvolume3D subvolArray[],
+	struct mesoSubvolume3D mesoSubArray[],
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 

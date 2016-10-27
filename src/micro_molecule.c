@@ -17,6 +17,7 @@
  * Revision LATEST_VERSION
  * - added specifying diffusion coefficient that applies to specific surface
  * interaction reactions.
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7 (public beta, 2016-07-09)
  * - set microscopic partial time step to 0 when creating new molecule from meso
@@ -144,7 +145,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	ListMolRecent3D p_listRecent[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
-	struct subvolume3D subvolArray[],
+	struct mesoSubvolume3D mesoSubArray[],
 	double sigma[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct chem_rxn_struct chem_rxn[],
 	const double HYBRID_DIST_MAX,
@@ -235,7 +236,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 							&minSub, HYBRID_DIST_MAX, regionArray[curRegion].spec.dt, DIFF_COEF))
 						{
 							newSub = regionArray[transRegion].neighID[newRegion][minSub];
-							subvolArray[newSub].num_mol[curType]++;							
+							mesoSubArray[newSub].num_mol[curType]++;							
 							regionArray[transRegion].bNeedUpdate[newRegion][minSub] = true;
 							regionArray[transRegion].numMolFromMicro[newRegion][minSub][curType]++;
 							
@@ -293,7 +294,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 						newSub = regionArray[newRegion].neighID[transRegion]
 							[findNearestSub(newRegion, regionArray,
 							transRegion, newPoint[0], newPoint[1], newPoint[2])];
-						subvolArray[newSub].num_mol[curType]++;
+						mesoSubArray[newSub].num_mol[curType]++;
 						 // TODO: Keep track of subvolumes that need updated propensities
 						 // mesoID is subvolArray[newSub].mesoID
 						 //
@@ -371,7 +372,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 						&minSub, HYBRID_DIST_MAX, curNodeR->item.dt_partial, DIFF_COEF))
 					{
 						newSub = regionArray[transRegion].neighID[newRegion][minSub];
-						subvolArray[newSub].num_mol[curType]++;							
+						mesoSubArray[newSub].num_mol[curType]++;							
 						regionArray[transRegion].bNeedUpdate[newRegion][minSub] = true;
 						regionArray[transRegion].numMolFromMicro[newRegion][minSub][curType]++;
 						
@@ -408,7 +409,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 					newSub = regionArray[newRegion].neighID[transRegion]
 						[findNearestSub(newRegion, regionArray,
 						transRegion, newPoint[0], newPoint[1], newPoint[2])];
-					subvolArray[newSub].num_mol[curType]++;
+					mesoSubArray[newSub].num_mol[curType]++;
 					 // TODO: Keep track of subvolumes that need updated propensities
 					 // mesoID is subvolArray[newSub].mesoID
 					 //
@@ -1172,7 +1173,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
 	const struct region regionArray[],
-	struct subvolume3D subvolArray[],
+	struct mesoSubvolume3D mesoSubArray[],
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
@@ -1502,7 +1503,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 													newSub = regionArray[destRegion].neighID[curRegion]
 														[findNearestSub(destRegion, regionArray,
 														curRegion, rxnProdCoor[0], rxnProdCoor[1], rxnProdCoor[2])];
-													subvolArray[newSub].num_mol[curProd]++;
+													mesoSubArray[newSub].num_mol[curProd]++;
 													curBoundSub = 0;
 													while(regionArray[destRegion].neighID[curRegion][curBoundSub]
 														!= newSub)

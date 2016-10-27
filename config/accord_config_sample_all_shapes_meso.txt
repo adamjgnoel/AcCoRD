@@ -31,14 +31,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Integer Subvolume Size": 5,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 20,
-				"Number of Subvolumes Along Y": 10,
-				"Number of Subvolumes Along Z": 10
+				"Number of Subvolumes Per Dimension": [20, 10, 10]
 			},
 			{
 				"Notes": "1st child of system parent.
@@ -47,14 +43,10 @@
 				"Parent Label": "A",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 10e-6,
-				"Anchor Y Coordinate": 10e-6,
-				"Anchor Z Coordinate": 10e-6,
+				"Anchor Coordinate": [10e-6, 10e-6, 10e-6],
 				"Integer Subvolume Size": 5,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 12,
-				"Number of Subvolumes Along Y": 7,
-				"Number of Subvolumes Along Z": 7
+				"Number of Subvolumes Per Dimension": [12, 7, 7]
 			},
 			{
 				"Notes": "2nd child of system parent. Adjacent to 1st child.
@@ -63,14 +55,10 @@
 				"Parent Label": "A",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 70e-6,
-				"Anchor Y Coordinate": 10e-6,
-				"Anchor Z Coordinate": 10e-6,
+				"Anchor Coordinate": [70e-6, 10e-6, 10e-6],
 				"Integer Subvolume Size": 2,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 10,
-				"Number of Subvolumes Along Y": 15,
-				"Number of Subvolumes Along Z": 15
+				"Number of Subvolumes Per Dimension": [10, 15, 15]
 			},
 			{
 				"Notes": "Neighbor to parent's neighbor.
@@ -79,14 +67,10 @@
 				"Parent Label": "B",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 60e-6,
-				"Anchor Y Coordinate": 15e-6,
-				"Anchor Z Coordinate": 15e-6,
+				"Anchor Coordinate": [60e-6, 15e-6, 15e-6],
 				"Integer Subvolume Size": 2,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 5,
-				"Number of Subvolumes Along Y": 5,
-				"Number of Subvolumes Along Z": 5
+				"Number of Subvolumes Per Dimension": [5, 5, 5]
 			},
 			{
 				"Notes": "Neighbor to parent's neighbor. Uses
@@ -96,14 +80,10 @@
 				"Parent Label": "B",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 60e-6,
-				"Anchor Y Coordinate": 30e-6,
-				"Anchor Z Coordinate": 30e-6,
+				"Anchor Coordinate": [60e-6, 30e-6, 30e-6],
 				"Integer Subvolume Size": 5,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 2,
-				"Number of Subvolumes Along Y": 2,
-				"Number of Subvolumes Along Z": 2
+				"Number of Subvolumes Per Dimension": [2, 2, 2]
 			}
 		],
 		"Actor Specification": [

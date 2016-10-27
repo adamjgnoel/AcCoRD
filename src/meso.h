@@ -9,9 +9,12 @@
  *
  * meso.h - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -67,6 +70,19 @@ struct mesoSubvolume3D {
 	// to chemical reactions
 	unsigned short firstChemRxn;
 	
+	// Diffusion transition rate from a boundary subvolume to all
+	// of its neighbours
+	// (whether or not each neighbour is in a different region)
+	// Only allocated if subvolume bBoundary == true
+	// Size is NUM_MOL_TYPES x num_neigh.
+	// Each element gives the diffusion rate to the corresponding
+	// neighbour in the neighID array (in subvolume structure).
+	double ** diffRateNeigh;
+		
+	// Number of each type of molecule in subvolume
+	// Length NUM_MOL_TYPES
+	uint64_t * num_mol;
+	
 	// FUTURE MEMBERS
 };
 
@@ -86,16 +102,23 @@ void allocateMesoHeapArray(const uint32_t numMesoSub,
 
 // Free memory allocated to array of Mesoscopic subvolume structures
 void deleteMesoSubArray(const uint32_t numMesoSub,
-	struct mesoSubvolume3D mesoSubArray[]);
+	struct mesoSubvolume3D mesoSubArray[],
+	const struct subvolume3D subvolArray[],
+	const unsigned short NUM_MOL_TYPES,
+	const short NUM_REGIONS);
 
 // Initialize Array of pointers to Mesoscopic subvolume structures
 void initializeMesoSubArray(const uint32_t numMesoSub,
 	const uint32_t numSub,
 	struct mesoSubvolume3D mesoSubArray[],
 	const struct subvolume3D subvolArray[],
+	const double SUBVOL_BASE_SIZE,
 	const unsigned short NUM_MOL_TYPES,
 	const unsigned short MAX_RXNS,
-	struct region regionArray[]);
+	struct region regionArray[],
+	const short NUM_REGIONS,
+	uint32_t subCoorInd[numSub][3],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 	
 // Reset propensities and reaction times for all subvolumes
 void resetMesoSubArray(const uint32_t numMesoSub,

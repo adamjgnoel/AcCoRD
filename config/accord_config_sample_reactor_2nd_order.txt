@@ -65,14 +65,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Integer Subvolume Size": 100,
 				"Is Region Microscopic?": false,
-				"Number of Subvolumes Along X": 1,
-				"Number of Subvolumes Along Y": 1,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [1, 1, 1]
 			}
 		],
 		"Actor Specification": [

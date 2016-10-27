@@ -10,9 +10,12 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - fixed bug where a molecule with diffusion rate 0 would have an invalid reaction
@@ -242,22 +245,9 @@ void deleteSubvolArray(const uint32_t numSub,
 	
 	for(curSub; curSub < numSub; curSub++)
 	{
-		if(subvolArray[curSub].neighID != NULL)	free(subvolArray[curSub].neighID);
-		if(!regionArray[subvolArray[curSub].regionID].spec.bMicro)
-		{
-			if(subvolArray[curSub].num_mol != NULL)	free(subvolArray[curSub].num_mol);
-		}
-		if(NUM_REGIONS > 1 && subvolArray[curSub].bBoundary
-			&& !regionArray[subvolArray[curSub].regionID].spec.bMicro
-			&& subvolArray[curSub].diffRateNeigh != NULL)
-		{
-			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-			{
-				if(subvolArray[curSub].diffRateNeigh[curMolType] != NULL)
-					free(subvolArray[curSub].diffRateNeigh[curMolType]);
-			}
-			free(subvolArray[curSub].diffRateNeigh);
-		}
+		if(!regionArray[subvolArray[curSub].regionID].spec.bMicro &&
+			subvolArray[curSub].neighID != NULL)
+			free(subvolArray[curSub].neighID);
 	}
 	
 	free(subvolArray);
@@ -517,12 +507,6 @@ void buildSubvolArray(const uint32_t numSub,
 					// Assign memory to array parameters					
 					if(!regionArray[i].spec.bMicro)
 					{ // Parameter only needed for mesoscopic regions
-						subvolArray[curID].num_mol = malloc(NUM_MOL_TYPES*sizeof(uint64_t));
-						if(subvolArray[curID].num_mol == NULL)
-						{
-							fprintf(stderr, "ERROR: Memory allocation for number of molecules in subvolume %" PRIu32 ".\n", curID);
-							exit(EXIT_FAILURE);
-						}
 						subvolArray[curID].mesoID = curMesoID;
 						curMesoID++;
 					} else{
@@ -726,6 +710,9 @@ void buildSubvolArray(const uint32_t numSub,
 	// Allocate space to store IDs of each subvolumes neighbors
 	for(curID = 0; curID < numSub; curID++)
 	{
+		if(regionArray[subvolArray[curID].regionID].spec.bMicro)
+			continue; // Don't need to store neighbor IDs for microscopic subvolumes
+		
 		subvolArray[curID].neighID =
 			malloc(subvolArray[curID].num_neigh*sizeof(uint32_t));
 		if(subvolArray[curID].neighID == NULL)
@@ -753,7 +740,7 @@ void buildSubvolArray(const uint32_t numSub,
 			length[2] = regionArray[curRegion].spec.numZ;
 		}
 				
-		if(regionArray[curRegion].spec.shape != SPHERE)
+		if(!regionArray[curRegion].spec.bMicro)
 		{
 			if(regionArray[curRegion].numFace == 0)
 			{ // Neighbors along first dimension only possible for normal 3D regions
@@ -823,17 +810,16 @@ void buildSubvolArray(const uint32_t numSub,
 				{
 					// One subvolume is in a box while the other is in a sphere.
 					// The subvolumes can be neighbors along multiple faces
-					subvolArray[sphSub].neighID[curSubNeigh[sphSub]++] = rectSub;
-					if (regionArray[rectRegion].spec.bMicro)
-						subvolArray[rectSub].neighID[curSubNeigh[rectSub]++] = sphSub;
-					else
+					if (!regionArray[rectRegion].spec.bMicro)
 						for(i = 0; i < numFaceSph; i++)
 							subvolArray[rectSub].neighID[curSubNeigh[rectSub]++] = sphSub;
 					numFaceSph = 0; // Reset value
 				} else
 				{
-					subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;			
-					subvolArray[curNeighID].neighID[curSubNeigh[curNeighID]++] = curID;
+					if(!regionArray[curRegion].spec.bMicro)
+						subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;			
+					if(!regionArray[neighRegion].spec.bMicro)
+						subvolArray[curNeighID].neighID[curSubNeigh[curNeighID]++] = curID;
 				}
 			}
 		}
@@ -842,120 +828,6 @@ void buildSubvolArray(const uint32_t numSub,
 	if(NUM_REGIONS > 1)
 	{ // Only need to enter if there is more than one region
 
-		// Determine transition rates out of mesoscopic subvolumes that are along
-		// the boundary of their respective region
-		for(curID = 0; curID < numSub; curID++)
-		{ // For each subvolume
-			if(!subvolArray[curID].bBoundary || regionArray[subvolArray[curID].regionID].spec.bMicro)
-				continue; // This subvolume is not meso and along the boundary
-			
-			// Allocate memory to store transition rate for this subvolume
-			subvolArray[curID].diffRateNeigh =
-				malloc(NUM_MOL_TYPES*sizeof(subvolArray[curID].diffRateNeigh));
-			
-			if(subvolArray[curID].diffRateNeigh == NULL){
-				fprintf(stderr, "ERROR: Memory allocation for mesoscopic diffusion rates for subvolume %" PRIu32 ", which is alng the boundary or region %u.\n", curID, subvolArray[curID].regionID);
-				exit(EXIT_FAILURE);
-			}
-			
-			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-			{
-				subvolArray[curID].diffRateNeigh[curMolType] =
-					malloc(subvolArray[curID].num_neigh*sizeof(double));
-				if(subvolArray[curID].diffRateNeigh[curMolType] == NULL){
-					fprintf(stderr, "ERROR: Memory allocation for mesoscopic diffusion rates for subvolume %" PRIu32 ", which is alng the boundary or region %u.\n", curID, subvolArray[curID].regionID);
-					exit(EXIT_FAILURE);
-				}
-			}
-			
-			curRegion = subvolArray[curID].regionID;
-			h_i = regionArray[curRegion].actualSubSize;
-			
-			findSubvolCoor(curSubBound, regionArray[curRegion], subCoorInd[curID]);
-			
-			for(curNeighID = 0; curNeighID < subvolArray[curID].num_neigh;
-				curNeighID++)
-			{
-				// Find actual neighbor index and region
-				neighID = subvolArray[curID].neighID[curNeighID];
-				neighRegion = subvolArray[neighID].regionID;
-				if (curRegion == neighRegion)
-				{ // Transition rate only depends on source volume
-					for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-					{
-						subvolArray[curID].diffRateNeigh[curMolType][curNeighID] =
-							DIFF_COEF[curRegion][curMolType]/h_i/h_i;
-					}						
-				} else
-				{
-					if(regionArray[curRegion].spec.type !=
-						regionArray[neighRegion].spec.type)
-					{
-						// Regions are not of the same type (at least one is a surface)
-						// Normal diffusion between these regions is not possible
-						for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-						{
-							// TODO: Correct this preliminary solution which prevents
-							// any transition out of a meso subvolume to a surface.
-							// Correct implementation would base transition rate
-							// on corresponding chemical reaction probabilities
-							subvolArray[curID].diffRateNeigh[curMolType][curNeighID] = 0.;
-						}
-						continue;
-					}
-					
-					// TODO: Need to catch cases where a membrane lies in between two
-					// subvolumes so that the diffusion rate can be adjusted properly
-					
-					if(regionArray[neighRegion].spec.bMicro)
-						h_j = h_i;
-					else
-						h_j = regionArray[neighRegion].actualSubSize;
-					
-					// Determine overlap area
-					if(regionArray[neighRegion].spec.shape == RECTANGULAR_BOX)
-					{
-						findSubvolCoor(curNeighBound, regionArray[neighRegion],
-							subCoorInd[neighID]);
-						intersectBoundary(RECTANGULAR_BOX, curSubBound,
-							RECTANGULAR_BOX, curNeighBound, boundOverlap);
-					} else if (regionArray[neighRegion].spec.shape == SPHERE)
-					{
-						// Assume that overlap is entire subvolume face
-						boundOverlap[0] = 0;
-						boundOverlap[1] = h_i;
-						boundOverlap[2] = 0;
-						boundOverlap[3] = h_i;
-						boundOverlap[4] = 0;
-						boundOverlap[5] = 0;
-					}
-					
-					for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-					{
-						subvolArray[curID].diffRateNeigh[curMolType][curNeighID] =
-							2*DIFF_COEF[curRegion][curMolType]/h_i/(h_i + h_j);
-						if(fabs(boundOverlap[0] - boundOverlap[1]) > boundAdjError)
-							subvolArray[curID].diffRateNeigh[curMolType][curNeighID] *=
-								(boundOverlap[1] - boundOverlap[0])/h_i;
-						if(fabs(boundOverlap[2] - boundOverlap[3]) > boundAdjError)
-							subvolArray[curID].diffRateNeigh[curMolType][curNeighID] *=
-								(boundOverlap[3] - boundOverlap[2])/h_i;
-						if(fabs(boundOverlap[4] - boundOverlap[5]) > boundAdjError)
-							subvolArray[curID].diffRateNeigh[curMolType][curNeighID] *=
-								(boundOverlap[5] - boundOverlap[4])/h_i;
-						
-						if(regionArray[neighRegion].spec.bMicro &&
-							DIFF_COEF[curRegion][curMolType] > 0.)
-						{ // Include multiplier on propensity
-							subvolArray[curID].diffRateNeigh[curMolType][curNeighID]
-								*= 2*h_i/sqrt(DIFF_COEF[curRegion][curMolType]
-								*PI*regionArray[neighRegion].spec.dt);
-						}
-					}
-				}
-			}
-		}
-		
 		// Initialize region knowledge of the subvolumes that are adjacent to it
 		initializeRegionSubNeighbor(regionArray, subvol_spec,
 			NUM_REGIONS, NUM_MOL_TYPES, SUBVOL_BASE_SIZE,

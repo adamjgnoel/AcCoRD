@@ -16,6 +16,7 @@
  * Revision LATEST_VERSION
  * - added BURST modulation, which does not modulate binary data but always releases
  * molecules (of all types specified)
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - modified random number generation. Now use PCG via a separate interface file.
@@ -93,6 +94,7 @@ void initializeActorCommon(const short NUM_ACTORS,
 	short * NUM_ACTORS_PASSIVE,
 	short * numPassiveRecord,
 	short ** passiveRecordID,
+	const struct subvolume3D subvolArray[],
 	uint32_t **** subID,
 	uint32_t subCoorInd[][3],
 	const double SUBVOL_BASE_SIZE)
@@ -492,7 +494,7 @@ void initializeActorCommon(const short NUM_ACTORS,
 						curInterSub < regionArray[curRegion].numSub; curInterSub++)
 					{
 						actorCommonArray[curActor].subID[curInterRegion][curInterSub] =
-							regionArray[curRegion].firstID + curInterSub;
+							subvolArray[regionArray[curRegion].firstID + curInterSub].mesoID;
 					}
 				} else
 				{	
@@ -527,7 +529,7 @@ void initializeActorCommon(const short NUM_ACTORS,
 									RECTANGULAR_BOX, curSubBound, 0.))
 								{ // The subvolume does intersect the actor space
 									curSub = subID[curRegion][cur1][cur2][cur3];
-									actorCommonArray[curActor].subID[curInterRegion][curInterSub] = curSub;
+									actorCommonArray[curActor].subID[curInterRegion][curInterSub] = subvolArray[curSub].mesoID;
 									curInterSub++;
 								}
 								
@@ -616,6 +618,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
 	const short NUM_REGIONS,
+	const struct mesoSubvolume3D mesoSubArray[],
 	const short NUM_ACTORS_ACTIVE,
 	struct actorActiveStruct3D actorActiveArray[],
 	const short NUM_ACTORS_PASSIVE,
@@ -709,7 +712,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 				curInterSub < actorCommonArray[curActor].numSub[curInterRegion];
 				curInterSub++)
 			{					
-				curSub = actorCommonArray[curActor].subID[curInterRegion][curInterSub];
+				curSub = mesoSubArray[actorCommonArray[curActor].subID[curInterRegion][curInterSub]].subID;
 				
 				// Determine boundary of current subvolume
 				findSubvolCoor(curSubBound, regionArray[curRegion],
@@ -827,7 +830,7 @@ void initializeActorActivePassive(const short NUM_ACTORS,
 				curInterSub < actorCommonArray[curActor].numSub[curInterRegion];
 				curInterSub++)
 			{					
-				curSub = actorCommonArray[curActor].subID[curInterRegion][curInterSub];
+				curSub = mesoSubArray[actorCommonArray[curActor].subID[curInterRegion][curInterSub]].subID;
 				
 				// Determine boundary of current subvolume
 				findSubvolCoor(curSubBound, regionArray[curRegion],
@@ -1473,7 +1476,7 @@ void placeMoleculesInSub(struct region regionArray[],
 	const uint32_t numMesoSub,
 	uint64_t numNewMol,
 	const unsigned short curMolType,
-	const uint32_t curSub,
+	const uint32_t curMeso,
 	const unsigned short NUM_MOL_TYPES,
 	double tCur,
 	const short NUM_REGIONS,
@@ -1481,11 +1484,11 @@ void placeMoleculesInSub(struct region regionArray[],
 	uint32_t (*heap_childID)[2],
 	bool (*b_heap_childValid)[2])
 {
-	uint32_t curMeso;
+	uint32_t curSub; // Sub ID in global subvolume list
 	
 	// Define which molecules are added where
-	subvolArray[curSub].num_mol[curMolType] += numNewMol;
-	curMeso = subvolArray[curSub].mesoID;
+	mesoSubArray[curMeso].num_mol[curMolType] += numNewMol;
+	curSub = mesoSubArray[curMeso].subID;
 	
 	// Place molecule(s) and update heap for subvolumes
 	updateMesoSub(curSub, false, (uint64_t []){numNewMol},

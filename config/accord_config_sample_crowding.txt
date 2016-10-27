@@ -38,14 +38,10 @@
 				"Parent Label": "",
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
-				"Anchor X Coordinate": 0,
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [0, 0, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 10,
-				"Number of Subvolumes Along Y": 10,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [10, 10, 1]
 			},
 			{
 				"Notes": "Microscopic box.",
@@ -54,14 +50,10 @@
 				"Shape": "Rectangular Box",
 				"Type": "3D Surface",
 				"Surface Type": "Outer",
-				"Anchor X Coordinate": 2e-6,
-				"Anchor Y Coordinate": 2e-6,
-				"Anchor Z Coordinate": 0,
+				"Anchor Coordinate": [2e-6, 2e-6, 0],
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 6,
-				"Number of Subvolumes Along Y": 6,
-				"Number of Subvolumes Along Z": 1
+				"Number of Subvolumes Per Dimension": [6, 6, 1]
 			}
 		],
 		"Actor Specification": [

@@ -10,9 +10,16 @@
  * subvolume.h - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
+ *
+ * Revision v0.7.0.1 (public beta, 2016-08-30)
+ * - fixed bug where a molecule with diffusion rate 0 would have an invalid reaction
+ * propensity at hybrid interface
  *
  * Revision v0.6 (public beta, 2016-05-30)
  * - improved propensity calculation for molecules to leave mesoscopic subvolume and enter
@@ -66,8 +73,6 @@ struct subvolume3D {
 	// identifying transitions between regions (both mesoscopic and microscopic)
 	unsigned short regionID;
 	
-	//double location[3]; // Coordinates of center of subvolume [ONLY NEEDED FOR INTERFACE]
-	
 	// The number of subvolumes that are neighbors to current one.
 	// More important for mesoscopic subvolumes
 	// To be neighbors, two subvolumes must (at least partially) share a common
@@ -78,25 +83,8 @@ struct subvolume3D {
 	// Length is maximum value of num_neigh for all subvolumes in current region
 	uint32_t * neighID;
 	
-	// Total number of reactions (including diffusion) that molecules in this
-	// subvolume can participate in
-	//unsigned short num_rxn;
-	
 	// Is subvolume along boundary of region?
 	bool bBoundary;
-	//uint32_t boundaryID; // (If applicable) Index of subvolume in boundary list
-	
-	// Diffusion transition rate from a (mesoscopic) boundary subvolume to all
-	// of its neighbours
-	// (whether or not each neighbour is in a different region)
-	// Only allocated if bBoundary == true AND bMicro == false
-	// Size is NUM_MOL_TYPES x num_neigh.
-	// Each element gives the diffusion rate to the corresponding
-	// neighbour in the neighID array.
-	double ** diffRateNeigh;
-		
-	// Pointers to arrays
-	uint64_t * num_mol;
 	
 	// FUTURE MEMBERS
 };

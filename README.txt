@@ -16,10 +16,10 @@ Primary features include:
 * AcCoRD's interface has been designed to be helpful to the novice user while providing meaningful output. AcCoRD also includes post-processing tools developed in MATLAB. These tools enable saving aggregated simulation output files, plotting receiver observations (either the time-varying behavior or empirical distributions at specified times), and visualizing the physical environment (either as still images or compiled into a video)
 
 Quicklinks:
-* Download latest stable version from http://adamnoel.ca/accord/download (user-friendly page) or https://github.com/adamjgnoel/AcCoRD/releases (developer page)
-* Journal paper (draft): http://adamnoel.ca/accord/paper
-* Usage documentation: http://adamnoel.ca/accord/user
-* Sample configuration files: http://adamnoel.ca/accord/examples
+* Download latest stable version from http://adamnoel.ca/software/accord/download (user-friendly page) or https://github.com/adamjgnoel/AcCoRD/releases (developer page)
+* Journal paper (draft): http://adamnoel.ca/software/accord/publications
+* Usage documentation: http://adamnoel.ca/software/accord/user
+* Sample configuration files: http://adamnoel.ca/software/accord/examples
 * Old AcCoRD releases: https://github.com/adamjgnoel/AcCoRD/releases
 * Main AcCoRD development page on Github: https://github.com/adamjgnoel/accord
 * Maintenance of existing issues and planned features: https://github.com/adamjgnoel/AcCoRD/issues
@@ -44,8 +44,8 @@ AcCoRD development began in October 2014 with the motivation to develop a reacti
 AcCoRD is developed in C (C99) for precise control over memory management and access to very fast algorithms for random number generation, linked list operations, and related computational tasks. Some utilities have been written (and will continue to be written) in MATLAB to facilitate post-processing.
 
 A formal publication on the design of AcCoRD will be submitted in November 2016. For now, the general motivation and some of the implementation ideas were presented in the following conference papers:  
-- A. Noel, K.C. Cheung, and R. Schober, On the Statistics of Reaction-Diffusion Simulations for Molecular Communication, in Proc. ACM NANOCOM 2015, Sep. 2015. DOI: http://dx.doi.org/10.1145/2800795.2800821 - the simulations in this paper were completed with proof-of-concept MATLAB code  
-- A. Noel, K.C. Cheung, and R. Schober, Multi-Scale Stochastic Simulation for Diffusive Molecular Communication, in Proc. IEEE ICC 2015, pp. 2712--2718, Jun. 2015. DOI: http://dx.doi.org/10.1109/ICC.2015.7248471 - the simulations in this paper were completed with AcCoRD v0.1, which was an early 2D build
+- A. Noel, K.C. Cheung, and R. Schober, On the Statistics of Reaction-Diffusion Simulations for Molecular Communication, in Proc. ACM NANOCOM 2015, Sep. 2015. DOI: http://dx.doi.org/10.1145/2800795.2800821 - the simulations in this paper were completed with AcCoRD v0.1, which was an early 2D build 
+- A. Noel, K.C. Cheung, and R. Schober, Multi-Scale Stochastic Simulation for Diffusive Molecular Communication, in Proc. IEEE ICC 2015, pp. 2712--2718, Jun. 2015. DOI: http://dx.doi.org/10.1109/ICC.2015.7248471 - the simulations in this paper were completed with proof-of-concept MATLAB code 
 
 Please contact the developer or consider following AcCoRD on Github (https://github.com/adamjgnoel/accord) for the latest updates.
 

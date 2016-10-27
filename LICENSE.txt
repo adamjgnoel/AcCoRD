@@ -4,7 +4,7 @@ Unless otherwise noted in the individual source files, all AcCoRD source code is
 The exceptions (and their corresonding source files) are as follows:
 - pcg_basic.c and pcg_basic.h are licensed by Melissa O'Neill under the Apache License, Version 2.0
 - cJSON.c and cJSON.h are licensed by Dave Gamble under the MIT license
-- cerf.h, defs.h, erfcx.c, err_fcts.c, im_w_of_x.c, and w_of_z.c (hereafter referred to as complex error functions) are licensed by Massachusetts Institute of Technology and Forschungszentrum Jülich GmbH under the MIT license. Authors are Steven G. Johnson and Joachim Wuttke
+- cerf.h, defs.h, erfcx.c, err_fcts.c, im_w_of_x.c, and w_of_z.c (hereafter referred to as "complex error functions") are licensed by Massachusetts Institute of Technology and Forschungszentrum Jülich GmbH under the MIT license. Authors are Steven G. Johnson and Joachim Wuttke
 - JSONLab is licensed by Qianqian Fang under the BSD 2-Clause license (applies to files in the matlab\JSONlab directory)
 
 The use of third-party code does not imply endorsement of AcCoRD by the respective third-party authors

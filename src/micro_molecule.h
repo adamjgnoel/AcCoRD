@@ -10,11 +10,11 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - added specifying diffusion coefficient that applies to specific surface
  * interaction reactions.
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct

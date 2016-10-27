@@ -25,11 +25,11 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.0 (2016-10-31)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.0 (2016-10-31)
 % - modified import of region placement parameters to accommodate simpler
 % definitions allowed in config files
 % - modified import of modulation parameters to accommodate addition of

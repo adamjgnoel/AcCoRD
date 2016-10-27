@@ -9,11 +9,11 @@
  *
  * actor.h - operations on array of actors and its elements
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - added BURST modulation, which does not modulate binary data but always releases
  * molecules (of all types specified)
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
@@ -22,6 +22,8 @@
  * - modified random number generation. Now use PCG via a separate interface file.
  * - added active point sources. Can be placed in microscopic or mesoscopic regions.
  * Cannot be on boundary of 2 or more regions or mesoscopic subvolumes
+ * - added second order chemical reactions in the microscopic regime via a binding radius
+ * and unbinding radius (can also model molecular crowding)
  * - made output of active actor data sequence a user option
  * - added bBits array for user to define a constant active actor bit sequence
  *

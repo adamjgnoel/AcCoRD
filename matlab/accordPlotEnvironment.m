@@ -36,11 +36,11 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 % hAxes - handle to axes in plotted figure. Use for making changes to
 %   axes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.0 (2016-10-31)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.0 (2016-10-31)
 % - added parameter to control the number of visible faces in spherical objects
 % - added parameters to set object outline line width and line style
 %

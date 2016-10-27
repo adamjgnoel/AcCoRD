@@ -10,11 +10,11 @@
  * subvolume.h - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)

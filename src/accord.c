@@ -9,11 +9,11 @@
  *
  * accord.c - main file
  *
- * Last revised for LATEST_VERSION
+ * Last revised for v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - enabled local diffusion coefficients
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
  *
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v0.7.0.1 (public beta, 2016-08-30)\n");
+	printf("Version v1.0 (2016-10-31)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
 	

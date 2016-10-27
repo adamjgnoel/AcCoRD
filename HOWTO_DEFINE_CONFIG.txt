@@ -56,14 +56,14 @@
 // With that out of the way, welcome to this "tutorial" for preparing proper
 // AcCoRD configuration files.
 //
-// This document is current as of v0.6 (2016-05-30).
+// This document is current as of v1.0 (2016-10-31).
 //
 // Please note that valid configuration files cannot have these comments
 // preceded by "//". If you remove these comments and place a copy of
 // this file where AcCoRD can "see" it, then you can (try to) run it in AcCoRD.
 // It probably won't work because this file provides an exhaustive list of
 // configuration options and many of them contradict each other.
-// However, this should be not be a problem since the config folder includes
+// However, the repository config folder includes
 // a number of sample valid configuration files.
 // AcCoRD looks for config files first in the current directory, then
 // in a "config" subdirectory, then in a "../config/" directory.

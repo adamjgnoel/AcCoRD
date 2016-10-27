@@ -10,7 +10,7 @@ This document is the CHANGELOG for AcCoRD v1.0 (2016-10-31)
 - [NEW] added parmeter to control the number of visible faces in spherical objects that are drawn in MATLAB
 - [NEW] added parameters to set the line width and line style of objects drawn in MATLAB
 - [NEW] added option to display a passive actor molecule counter when generating a video of simulation output. Display can have custom prefix text and applies to one type of molecule. Multiple displays can be used simultaneously. 
-- [ENHANCEMENT] changed convention for defining region anchor coordinates and the numver of subvolumes along each dimension of rectangular regions. Old convention is still supported
+- [ENHANCEMENT] changed convention for defining region anchor coordinates and the number of subvolumes along each dimension of rectangular regions. Old convention is still supported
 - [ENHANCEMENT] improved memory usage of microscopic regions by moving mesoscopic-specific subvolume parameters from the generic subvolume structure to the mesoscopic subvolume structure
 - [ENHANCEMENT] adjusted default diffusion coefficients used for calculating surface interaction reaction probabilities. Will use correct molecule's default diffusion coefficient, even if the coefficient was defined locally for the region in question. The reactant's coefficient is used for absorption and membrane reactions. The first product's coefficient is used for desorption reactions.
 - [ENHANCEMENT] added warnings for defining passive actor parameters for active actors (or vice versa)

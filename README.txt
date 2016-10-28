@@ -16,10 +16,7 @@ Primary features include:
 * AcCoRD's interface has been designed to be helpful to the novice user while providing meaningful output. AcCoRD also includes post-processing tools developed in MATLAB. These tools enable saving aggregated simulation output files, plotting receiver observations (either the time-varying behavior or empirical distributions at specified times), and visualizing the physical environment (either as still images or compiled into a video)
 
 Quicklinks:
-* Download latest stable version from http://adamnoel.ca/software/accord/download (user-friendly page) or https://github.com/adamjgnoel/AcCoRD/releases (developer page)
-* Journal paper (draft): http://adamnoel.ca/software/accord/publications
-* Usage documentation: http://adamnoel.ca/software/accord/user
-* Sample configuration files: http://adamnoel.ca/software/accord/examples
+* User-friendly external webpage: http://adamnoel.ca/software/accord
 * Old AcCoRD releases: https://github.com/adamjgnoel/AcCoRD/releases
 * Main AcCoRD development page on Github: https://github.com/adamjgnoel/accord
 * Maintenance of existing issues and planned features: https://github.com/adamjgnoel/AcCoRD/issues

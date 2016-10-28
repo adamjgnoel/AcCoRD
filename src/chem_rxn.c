@@ -9,11 +9,11 @@
  *
  * chem_rxn.c - structure for storing chemical reaction properties
  *
- * Last revised for LATEST_VERSION
+ * Last revised for v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - enabled local diffusion coefficients. Chemical reactions involving surface
  * interactions can specify the diffusion coefficient to use in transition
  * probabilities as a reaction parameter (default is the molecule's default

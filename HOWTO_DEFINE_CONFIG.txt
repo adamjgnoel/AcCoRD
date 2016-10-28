@@ -9,9 +9,19 @@
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
 //
-// Last revised for AcCoRD v0.6 (2016-05-30)
+// Last revised for AcCoRD v1.0 (2016-10-31)
 //
 // Revision history:
+//
+// Revision v1.0 (2016-10-31)
+// - added "Burst" modulation, which does not modulate binary data but always
+// releases molecules. Can release multiple types of molecules
+// - added local diffusion coefficients defined for individual regions
+// - added local diffusion coefficient to apply specifically to calculate a
+// surface interaction reaction probability
+// - changed convention for defining region anchor coordinates and the number of
+// subvolumes along each dimension of rectangular regions. Old convention is still
+// supported
 //
 // Revision v0.6 (2016-05-30)
 // - added new properties for bimolecular reactions in microscopic regime
@@ -46,14 +56,14 @@
 // With that out of the way, welcome to this "tutorial" for preparing proper
 // AcCoRD configuration files.
 //
-// This document is current as of v0.6 (2016-05-30).
+// This document is current as of v1.0 (2016-10-31).
 //
 // Please note that valid configuration files cannot have these comments
 // preceded by "//". If you remove these comments and place a copy of
 // this file where AcCoRD can "see" it, then you can (try to) run it in AcCoRD.
 // It probably won't work because this file provides an exhaustive list of
 // configuration options and many of them contradict each other.
-// However, this should be not be a problem since the config folder includes
+// However, the repository config folder includes
 // a number of sample valid configuration files.
 // AcCoRD looks for config files first in the current directory, then
 // in a "config" subdirectory, then in a "../config/" directory.
@@ -222,6 +232,13 @@
 				// different molecule type (with 0 diffusion coefficient) as the
 				// product of the absorbing reaction
 				
+				"Surface Reaction Diffusion Coefficient": 1e-9,
+				// Optional property to over-ride the default diffusion coefficient
+				// for a surface reaction. By default, the coefficient used is the
+				// default (i.e., global) diffusion coefficient
+				// of the reactant for an absorbing reaction or membrane transition,
+				// and that of the first product for a desorption reaction.
+				
 				"Surface Transition Probability": "Normal",
 				// Selection for algorithm for how a surface transition probability
 				// is calculated. Neeed for "Absorbing", "Desorbing", "Membrane
@@ -344,6 +361,10 @@
 				// defined within the boundary of its parent (i.e., no protrusions
 				// are permitted).
 				
+				"Local Diffusion Coefficients": [1e-9],
+				// Over-ride the global diffusion coefficients in this region.
+				// An array of length "Number of Molecule Types". Units are metre^2/second
+				
 				"Shape": "Rectangular Box",
 				// Shape of the region. CURRENTLY "Rectangular Box", "Sphere", and
 				// "Rectangle" ARE SUPPORTED
@@ -366,12 +387,11 @@
 				// to define whether individual molecules can pass through them. A membrane
 				// surface must be fully covered by normal neoghboring regions on both sides.
 				
-				"Anchor X Coordinate": 0,									
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
-				// The anchor coordinates define
-				// the relative position of the region in GLOBAL space (and NOT relative to its
-				// parent if it has one).
+				"Anchor Coordinate": [0, 0, 0],
+				// OPTION 1 for defining a region's anchor coordinate.
+				// The anchor coordinate defines the relative position of the region
+				// in GLOBAL space (and NOT relative to its parent if it has one).
+				// Must be a vector of length 3.
 				// Rectangular regions are defined as rectangular boxes whose faces are parallel to the
 				// global coordinate axes.
 				// The anchor of a rectangular box region is the "minimum coordinate" of the
@@ -379,9 +399,18 @@
 				// "Subvolume Base Size" when setting the anchor points of rectangular box regions.
 				// The anchor of a sphere region is its center.
 				// All units are meters.
+				
+				"Anchor X Coordinate": 0,									
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				// OPTION 2 for defining a region's anchor coordinate. Same meaning as
+				// "Anchor Coordinate" above, but defined using 3 different parameters
+				// (one for each dimension)
+				// This method was the original convention and could be deprecated in
+				// a future release.
 								
 				//
-				//!!!!  The remaining parameters apply to Rectangular Box regions ONLY !!!!
+				//!!!!  The following parameters apply to Rectangular Box regions ONLY !!!!
 				// AcCoRD will produce warnings if any of these parameters are defined for a
 				// spherical region
 				//
@@ -399,13 +428,20 @@
 				// regions must share the entire subvolume face with the adjacent microscopic
 				// region. This is due to how adjacency is detected and how molecules are placed
 				// when leaving the mesoscopic regime.
+				
+				"Number of Subvolumes Per Dimension": [10, 5, 5]"
+				// OPTION 1 for defining a rectangular region's dimensions
+				// Size of the region along each axis as measured by the subvolumes in
+				// that region. Sphere regions does not need this defined because they
+				// always have one subvolume.
+				// Must be a vector of length 3.
 													
 				"Number of Subvolumes Along X": 10,
 				"Number of Subvolumes Along Y": 5,
 				"Number of Subvolumes Along Z": 5
-				// Size of the region along each axis as measured by the subvolumes in
-				// that region. Sphere regions do not need these defined because they
-				// always have one subvolume.
+				// OPTION 2 for defining a rectangular region's dimensions.
+				// Same meaning as "Number of Subvolumes Per Dimension" above,
+				// but defined using 3 different parameters (one for each dimension)
 			},
 			{							
 			// Object describing the second region. Only one region must be described
@@ -416,16 +452,12 @@
 				"Shape": "Rectangular Box",
 				"Type": "Normal",
 				
-				"Anchor X Coordinate": 20e-6,
+				"Anchor Coordinate": [20e-6, 0, 0],
 				// Note that here the second region is placed so that it is to the "right" of region 1.
 				
-				"Anchor Y Coordinate": 0,
-				"Anchor Z Coordinate": 0,
 				"Integer Subvolume Size": 1,
 				"Is Region Microscopic?": true,
-				"Number of Subvolumes Along X": 10,
-				"Number of Subvolumes Along Y": 10,
-				"Number of Subvolumes Along Z": 10,
+				"Number of Subvolumes Per Dimension": [10, 10, 10]"
 			},
 			{							
 			// Object describing the third region. Only one region is necessary
@@ -437,9 +469,7 @@
 				"Shape": "Sphere",
 				"Type": "Normal",
 				
-				"Anchor X Coordinate": 25e-6,				
-				"Anchor Y Coordinate": 5e-6,
-				"Anchor Z Coordinate": 5e-6,
+				"Anchor Coordinate": [25e-6, 5e-6, 5e-6],
 				
 				"Radius": 4e-6
 				// Radius of the sphere. This region is inside of a rectuangular box region
@@ -551,38 +581,49 @@
 															
 				"Bits Random?": true,
 				// If true, then the underlying actor bit stream can have 1s or 0s.
-				// If false, then "Bit Sequence" must be defined.				
+				// If false, then "Bit Sequence" must be defined.
+				// Should not be defined if "Modulation Scheme" is "Burst".
 				
 				"Bit Sequence": [0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1],
 				// Constant bit sequence used if "Bits Random?" is false
 															
 				"Probability of Bit 1": 1,
 				// If "Bits Random?" is true, then this is the probability that a given bit will be 1.
+				// Should not be defined if "Modulation Scheme" is "Burst".
 				
 				"Modulation Scheme": "CSK",
-				// The actor's modulation scheme. CURRENTLY MUST BE "CSK", for concentration shift keying.
+				// The actor's modulation scheme. Current options are:
+				// "CSK" - concentration shift keying
+				// "Burst" - like CSK for 1 bit that always has value 1, but can
+				//		also release multiple types of molecules.
 				
 				"Modulation Bits": 1,
 				// Integer number of bits in one symbol
+				// Should not be defined if "Modulation Scheme" is "Burst".
 				
 				"Modulation Strength": 10,
 				// Used to scale number of molecules released. Not necessarily the number of molecules per
-				// bit. If modulation is "CSK" and "Release Interval" is greater than zero, the modulation
-				// strength defines the release rate (constant number of molecules per slot interval if "Random
-				// Molecule Release Times?" is false, and a chemical generation rate if "Random Molecule
-				// Release Times?" is true). For example, if modulation is "CSK", "Modulation Bits" is 2, and
-				// "Random Molecule Release Times?" is false, then the actor will release
-				// val*"Modulation Strength" molecules in each slot where, val is the current symbol (a random
-				// integer between 0 and 3).
-				// If "Random Molecule Release Times?" is
-				// true and modulation is "CSK", then this defines the number of molecules released per second
-				// if there is one modulation bit and the current bit is 1.
-				// If modulation is "CSK", then only the first true value in "Is Molecule Type Released?" will
-				// be transmitter (the remaining values are ignored)
+				// bit.
+				// If modulation is "CSK" and "Release Interval" is greater than zero, the modulation
+				// 		strength defines the release rate (constant number of molecules per slot
+				//		interval if "Random Molecule Release Times?" is false, and a chemical generation
+				//		rate if "Random Molecule Release Times?" is true). For example, if modulation is 
+				//		"CSK", "Modulation Bits" is 2, and "Random Molecule Release Times?" is false, then
+				//		the actor will release val*"Modulation Strength" molecules in each slot, where
+				//		val is the current symbol (a random integer between 0 and 3). If "Random Molecule
+				// 		Release Times?" is true and modulation is "CSK", then this defines the number of
+				//		molecules released per second if there is one modulation bit and the current bit is 1.
+				// If modulation is "CSK", then only the first true value in "Is Molecule Type Released?"
+				// 		will be transmitted (the remaining values are ignored)
+				// If "Modulation Scheme" is "Burst", then "Modulation Strength" is applied the same as for
+				// 		"CSK" where "Modulation Bits" is 1, and every type of molecule designated by
+				// 		"Is Molecule Type Released?" array is released.
 															
 				"Is Molecule Type Released?": [true],
 				// An array of length "Number of Molecule Types". Used to indicate which types of
 				// molecules are released by this actor.
+				// If "Modulation Scheme" is "CSK", then only the FIRST true will be recognized
+				// If "Modulation Scheme" is "Burst", then multiple types of molecules can be released
 		},
 			{
 			// Object describing the second actor

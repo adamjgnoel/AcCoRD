@@ -24,11 +24,11 @@ function [hFig, hAxes] = accordVideoMakerWrapper()
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.0 (2016-10-31)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.0 (2016-10-31)
 % - expanded the bMakeVideo bool to also be an int to specify how many
 % times to repeat each frame. Use to reduce the apparent frame rate
 %

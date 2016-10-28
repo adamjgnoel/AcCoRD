@@ -10,11 +10,11 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - added BURST modulation
  *
  * Revision v0.6 (public beta, 2016-05-30)

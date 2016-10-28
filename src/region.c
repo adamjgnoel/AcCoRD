@@ -10,11 +10,11 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.0 (2016-10-31)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.0 (2016-10-31)
  * - added local diffusion coefficients that can apply to particular region
  * - added specifying diffusion coefficient that applies to specific surface
  * interaction reactions.

@@ -8,9 +8,13 @@
 // For user documentation, read README.txt in the root AcCoRD directory
 //
 // HOWTO_READ_SUMMARY_OUTPUT.txt - explains how to read the summary output file
-// Last revised for AcCoRD v0.4.1
+//
+// Last revised for AcCoRD v1.0 (2016-10-31)
 //
 // Revision history:
+//
+// Revision v1.0 (2016-10-31)
+// - added documentation of runtime field, which was added in v0.7.0.1
 //
 // Revision v0.4.1
 // - changed output filename convention and possible location
@@ -25,7 +29,7 @@
 // With that out of the way, welcome to this "tutorial" for examining proper
 // AcCoRD output summary files.
 //
-// This document is current as of v0.4.1 (2016-02-18).
+// This document is current as of v1.0 (2016-10-31).
 //
 // Please note that output summary files will not have these comments
 // preceded by "//". 
@@ -125,4 +129,8 @@
 		
 	"EndTime":	"2015-08-04 10:24:28"	// (Approximate) local time when the simulation
 										// was completed
+										
+	"RunTime":	18.790000				// (Approximate) run time (in seconds) to execute
+										// the primary simulation loop. Ignores time
+										// spent on initialization and cleanup tasks
 }

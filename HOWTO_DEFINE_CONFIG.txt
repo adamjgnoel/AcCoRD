@@ -535,7 +535,7 @@
 				// Units are seconds.
 															
 				"Is There Max Number of Actions?": false,
-				// A maximum number of actions can be called to "turn of" an actor before the
+				// A maximum number of actions can be called to "turn off" an actor before the
 				// final time is reached.
 				
 				"Max Number of Actions": 100,

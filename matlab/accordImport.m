@@ -27,9 +27,15 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD v1.0 (2016-10-31)
+% Last revised for AcCoRD LATEST_RELEASE
 %
 % Revision history:
+%
+% Revision LATEST_RELEASE
+% - changed import algorithm to read entire output file in one call and
+% store contents in a cell array, and then scan the elements of the cell
+% array. Now about an order of magnitude faster at reading the simulation
+% output.
 %
 % Revision v1.0 (2016-10-31)
 % - corrected opening comments about where the output file(s) need to be
@@ -165,59 +171,64 @@ curReal = 1;
 for s = 1:data.numSeed
     seed = seedRange(s);
     fid = fopen([fileName '_SEED' num2str(seed) '.txt']);
+    fileText = textscan(fid, '%s', 'Delimiter', '\n');
+    fclose(fid);
+    curRow = 1;
     for r = 1:data.numRepeatSingle
         % Read in realization line
-        textscan(fid, '%*[^\n]', 1);
+        curRow = curRow + 1;
         for i = 1:data.numActive
-            % Read in active actor label line
-            textscan(fid, '%*[^\n]', 1);
+            % Skip active actor label line
+            curRow = curRow + 1;
             % Read in actor bits
-            content = textscan(fid, activeBitStr{i}, 1, 'CollectOutput',1);
-            data.activeBits{i}(curReal,:) = content{:};
+            content = textscan(fileText{1}{curRow}, activeBitStr{i}, 1, 'CollectOutput',1);
+            data.activeBits{i}(curReal,:) = content{:}';
+            curRow = curRow + 1;
         end
 
         for i = 1:data.numPassiveRecord
             % Scan in passive actor label line
-            textscan(fid, '%*[^\n]', 1);
+            curRow = curRow + 1;
             if data.passiveRecordBTime(i)
                 % Time is being recorded. Read in time label
-                textscan(fid, '%*[^\n]', 1);
+                curRow = curRow + 1;
                 % Read in timestamps
-                content = textscan(fid, passiveDoubleStr{i}, 1, 'CollectOutput',1);
+                content = textscan(fileText{1}{curRow}, passiveDoubleStr{i}, 1, 'CollectOutput',1);
                 data.passiveRecordTime{i}(curReal,:) = content{:};
+                curRow = curRow + 1;
             end
             for j = 1:data.passiveRecordNumMolType(i)
-                % Read in molecule type line AND count label line
-                textscan(fid, '%*[^\n]', 2);
+                % Skip molecule type line AND count label line
+                curRow = curRow + 2;
                 % Read in molecule counts
-                content = textscan(fid, passiveCountStr{i}, 1, 'CollectOutput',1);
+                content = textscan(fileText{1}{curRow}, passiveCountStr{i}, 1, 'CollectOutput',1);
                 data.passiveRecordCount{i}(curReal,j,:) = content{:};
+                curRow = curRow + 1;
                 if data.passiveRecordBPos{i}(j)
-                    % Positions are being recorded. Read in Position label
-                    textscan(fid, '%*[^\n]', 1);
+                    % Positions are being recorded. Skip Position label
+                    curRow = curRow + 1;
                     for k = 1:length(data.passiveRecordCount{i}(curReal,j,:))
+                        curPos = 2;
                         data.passiveRecordPos{i}{j}{curReal,k} = zeros(data.passiveRecordCount{i}(curReal,j,k),3);
-                        % Read in opening round bracket associated with
-                        % current count
-                        textscan(fid, '%*[(]', 1);
                         for l = 1:data.passiveRecordCount{i}(curReal,j,k)
-                            % Scan to start of coordinate
-                            textscan(fid, '%*[(]', 1);
+                            % Go to start of coordinate
+                            curPos = curPos + 2;
                             % Read in coordinates of current molecule
-                            content = textscan(fid, '%f', 3, 'CollectOutput',1,'Delimiter',',');
-                            data.passiveRecordPos{i}{j}{curReal,k}(l,:) = content{:};
-                            % Scan to start of coordinate
-                            textscan(fid, '%*[)]', 1);
+                            [content,pos] = textscan(fileText{1}{curRow}(curPos:end), '%f', 3, 'CollectOutput',1,'Delimiter',',');
+                            curPos = curPos + pos;
+                            data.passiveRecordPos{i}{j}{curReal,k}(l,:) = content{:}';
+                            % Move to end of coordinate
+                            curPos = curPos + 1;
                         end
-                        % Scan in next newline
-                        textscan(fid, '%*[^\n]', 1);
+                        % Move to next line
+                        curRow = curRow + 1;
                     end
                 end
             end
         end
         curReal = curReal + 1;
+        curRow = curRow + 1;
     end
-    fclose(fid);
 end
 
 %% Write output to a .mat file

@@ -553,7 +553,7 @@ void loadConfig(const char * CONFIG_NAME,
 								free(tempString);
 								break;
 							default:
-								if(cJSON_bItemValid(curObj,"Surface Reaction Probability", cJSON_String))
+								if(cJSON_bItemValid(curObj,"Surface Transition Probability", cJSON_String))
 								{ // Reaction does not have a defined Surface Transition Probability
 									bWarn = true;
 									printf("WARNING %d: Chemical reaction %d does not need a \"Surface Transition Probability\". Ignoring.\n", numWarn++, curArrayItem);
@@ -864,8 +864,7 @@ void loadConfig(const char * CONFIG_NAME,
 	{
 		bWarn = true;
 		printf("WARNING %d: \"Subvolume Base Size\" not defined or is invalid. Setting to default value of \"1\".\n", numWarn++);
-		curSpec->SUBVOL_BASE_SIZE =
-			cJSON_GetObjectItem(environment,"Subvolume Base Size")->valuedouble;
+		curSpec->SUBVOL_BASE_SIZE = 1.;
 	} else
 	{
 		curSpec->SUBVOL_BASE_SIZE =

@@ -188,7 +188,7 @@ disp('Call accordAddCameraAnchor(FRAME_INDICES) to anchor the camera display set
 disp('	for the video frames defined by FRAME_INDICES.');
 disp('	For frames that are not defined, the camera display is interpolated between');
 disp('	anchor frames.');
-disp('	If accordDynamicCamera is called without arguments, then existing camera');
+disp('	If accordAddCameraAnchor is called without arguments, then existing camera');
 disp('	anchor settings are reset and all frames are anchored to the current.');
 disp('	camera.');
 disp('	Current settings can be checked by reading variables');
@@ -200,13 +200,13 @@ numCameraAnchor = length(cameraAnchorArray);
 bDynamicCamera = numCameraAnchor > 0;
 if bDynamicCamera
     disp('NOTE: Camera anchor points already defined by wrapper file.');
-    disp('	Calls to accordDynamicCamera will append to current settings.');
+    disp('	Calls to accordAddCameraAnchor will append to current settings.');
     disp('	Camera is set to first camera anchor.');
     set(hAxes(1), {'CameraPosition','CameraTarget',...
         'CameraViewAngle','CameraUpVector'}, cameraAnchorArray{1});
 else
     disp('NOTE: No camera anchor points already defined by wrapper file.');
-    disp('	If accordDynamicCamera is not called, then camera settings');
+    disp('	If accordAddCameraAnchor is not called, then camera settings');
     disp('	will not be changed when video generation starts.');
     frameCameraAnchor = zeros(1,numFrames);
 end

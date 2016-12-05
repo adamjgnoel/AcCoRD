@@ -208,7 +208,7 @@ for s = 1:data.numSeed
                     % Positions are being recorded. Skip Position label
                     curRow = curRow + 1;
                     for k = 1:length(data.passiveRecordCount{i}(curReal,j,:))
-                        curPos = 2;
+                        curPos = 1;
                         data.passiveRecordPos{i}{j}{curReal,k} = zeros(data.passiveRecordCount{i}(curReal,j,k),3);
                         for l = 1:data.passiveRecordCount{i}(curReal,j,k)
                             % Go to start of coordinate

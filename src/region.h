@@ -10,9 +10,12 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added members defining flow parameters for every molecule
  *
  * Revision v1.0 (2016-10-31)
  * - added local diffusion coefficients that can apply to particular region
@@ -110,6 +113,23 @@ struct spec_region3D { // Used to define a region of subvolumes
 	
 	// Local diffusion coefficients (if applicable)
 	double * diffusion;
+	
+	// Can each type of molecule flow?
+	// Length is NUM_MOL_TYPES
+	bool * bFlow;
+	
+	// Is the definition for this molecule's flow different from the global setting?
+	// Length is NUM_MOL_TYPES
+	bool * bFlowLocal;
+	
+	// What type of flow does each type of molecule experience?
+	// Types are defined in global_param.h
+	// Length is NUM_MOL_TYPES
+	unsigned short * flowType;
+	
+	// Flow vector/parameters for each type of molecule
+	// Size is NUM_MOL_TYPES x VECTOR_LENGTH (size of VECTOR_LENGTH depends on the type of flow)
+	double ** flowVector;
 	
 	// Region shape. There are specific restrictions on shape, depending on
 	// whether it is micro, whether its parent is micro, and whether it is

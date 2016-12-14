@@ -9,9 +9,14 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added global flow parameters (based on either no flow or uniform flow).
+ * Global settings apply to all molecule types but can be modified for any
+ * individual molecule type in any region.
  *
  * Revision v1.0 (2016-10-31)
  * - added warnings for defining passive actor parameters for active actors or
@@ -143,6 +148,8 @@ struct simSpec3D {
 	unsigned short NUM_MOL_TYPES;
 	unsigned short MAX_RXNS;
 	double * DIFF_COEF;
+	unsigned short GLOBAL_FLOW_TYPE;
+	double * GLOBAL_FLOW_VECTOR;
 	struct chem_rxn_struct * chem_rxn;
 };
 

@@ -9,9 +9,14 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added global flow parameters (based on either no flow or uniform flow).
+ * Global settings apply to all molecule types but can be modified for any
+ * individual molecule type in any region.
  *
  * Revision v1.0 (2016-10-31)
  * - added warnings for defining passive actor parameters for active actors or
@@ -105,14 +110,15 @@ void loadConfig(const char * CONFIG_NAME,
 	long fileLength;
 	cJSON * configJSON;
 	cJSON *simControl, *environment, *regionSpec,
-		*curObj, *curObjInner,
+		*curObj, *curObjInner, *curArray,
 		*actorSpec, *actorShape, *actorModScheme,
-		*diffCoef,
+		*diffCoef, *flowVec, *flowLocal,
 		*chemSpec, *rxnSpec;
 	int arrayLen;
 	char * tempString;
 	int curArrayItem;
 	unsigned short curMolType, i;
+	unsigned short numFlowExcept, curFlowExcept;
 	char * configContent;
 	char * configNameFull;
 	unsigned int dirLength, nameLength;
@@ -349,6 +355,76 @@ void loadConfig(const char * CONFIG_NAME,
 					cJSON_GetArrayItem(diffCoef, curMolType)->valuedouble;
 			}
 		}
+	}
+	
+	// Load global flow vector
+	curSpec->GLOBAL_FLOW_VECTOR = NULL;
+	if(!cJSON_bItemValid(chemSpec,"Global Flow Type", cJSON_String))
+	{ // Config file does not list a valid Global Flow Type
+		bWarn = true;
+		printf("WARNING %d: \"Global Flow Type\" not defined or has invalid value. Assigning default value \"None\".\n", numWarn++);
+		curSpec->GLOBAL_FLOW_TYPE = FLOW_NONE;
+	} else{
+		tempString = stringWrite(cJSON_GetObjectItem(chemSpec,"Global Flow Type")->valuestring);
+		if(strcmp(tempString,"None") == 0)
+		{ // No molecule flow
+			curSpec->GLOBAL_FLOW_TYPE = FLOW_NONE;
+			arrayLen = 0;
+		} else if(strcmp(tempString,"Uniform") == 0)
+		{ // Steady uniform flow
+			curSpec->GLOBAL_FLOW_TYPE = FLOW_UNIFORM;
+			arrayLen = 3;
+		} else
+		{
+			bWarn = true;
+			printf("WARNING %d: \"Global Flow Type\" has invalid value. Assigning default value \"None\".\n", numWarn++);
+			curSpec->GLOBAL_FLOW_TYPE = FLOW_NONE;
+			arrayLen = 0;
+		}
+		free(tempString);
+		
+		// Load flow parameters
+		if(arrayLen > 0)
+		{
+			curSpec->GLOBAL_FLOW_VECTOR = malloc(arrayLen * sizeof(double));
+			if(curSpec->GLOBAL_FLOW_VECTOR == NULL)
+			{
+				fprintf(stderr,"ERROR: Memory could not be allocated to store global flow vector.\n");
+				exit(EXIT_FAILURE);
+			}
+			
+			if(!cJSON_bItemValid(chemSpec,"Global Flow Vector", cJSON_Array) ||
+				cJSON_GetArraySize(cJSON_GetObjectItem(chemSpec,"Global Flow Vector"))
+				!= arrayLen)
+			{
+				bWarn = true;
+				printf("WARNING %d: \"Global Flow Vector\" was not defined or has the wrong length. Assigning default value of \"0\" to each element.\n", numWarn++);
+				for(i = 0; i < arrayLen; i++)
+				{
+					curSpec->GLOBAL_FLOW_VECTOR[i] = 0.;						
+				}
+			} else
+			{
+				flowVec = cJSON_GetObjectItem(chemSpec, "Global Flow Vector");
+				for(i = 0; i < arrayLen; i++)
+				{
+					if(!cJSON_bArrayItemValid(flowVec,i, cJSON_Number))
+					{
+						bWarn = true;
+						printf("WARNING %d: \"Global Flow Vector\" item %d not defined or has an invalid value. Assigning default value of \"0\".\n", numWarn++, i);
+						curSpec->GLOBAL_FLOW_VECTOR[i] = 0.;
+					} else
+					{
+						curSpec->GLOBAL_FLOW_VECTOR[i] =
+							cJSON_GetArrayItem(flowVec, i)->valuedouble;
+					}
+				}
+			}
+		} else if(cJSON_bItemValid(chemSpec,"Global Flow Vector", cJSON_Array))
+		{
+			bWarn = true;
+			printf("WARNING %d: \"Global Flow Vector\" was defined but is not needed. Ignoring.\n", numWarn++);
+		}		
 	}
 	
 	if(!cJSON_bItemValid(chemSpec,"Chemical Reaction Specification", cJSON_Array))
@@ -938,6 +1014,159 @@ void loadConfig(const char * CONFIG_NAME,
 					{
 						curSpec->subvol_spec[curArrayItem].diffusion[curMolType] =
 							cJSON_GetArrayItem(diffCoef, curMolType)->valuedouble;
+					}
+				}
+			}
+		}
+		
+		// Local flow parameters
+		curSpec->subvol_spec[curArrayItem].bFlow =
+			malloc(curSpec->NUM_MOL_TYPES * sizeof(bool));
+		curSpec->subvol_spec[curArrayItem].bFlowLocal =
+			malloc(curSpec->NUM_MOL_TYPES * sizeof(bool));
+		curSpec->subvol_spec[curArrayItem].flowType =
+			malloc(curSpec->NUM_MOL_TYPES * sizeof(unsigned short));
+		curSpec->subvol_spec[curArrayItem].flowVector =
+			malloc(curSpec->NUM_MOL_TYPES * sizeof(double *));
+		if(curSpec->subvol_spec[curArrayItem].bFlow == NULL ||
+			curSpec->subvol_spec[curArrayItem].bFlowLocal == NULL ||
+			curSpec->subvol_spec[curArrayItem].flowType == NULL ||
+			curSpec->subvol_spec[curArrayItem].flowVector == NULL)
+		{
+			fprintf(stderr,"ERROR: Memory could not be allocated to store region flow parameters.\n");
+			exit(EXIT_FAILURE);
+		}
+		for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+		{ // Assign default flow parameters
+			curSpec->subvol_spec[curArrayItem].bFlowLocal[curMolType] = false;
+			curSpec->subvol_spec[curArrayItem].flowVector[curMolType] = NULL;
+			curSpec->subvol_spec[curArrayItem].flowType[curMolType] =
+				curSpec->GLOBAL_FLOW_TYPE;
+			switch(curSpec->GLOBAL_FLOW_TYPE)
+			{
+				case FLOW_NONE:
+					curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = false;
+				default:
+					curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = true;
+			}
+		}
+		// Check for region exceptions to global flow parameters
+		if(cJSON_bItemValid(curObj,"Local Flow", cJSON_Array))
+		{ // Region has custom local flow parameters
+			flowLocal = cJSON_GetObjectItem(curObj, "Local Flow");
+			numFlowExcept = cJSON_GetArraySize(flowLocal);
+			for(curFlowExcept = 0; curFlowExcept < numFlowExcept; curFlowExcept++)
+			{
+				// Read current flow exception
+				if(!cJSON_bArrayItemValid(flowLocal, curFlowExcept, cJSON_Object))
+				{
+					bWarn = true;
+					printf("WARNING %d: \"Local Flow\" item %d in region %d is not a JSON object. Ignoring.\n", numWarn++, curFlowExcept, curArrayItem);
+					continue;
+				}
+				
+				// Check for valid exception
+				curObjInner = cJSON_GetArrayItem(flowLocal, curFlowExcept);
+				if(!cJSON_bItemValid(curObjInner,"Is Molecule Type Affected?", cJSON_Array) ||
+					cJSON_GetArraySize(cJSON_GetObjectItem(curObjInner,"Is Molecule Type Affected?")) != curSpec->NUM_MOL_TYPES ||
+					!cJSON_bItemValid(curObjInner,"Flow Type", cJSON_String))
+				{
+					bWarn = true;
+					printf("WARNING %d: \"Local Flow\" item %d in region %d has missing parameters. Ignoring\n", numWarn++, curFlowExcept, curArrayItem);
+					continue;
+				}
+				
+				curArray = cJSON_GetObjectItem(curObjInner,"Is Molecule Type Affected?");
+				// Apply exception to valid molecule types where applicable
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+				{
+					if(!cJSON_bArrayItemValid(curArray,curMolType, cJSON_True))
+					{
+						bWarn = true;
+						printf("WARNING %d: Molecule type %d does not have a valid \"Is Molecule Type Affected?\" value for \"Local Flow Parameters\" item %d in region %d. Ignoring.\n", numWarn++, curMolType, curFlowExcept, curArrayItem);
+						continue;
+					}
+					if(cJSON_GetArrayItem(curArray, curMolType)->valueint)
+					{ // Exception is supposed to apply to this type of molecule
+						if(curSpec->subvol_spec[curArrayItem].bFlowLocal[curMolType])
+						{ // Exception was already defined for this type of molecule!
+							bWarn = true;
+							printf("WARNING %d: Molecule type %d already had local flow parameters defined for region %d, but they are being defined again by \"Local Flow Parameters\" item %d. Ignoring.\n", numWarn++, curMolType, curArrayItem, curFlowExcept);
+							continue;
+						}
+						curSpec->subvol_spec[curArrayItem].bFlowLocal[curMolType] = true;
+						// Load flow type for current molecule in this region
+						if(!cJSON_bItemValid(curObjInner,"Flow Type", cJSON_String))
+						{ // Config file does not list a valid Flow Type
+							bWarn = true;
+							printf("WARNING %d: \"Flow Type\" in local flow exception %d of region %d not defined or has invalid value. Assigning default value \"None\" to molecule type %d in this region.\n",
+								numWarn++, curFlowExcept, curArrayItem, curMolType);
+							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_NONE;
+							continue;
+						}
+						tempString =
+							stringWrite(cJSON_GetObjectItem(curObjInner,"Flow Type")->valuestring);
+						if(strcmp(tempString,"None") == 0)
+						{ // No molecule flow
+							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_NONE;
+							arrayLen = 0;
+						} else if(strcmp(tempString,"Uniform") == 0)
+						{ // Steady uniform flow
+							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_UNIFORM;
+							arrayLen = 3;
+						} else
+						{
+							bWarn = true;
+							printf("WARNING %d: \"Flow Type\" in local flow exception %d of region %d not defined or has invalid value. Assigning default value \"None\" to molecule type %d in this region.\n",
+								numWarn++, curFlowExcept, curArrayItem, curMolType);
+							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_NONE;
+							arrayLen = 0;
+						}
+						free(tempString);
+						
+						// Load flow vector for this type of molecule
+						if(arrayLen > 0)
+						{
+							curSpec->subvol_spec[curArrayItem].flowVector[curMolType] =
+								malloc(arrayLen * sizeof(double));
+							if(curSpec->subvol_spec[curArrayItem].flowVector[curMolType] == NULL)
+							{
+								fprintf(stderr,"ERROR: Memory could not be allocated to store local flow vector.\n");
+								exit(EXIT_FAILURE);
+							}
+							
+							if(!cJSON_bItemValid(curObjInner,"Flow Vector", cJSON_Array) ||
+								cJSON_GetArraySize(cJSON_GetObjectItem(curObjInner,"Flow Vector"))
+								!= arrayLen)
+							{
+								bWarn = true;
+								printf("WARNING %d: \"Flow Vector\" in local flow exception %d of region %d was not defined or has the wrong length. Assigning default value of \"0\" to each element.\n", numWarn++, curFlowExcept, curArrayItem);
+								for(i = 0; i < arrayLen; i++)
+								{
+									curSpec->subvol_spec[curArrayItem].flowVector[curMolType][i] = 0.;						
+								}
+								continue;
+							}
+											
+							flowVec = cJSON_GetObjectItem(curObjInner, "Flow Vector");
+							for(i = 0; i < arrayLen; i++)
+							{
+								if(!cJSON_bArrayItemValid(flowVec,i, cJSON_Number))
+								{
+									bWarn = true;
+									printf("WARNING %d: \"Flow Vector\" item %d in local flow exception %d of region %d not defined or has an invalid value. Assigning default value of \"0\".\n", numWarn++, i, curFlowExcept, curArrayItem);
+									curSpec->subvol_spec[curArrayItem].flowVector[curMolType][i] = 0.;
+								} else
+								{
+									curSpec->subvol_spec[curArrayItem].flowVector[curMolType][i] =
+										cJSON_GetArrayItem(flowVec, i)->valuedouble;
+								}
+							}
+						} else if(cJSON_bItemValid(curObjInner,"Flow Vector", cJSON_Array))
+						{
+							bWarn = true;
+							printf("WARNING %d: \"Flow Vector\" was defined in local flow exception %d of region %d but is not needed. Ignoring.\n", numWarn++, curFlowExcept, curArrayItem);
+						}
 					}
 				}
 			}
@@ -2112,19 +2341,20 @@ void loadConfig(const char * CONFIG_NAME,
 // Release memory allocated to configuration settings
 void deleteConfig(struct simSpec3D curSpec)
 {
-	unsigned short curRegion, curActor;
+	unsigned short curRegion, curActor, curMolType;
 	unsigned short curRxn;
 	
 	if(curSpec.DIFF_COEF != NULL)
 		free(curSpec.DIFF_COEF);
+	if(curSpec.GLOBAL_FLOW_VECTOR != NULL)
+		free(curSpec.GLOBAL_FLOW_VECTOR);
 	if(curSpec.OUTPUT_NAME != NULL)
 		free(curSpec.OUTPUT_NAME);
 	
 	if(curSpec.chem_rxn != NULL)
 	{
 		for(curRxn = 0; curRxn < curSpec.MAX_RXNS; curRxn++)
-		{
-			
+		{			
 			if(curSpec.chem_rxn[curRxn].label != NULL)
 				free(curSpec.chem_rxn[curRxn].label);
 			if(curSpec.chem_rxn[curRxn].bReversible
@@ -2162,6 +2392,20 @@ void deleteConfig(struct simSpec3D curSpec)
 			if(curSpec.subvol_spec[curRegion].bLocalDiffusion &&
 				curSpec.subvol_spec[curRegion].diffusion != NULL)
 				free(curSpec.subvol_spec[curRegion].diffusion);
+			for(curMolType = 0; curMolType < curSpec.NUM_MOL_TYPES; curMolType++)
+			{
+				if(curSpec.subvol_spec[curRegion].bFlowLocal[curMolType] &&
+					curSpec.subvol_spec[curRegion].flowVector[curMolType] != NULL)
+					free(curSpec.subvol_spec[curRegion].flowVector[curMolType]);
+			}
+			if(curSpec.subvol_spec[curRegion].bFlowLocal != NULL)
+				free(curSpec.subvol_spec[curRegion].bFlowLocal);
+			if(curSpec.subvol_spec[curRegion].bFlow != NULL)
+				free(curSpec.subvol_spec[curRegion].bFlow);
+			if(curSpec.subvol_spec[curRegion].flowType != NULL)
+				free(curSpec.subvol_spec[curRegion].flowType);
+			if(curSpec.subvol_spec[curRegion].flowVector != NULL)
+				free(curSpec.subvol_spec[curRegion].flowVector);
 		}
 		free(curSpec.subvol_spec);
 	}

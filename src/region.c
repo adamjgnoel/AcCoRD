@@ -10,9 +10,12 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added members defining flow parameters for every molecule
  *
  * Revision v1.0 (2016-10-31)
  * - added local diffusion coefficients that can apply to particular region

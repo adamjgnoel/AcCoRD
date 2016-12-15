@@ -264,95 +264,10 @@ void initializeRegionArray(struct region regionArray[],
 			regionArray[i].bDiffuse[curMolType] =
 				DIFF_COEF[i][curMolType] > 0.;
 		}
-		
-		// Copy flow parameters from specification
-		// (assignment of subvol_spec copies pointers but not allocated memory!)
-		regionArray[i].spec.bFlow = malloc(NUM_MOL_TYPES*sizeof(bool));
-		regionArray[i].spec.flowType = malloc(NUM_MOL_TYPES*sizeof(unsigned short));
-		regionArray[i].spec.flowVector = malloc(NUM_MOL_TYPES*sizeof(double *));
-		if(regionArray[i].spec.bFlow == NULL ||
-			regionArray[i].spec.flowType == NULL ||
-			regionArray[i].spec.flowVector == NULL)
-		{
-			fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") flow parameters.\n", i, subvol_spec[i].label);
-			exit(EXIT_FAILURE);
-		}
-		for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-		{
-			regionArray[i].spec.bFlow[curMolType] = subvol_spec[i].bFlow[curMolType];
-			regionArray[i].spec.flowType[curMolType] = subvol_spec[i].flowType[curMolType];
-			switch(regionArray[i].spec.flowType[curMolType])
-			{
-				case FLOW_NONE:
-					j = 0;
-					break;
-				case FLOW_UNIFORM:
-					j = 3;
-					break;
-			}
-			if(j > 0)
-			{
-				regionArray[i].spec.flowVector[curMolType] = malloc(j*sizeof(double));
-				if(regionArray[i].spec.flowVector[curMolType] == NULL)
-				{
-					fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") flow vector for molecule type %d.\n", i, subvol_spec[i].label, curMolType);
-					exit(EXIT_FAILURE);
-				}				
-				switch(regionArray[i].spec.flowType[curMolType])
-				{
-					case FLOW_UNIFORM:
-						for(m = 0; m < 3; m++)
-							regionArray[i].spec.flowVector[curMolType][m] =
-								subvol_spec[i].flowVector[curMolType][m];
-				}
-			} else
-				regionArray[i].spec.flowVector[curMolType] = NULL;
-		}
-		
-		
-		// Calculate constant flow parameters for microscopic regions
-		if(regionArray[i].spec.bMicro)
-		{
-			regionArray[i].flowConstant = malloc(NUM_MOL_TYPES*sizeof(double *));
-			if(regionArray[i].flowConstant == NULL)
-			{
-				fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") constant flow parameters.\n", i, subvol_spec[i].label);
-				exit(EXIT_FAILURE);
-			}
-			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
-			{
-				switch(regionArray[i].spec.flowType[curMolType])
-				{
-					case FLOW_NONE:
-						j = 0;
-						break;
-					case FLOW_UNIFORM:
-						j = 3;
-						break;
-				}
-				if(j > 0)
-				{
-					regionArray[i].flowConstant[curMolType] = malloc(j*sizeof(double));
-					if(regionArray[i].flowConstant[curMolType] == NULL)
-					{
-						fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") constant flow parameters for molecule type %d.\n", i, subvol_spec[i].label, curMolType);
-						exit(EXIT_FAILURE);
-					}
-					switch(regionArray[i].spec.flowType[curMolType])
-					{
-						case FLOW_UNIFORM:
-							for(m = 0; m < 3; m++)
-								regionArray[i].flowConstant[curMolType][m] =
-									regionArray[i].spec.flowVector[curMolType][m]*regionArray[i].spec.dt;
-					}
-				} else
-				{
-					regionArray[i].flowConstant[curMolType] = NULL;
-				}
-			}			
-		} else
-			regionArray[i].flowConstant = NULL;
 	}
+	
+	// Allocate and initialize flow parameters
+	initializeRegionFlow(NUM_REGIONS, NUM_MOL_TYPES, regionArray, subvol_spec);
 	
 	// Allocate memory for each region's neighbors
 	allocateRegionNeighbors(NUM_REGIONS, regionArray);
@@ -1941,6 +1856,106 @@ void findNumRegionSubvolumes(const short NUM_REGIONS,
 			}
 		}		
 		curID += regionArray[i].numSub;
+	}
+}
+
+// Allocate and initialize the flow parameters in each region
+void initializeRegionFlow(const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	struct region regionArray[],	
+	const struct spec_region3D subvol_spec[])
+{
+	short i, j, m;
+	unsigned short curMolType;
+	
+	for(i = 0; i < NUM_REGIONS; i++)
+	{
+		// Copy flow parameters from specification
+		// (assignment of subvol_spec copies pointers but not allocated memory!)
+		regionArray[i].spec.bFlow = malloc(NUM_MOL_TYPES*sizeof(bool));
+		regionArray[i].spec.flowType = malloc(NUM_MOL_TYPES*sizeof(unsigned short));
+		regionArray[i].spec.flowVector = malloc(NUM_MOL_TYPES*sizeof(double *));
+		if(regionArray[i].spec.bFlow == NULL ||
+			regionArray[i].spec.flowType == NULL ||
+			regionArray[i].spec.flowVector == NULL)
+		{
+			fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") flow parameters.\n", i, subvol_spec[i].label);
+			exit(EXIT_FAILURE);
+		}
+		for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
+		{
+			regionArray[i].spec.bFlow[curMolType] = subvol_spec[i].bFlow[curMolType];
+			regionArray[i].spec.flowType[curMolType] = subvol_spec[i].flowType[curMolType];
+			switch(regionArray[i].spec.flowType[curMolType])
+			{
+				case FLOW_NONE:
+					j = 0;
+					break;
+				case FLOW_UNIFORM:
+					j = 3;
+					break;
+			}
+			if(j > 0)
+			{
+				regionArray[i].spec.flowVector[curMolType] = malloc(j*sizeof(double));
+				if(regionArray[i].spec.flowVector[curMolType] == NULL)
+				{
+					fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") flow vector for molecule type %d.\n", i, subvol_spec[i].label, curMolType);
+					exit(EXIT_FAILURE);
+				}				
+				switch(regionArray[i].spec.flowType[curMolType])
+				{
+					case FLOW_UNIFORM:
+						for(m = 0; m < 3; m++)
+							regionArray[i].spec.flowVector[curMolType][m] =
+								subvol_spec[i].flowVector[curMolType][m];
+				}
+			} else
+				regionArray[i].spec.flowVector[curMolType] = NULL;
+		}		
+		
+		// Calculate constant flow parameters for microscopic regions
+		if(regionArray[i].spec.bMicro)
+		{
+			regionArray[i].flowConstant = malloc(NUM_MOL_TYPES*sizeof(double *));
+			if(regionArray[i].flowConstant == NULL)
+			{
+				fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") constant flow parameters.\n", i, subvol_spec[i].label);
+				exit(EXIT_FAILURE);
+			}
+			for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
+			{
+				switch(regionArray[i].spec.flowType[curMolType])
+				{
+					case FLOW_NONE:
+						j = 0;
+						break;
+					case FLOW_UNIFORM:
+						j = 3;
+						break;
+				}
+				if(j > 0)
+				{
+					regionArray[i].flowConstant[curMolType] = malloc(j*sizeof(double));
+					if(regionArray[i].flowConstant[curMolType] == NULL)
+					{
+						fprintf(stderr, "ERROR: Memory allocation for region %u (label: \"%s\") constant flow parameters for molecule type %d.\n", i, subvol_spec[i].label, curMolType);
+						exit(EXIT_FAILURE);
+					}
+					switch(regionArray[i].spec.flowType[curMolType])
+					{
+						case FLOW_UNIFORM:
+							for(m = 0; m < 3; m++)
+								regionArray[i].flowConstant[curMolType][m] =
+									regionArray[i].spec.flowVector[curMolType][m]*regionArray[i].spec.dt;
+					}
+				} else
+				{
+					regionArray[i].flowConstant[curMolType] = NULL;
+				}
+			}			
+		} else
+			regionArray[i].flowConstant = NULL;
 	}
 }
 

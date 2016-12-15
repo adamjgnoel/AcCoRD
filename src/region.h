@@ -686,6 +686,12 @@ void initializeRegionNesting(const short NUM_REGIONS,
 void findNumRegionSubvolumes(const short NUM_REGIONS,
 	struct region regionArray[]);
 
+// Allocate and initialize the flow parameters in each region
+void initializeRegionFlow(const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	struct region regionArray[],	
+	const struct spec_region3D subvol_spec[]);
+
 // Allocate memory for each region's neighbors
 void allocateRegionNeighbors(const short NUM_REGIONS,
 	struct region regionArray[]);

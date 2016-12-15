@@ -14,8 +14,8 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
- * - added global flow parameters (based on either no flow or uniform flow).
- * Global settings apply to all molecule types but can be modified for any
+ * - added flow parameters (based on either no flow or uniform flow).
+ * Global settings apply to any subset of molecule types but can be modified for any
  * individual molecule type in any region.
  *
  * Revision v1.0 (2016-10-31)
@@ -150,6 +150,7 @@ struct simSpec3D {
 	double * DIFF_COEF;
 	unsigned short GLOBAL_FLOW_TYPE;
 	double * GLOBAL_FLOW_VECTOR;
+	bool * B_GLOBAL_MOL_FLOW;
 	struct chem_rxn_struct * chem_rxn;
 };
 

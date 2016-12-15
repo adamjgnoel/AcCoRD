@@ -10,9 +10,13 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - simplified detection of whether molecules flow or diffuse in each region
+ * - added uniform flow to the diffusion algorithm
  *
  * Revision v1.0 (2016-10-31)
  * - added specifying diffusion coefficient that applies to specific surface
@@ -159,7 +163,17 @@ void diffuseMolecules(const short NUM_REGIONS,
 
 void diffuseOneMolecule(ItemMol3D * molecule, double sigma);
 
+// Move one molecule according to a flow vector
+void flowTransportOneMolecule(ItemMol3D * molecule,
+	const unsigned short flowType,
+	double *flowConstant);
+
 void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF);
+
+// Move one molecule according to a flow vector
+void flowTransportOneMoleculeRecent(ItemMolRecent3D * molecule,
+	const unsigned short flowType,
+	double *flowVector);
 
 // Did molecule enter mesoscopic region while diffusing?
 bool bEnterMesoIndirect(const short NUM_REGIONS,

@@ -14,8 +14,8 @@
  * Revision history:
  *
  * Revision LATEST_VERSION
- * - added global flow parameters (based on either no flow or uniform flow).
- * Global settings apply to all molecule types but can be modified for any
+ * - added flow parameters (based on either no flow or uniform flow).
+ * Global settings apply to any subset of molecule types but can be modified for any
  * individual molecule type in any region.
  *
  * Revision v1.0 (2016-10-31)
@@ -357,13 +357,21 @@ void loadConfig(const char * CONFIG_NAME,
 		}
 	}
 	
-	// Load global flow vector
+	// Load global flow parameters
+	curSpec->B_GLOBAL_MOL_FLOW = malloc(curSpec->NUM_MOL_TYPES * sizeof(bool));
+	if(curSpec->B_GLOBAL_MOL_FLOW == NULL)
+	{
+		fprintf(stderr,"ERROR: Memory could not be allocated to store boolean vector indicating which molecules can flow\n");
+		exit(EXIT_FAILURE);
+	}
 	curSpec->GLOBAL_FLOW_VECTOR = NULL;
 	if(!cJSON_bItemValid(chemSpec,"Global Flow Type", cJSON_String))
 	{ // Config file does not list a valid Global Flow Type
 		bWarn = true;
 		printf("WARNING %d: \"Global Flow Type\" not defined or has invalid value. Assigning default value \"None\".\n", numWarn++);
 		curSpec->GLOBAL_FLOW_TYPE = FLOW_NONE;
+		
+		arrayLen = 0;
 	} else{
 		tempString = stringWrite(cJSON_GetObjectItem(chemSpec,"Global Flow Type")->valuestring);
 		if(strcmp(tempString,"None") == 0)
@@ -382,50 +390,97 @@ void loadConfig(const char * CONFIG_NAME,
 			arrayLen = 0;
 		}
 		free(tempString);
-		
-		// Load flow parameters
-		if(arrayLen > 0)
+	}
+	
+	// Load flow parameters
+	if(arrayLen > 0)
+	{
+		curSpec->GLOBAL_FLOW_VECTOR = malloc(arrayLen * sizeof(double));
+		if(curSpec->GLOBAL_FLOW_VECTOR == NULL)
 		{
-			curSpec->GLOBAL_FLOW_VECTOR = malloc(arrayLen * sizeof(double));
-			if(curSpec->GLOBAL_FLOW_VECTOR == NULL)
+			fprintf(stderr,"ERROR: Memory could not be allocated to store global flow vector.\n");
+			exit(EXIT_FAILURE);
+		}
+		
+		if(!cJSON_bItemValid(chemSpec,"Global Flow Vector", cJSON_Array) ||
+			cJSON_GetArraySize(cJSON_GetObjectItem(chemSpec,"Global Flow Vector"))
+			!= arrayLen)
+		{
+			bWarn = true;
+			printf("WARNING %d: \"Global Flow Vector\" was not defined or has the wrong length. Assigning default value of \"0\" to each element.\n", numWarn++);
+			for(i = 0; i < arrayLen; i++)
 			{
-				fprintf(stderr,"ERROR: Memory could not be allocated to store global flow vector.\n");
-				exit(EXIT_FAILURE);
+				curSpec->GLOBAL_FLOW_VECTOR[i] = 0.;						
 			}
-			
-			if(!cJSON_bItemValid(chemSpec,"Global Flow Vector", cJSON_Array) ||
-				cJSON_GetArraySize(cJSON_GetObjectItem(chemSpec,"Global Flow Vector"))
-				!= arrayLen)
+		} else
+		{
+			flowVec = cJSON_GetObjectItem(chemSpec, "Global Flow Vector");
+			for(i = 0; i < arrayLen; i++)
+			{
+				if(!cJSON_bArrayItemValid(flowVec,i, cJSON_Number))
+				{
+					bWarn = true;
+					printf("WARNING %d: \"Global Flow Vector\" item %d not defined or has an invalid value. Assigning default value of \"0\".\n", numWarn++, i);
+					curSpec->GLOBAL_FLOW_VECTOR[i] = 0.;
+				} else
+				{
+					curSpec->GLOBAL_FLOW_VECTOR[i] =
+						cJSON_GetArrayItem(flowVec, i)->valuedouble;
+				}
+			}
+		}
+		
+		// Determine which molecule types the global flow applies to
+		if(cJSON_bItemValid(chemSpec,"Does Molecule Type Flow?", cJSON_Array))
+		{
+			if(cJSON_GetArraySize(cJSON_GetObjectItem(chemSpec,"Does Molecule Type Flow?")) != curSpec->NUM_MOL_TYPES)
 			{
 				bWarn = true;
-				printf("WARNING %d: \"Global Flow Vector\" was not defined or has the wrong length. Assigning default value of \"0\" to each element.\n", numWarn++);
-				for(i = 0; i < arrayLen; i++)
+				printf("WARNING %d: \"Does Molecule Type Flow?\" does not have the correct length. Applying global flow to each type of molecule.\n", numWarn++);
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
 				{
-					curSpec->GLOBAL_FLOW_VECTOR[i] = 0.;						
+					curSpec->B_GLOBAL_MOL_FLOW[curMolType] = true;
 				}
 			} else
 			{
-				flowVec = cJSON_GetObjectItem(chemSpec, "Global Flow Vector");
-				for(i = 0; i < arrayLen; i++)
+				curObj = cJSON_GetObjectItem(chemSpec,"Does Molecule Type Flow?");
+				for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
 				{
-					if(!cJSON_bArrayItemValid(flowVec,i, cJSON_Number))
+					if(!cJSON_bArrayItemValid(curObj,curMolType, cJSON_True))
 					{
 						bWarn = true;
-						printf("WARNING %d: \"Global Flow Vector\" item %d not defined or has an invalid value. Assigning default value of \"0\".\n", numWarn++, i);
-						curSpec->GLOBAL_FLOW_VECTOR[i] = 0.;
+						printf("WARNING %d: Molecule type %d does not have a valid global \"Does Molecule Type Flow?\" value. Setting to true.\n", numWarn++, curMolType);
+						curSpec->B_GLOBAL_MOL_FLOW[curMolType] = true;
 					} else
 					{
-						curSpec->GLOBAL_FLOW_VECTOR[i] =
-							cJSON_GetArrayItem(flowVec, i)->valuedouble;
+						curSpec->B_GLOBAL_MOL_FLOW[curMolType] = 
+							cJSON_GetArrayItem(curObj, curMolType)->valueint;
 					}
 				}
 			}
-		} else if(cJSON_bItemValid(chemSpec,"Global Flow Vector", cJSON_Array))
+		} else
+		{
+			// By default, global flow applies to every type of molecule
+			printf("Note: \"Does Molecule Type Flow?\" array was not defined to specify which molecule types experience global flow. Applying to all.\n");
+			for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+			{
+				curSpec->B_GLOBAL_MOL_FLOW[curMolType] = true;
+			}
+		}
+	} else
+	{
+		for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+		{
+			curSpec->B_GLOBAL_MOL_FLOW[curMolType] = false;
+		}
+		
+		if(cJSON_bItemValid(chemSpec,"Global Flow Vector", cJSON_Array) ||
+			cJSON_bItemValid(chemSpec,"Does Molecule Type Flow?", cJSON_Array))
 		{
 			bWarn = true;
-			printf("WARNING %d: \"Global Flow Vector\" was defined but is not needed. Ignoring.\n", numWarn++);
+			printf("WARNING %d: Global flow parameters were defined but are not needed because there is no global flow. Ignoring.\n", numWarn++);
 		}		
-	}
+	}			
 	
 	if(!cJSON_bItemValid(chemSpec,"Chemical Reaction Specification", cJSON_Array))
 	{
@@ -1037,17 +1092,19 @@ void loadConfig(const char * CONFIG_NAME,
 			exit(EXIT_FAILURE);
 		}
 		for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
-		{ // Assign default flow parameters
+		{ // Assign default (global) flow parameters
 			curSpec->subvol_spec[curArrayItem].bFlowLocal[curMolType] = false;
 			curSpec->subvol_spec[curArrayItem].flowVector[curMolType] = NULL;
-			curSpec->subvol_spec[curArrayItem].flowType[curMolType] =
-				curSpec->GLOBAL_FLOW_TYPE;
-			switch(curSpec->GLOBAL_FLOW_TYPE)
+			if(curSpec->B_GLOBAL_MOL_FLOW[curMolType])
 			{
-				case FLOW_NONE:
-					curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = false;
-				default:
-					curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = true;
+				curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = true;
+				curSpec->subvol_spec[curArrayItem].flowType[curMolType] =
+					curSpec->GLOBAL_FLOW_TYPE;
+			} else
+			{
+				curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = false;
+				curSpec->subvol_spec[curArrayItem].flowType[curMolType] =
+					FLOW_NONE;
 			}
 		}
 		// Check for region exceptions to global flow parameters
@@ -1168,6 +1225,36 @@ void loadConfig(const char * CONFIG_NAME,
 							printf("WARNING %d: \"Flow Vector\" was defined in local flow exception %d of region %d but is not needed. Ignoring.\n", numWarn++, curFlowExcept, curArrayItem);
 						}
 					}
+				}
+			}
+		}
+		// Apply global flow settings to remaining molecules
+		switch(curSpec->GLOBAL_FLOW_TYPE)
+		{
+			case FLOW_NONE:
+				arrayLen = 0;
+				break;
+			case FLOW_UNIFORM:
+				arrayLen = 3;
+				break;
+		}
+		if(arrayLen > 0)
+		{			
+			for(curMolType = 0; curMolType < curSpec->NUM_MOL_TYPES; curMolType++)
+			{
+				if(curSpec->subvol_spec[curArrayItem].bFlowLocal[curMolType])
+					continue; // An exception was already recorded for this type
+				curSpec->subvol_spec[curArrayItem].flowVector[curMolType] =
+					malloc(arrayLen * sizeof(double));
+				if(curSpec->subvol_spec[curArrayItem].flowVector[curMolType] == NULL)
+				{
+					fprintf(stderr,"ERROR: Memory could not be allocated to store local flow vector for molecule type % in region %d.\n", curMolType, curArrayItem);
+					exit(EXIT_FAILURE);
+				}
+				for(i = 0; i < arrayLen; i++)
+				{
+					curSpec->subvol_spec[curArrayItem].flowVector[curMolType][i] =
+						curSpec->GLOBAL_FLOW_VECTOR[i];
 				}
 			}
 		}
@@ -2350,6 +2437,8 @@ void deleteConfig(struct simSpec3D curSpec)
 		free(curSpec.GLOBAL_FLOW_VECTOR);
 	if(curSpec.OUTPUT_NAME != NULL)
 		free(curSpec.OUTPUT_NAME);
+	if(curSpec.B_GLOBAL_MOL_FLOW != NULL)
+		free(curSpec.B_GLOBAL_MOL_FLOW);
 	
 	if(curSpec.chem_rxn != NULL)
 	{
@@ -2394,8 +2483,7 @@ void deleteConfig(struct simSpec3D curSpec)
 				free(curSpec.subvol_spec[curRegion].diffusion);
 			for(curMolType = 0; curMolType < curSpec.NUM_MOL_TYPES; curMolType++)
 			{
-				if(curSpec.subvol_spec[curRegion].bFlowLocal[curMolType] &&
-					curSpec.subvol_spec[curRegion].flowVector[curMolType] != NULL)
+				if(curSpec.subvol_spec[curRegion].flowVector[curMolType] != NULL)
 					free(curSpec.subvol_spec[curRegion].flowVector[curMolType]);
 			}
 			if(curSpec.subvol_spec[curRegion].bFlowLocal != NULL)

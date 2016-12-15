@@ -16,6 +16,7 @@
  *
  * Revision LATEST_VERSION
  * - added members defining flow parameters for every molecule
+ * - added member to denote which molecules can diffuse
  *
  * Revision v1.0 (2016-10-31)
  * - added local diffusion coefficients that can apply to particular region
@@ -112,6 +113,7 @@ struct spec_region3D { // Used to define a region of subvolumes
 	bool bLocalDiffusion;
 	
 	// Local diffusion coefficients (if applicable)
+	// Length is NUM_MOL_TYPES
 	double * diffusion;
 	
 	// Can each type of molecule flow?
@@ -181,6 +183,15 @@ struct spec_region3D { // Used to define a region of subvolumes
 struct region { // Region boundary parameters
 	// The user-defined region parameters
 	struct spec_region3D spec;
+	
+	// Does each molecule type diffuse?
+	// Length is NUM_MOL_TYPES
+	bool * bDiffuse;
+	
+	// Flow parameters for each type of molecule.
+	// Intended to apply for microscopic time steps of a "typical" length
+	// Size is NUM_MOL_TYPES x Y, where Y depends on the type of flow
+	double ** flowConstant;
 	
 	// What plane is the region in?
 	// Applies particularly to 2D regions.

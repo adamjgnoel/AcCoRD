@@ -821,7 +821,7 @@ int main(int argc, char *argv[])
 				}
 				
 				// Diffuse all microscopic molecules to valid locations and merge
-				// 2 sets of molecule lists into 1
+				// 2 sets of molecule lists into 1. Also imposes flow.
 				diffuseMolecules(spec.NUM_REGIONS, spec.NUM_MOL_TYPES, microMolList,
 					microMolListRecent, regionArray, mesoSubArray,
 					micro_sigma, spec.chem_rxn, spec.MAX_HYBRID_DIST, DIFF_COEF);

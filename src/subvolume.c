@@ -245,9 +245,13 @@ void deleteSubvolArray(const uint32_t numSub,
 	
 	for(curSub; curSub < numSub; curSub++)
 	{
-		if(!regionArray[subvolArray[curSub].regionID].spec.bMicro &&
-			subvolArray[curSub].neighID != NULL)
-			free(subvolArray[curSub].neighID);
+		if(!regionArray[subvolArray[curSub].regionID].spec.bMicro)
+		{
+			if(subvolArray[curSub].neighID != NULL)
+				free(subvolArray[curSub].neighID);
+			if(subvolArray[curSub].neighDir != NULL)
+				free(subvolArray[curSub].neighDir);
+		}
 	}
 	
 	free(subvolArray);
@@ -366,6 +370,7 @@ void buildSubvolArray(const uint32_t numSub,
 		boundOverlap[i] = 0.;
 	}
 	unsigned short adjDirection = 0;
+	unsigned short dirArray[6]; // Array needed when a cubic subvolume neighbors a sphere
 	double boundAdjError = SUBVOL_BASE_SIZE * SUB_ADJ_RESOLUTION;
 	
 	double h_i, h_j; // Subvolume sizes (used for finding transition rates)
@@ -683,7 +688,7 @@ void buildSubvolArray(const uint32_t numSub,
 				if(checkSubvolNeigh(regionArray, NUM_REGIONS, curRegion, neighRegion,
 					&sphRegion,	&rectRegion, curID, curNeighID, &sphSub,
 					&rectSub, numSub, subCoorInd, boundAdjError, &adjDirection,
-					curSubBound, curNeighBound, &numFaceSph))
+					curSubBound, curNeighBound, &numFaceSph, dirArray))
 				{
 					// Subvolumes are neighbors. Record IDs
 					if (numFaceSph > 0)
@@ -715,14 +720,17 @@ void buildSubvolArray(const uint32_t numSub,
 		
 		subvolArray[curID].neighID =
 			malloc(subvolArray[curID].num_neigh*sizeof(uint32_t));
-		if(subvolArray[curID].neighID == NULL)
+		subvolArray[curID].neighDir =
+			malloc(subvolArray[curID].num_neigh*sizeof(unsigned short));
+		if(subvolArray[curID].neighID == NULL ||
+			subvolArray[curID].neighDir == NULL)
 		{
-			fprintf(stderr, "ERROR: Memory allocation for IDs of neighbors of subvolume %" PRIu32 ".\n", curID);
+			fprintf(stderr, "ERROR: Memory allocation for neighbors of subvolume %" PRIu32 ".\n", curID);
 			exit(EXIT_FAILURE);
 		}
 	}
 		
-	// Find and store IDs of each subvolume's neighbors
+	// Find and store ID and direction of each subvolume's neighbors
 	for(curID = 0; curID < numSub; curID++)
 	{
 		// Calculate neighbors in the same region
@@ -747,39 +755,57 @@ void buildSubvolArray(const uint32_t numSub,
 				if(subCoorInd[curID][0] > 0)
 				{ // Neighbor is 1 "x" index "down"
 					if(subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
-					subvolArray[curID].neighID[curSubNeigh[curID]++] =
-						subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+					{
+						subvolArray[curID].neighDir[curSubNeigh[curID]] = LEFT;
+						subvolArray[curID].neighID[curSubNeigh[curID]++] =
+							subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+					}
 				}
 				if(subCoorInd[curID][0] < length[0]-1)
 				{ // Neighbor is 1 "x" index "up"
 					if(subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
-					subvolArray[curID].neighID[curSubNeigh[curID]++] =
-						subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+					{
+						subvolArray[curID].neighDir[curSubNeigh[curID]] = RIGHT;
+						subvolArray[curID].neighID[curSubNeigh[curID]++] =
+							subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]];
+					}
 				}
 			}
 			if(subCoorInd[curID][1] > 0)
 			{ // Neighbor is 1 "y" index "down"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]-1][subCoorInd[curID][2]] < UINT32_MAX)
-				subvolArray[curID].neighID[curSubNeigh[curID]++] =
-					subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]-1][subCoorInd[curID][2]];
+				{
+					subvolArray[curID].neighDir[curSubNeigh[curID]] = DOWN;
+					subvolArray[curID].neighID[curSubNeigh[curID]++] =
+						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]-1][subCoorInd[curID][2]];
+				}
 			}
 			if(subCoorInd[curID][1] < length[1]-1)
 			{ // Neighbor is 1 "y" index "up"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]+1][subCoorInd[curID][2]] < UINT32_MAX)
-				subvolArray[curID].neighID[curSubNeigh[curID]++] =
-					subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]+1][subCoorInd[curID][2]];
+				{
+					subvolArray[curID].neighDir[curSubNeigh[curID]] = UP;
+					subvolArray[curID].neighID[curSubNeigh[curID]++] =
+						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]+1][subCoorInd[curID][2]];
+				}
 			}
 			if(subCoorInd[curID][2] > 0)
 			{ // Neighbor is 1 "z" index "down"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]-1] < UINT32_MAX)
-				subvolArray[curID].neighID[curSubNeigh[curID]++] =
-					subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]-1];
+				{
+					subvolArray[curID].neighDir[curSubNeigh[curID]] = IN;
+					subvolArray[curID].neighID[curSubNeigh[curID]++] =
+						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]-1];
+				}
 			}
 			if(subCoorInd[curID][2] < length[2]-1)
 			{ // Neighbor is 1 "z" index "up"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]+1] < UINT32_MAX)
-				subvolArray[curID].neighID[curSubNeigh[curID]++] =
-					subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]+1];
+				{
+					subvolArray[curID].neighDir[curSubNeigh[curID]] = OUT;
+					subvolArray[curID].neighID[curSubNeigh[curID]++] =
+						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]+1];
+				}
 			}
 		}
 		
@@ -803,7 +829,7 @@ void buildSubvolArray(const uint32_t numSub,
 			if(checkSubvolNeigh(regionArray, NUM_REGIONS, curRegion, neighRegion, &sphRegion,
 				&rectRegion, curID, curNeighID, &sphSub, &rectSub,
 				numSub, subCoorInd, boundAdjError, &adjDirection,
-				curSubBound, curNeighBound, &numFaceSph))
+				curSubBound, curNeighBound, &numFaceSph, dirArray))
 			{
 				// Subvolumes are neighbors. Record IDs
 				if (numFaceSph > 0)
@@ -812,14 +838,49 @@ void buildSubvolArray(const uint32_t numSub,
 					// The subvolumes can be neighbors along multiple faces
 					if (!regionArray[rectRegion].spec.bMicro)
 						for(i = 0; i < numFaceSph; i++)
+						{
+							subvolArray[rectSub].neighDir[curSubNeigh[rectSub]] = dirArray[i];
 							subvolArray[rectSub].neighID[curSubNeigh[rectSub]++] = sphSub;
+						}
 					numFaceSph = 0; // Reset value
 				} else
 				{
 					if(!regionArray[curRegion].spec.bMicro)
-						subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;			
+					{
+						subvolArray[curID].neighDir[curSubNeigh[curID]] = adjDirection;
+						subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;
+					}
 					if(!regionArray[neighRegion].spec.bMicro)
+					{
+						switch(adjDirection)
+						{
+							case LEFT:
+								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
+									RIGHT;
+									break;
+							case RIGHT:
+								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
+									LEFT;
+									break;
+							case UP:
+								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
+									DOWN;
+									break;
+							case DOWN:
+								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
+									UP;
+									break;
+							case IN:
+								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
+									OUT;
+									break;
+							case OUT:
+								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
+									IN;
+									break;
+						}
 						subvolArray[curNeighID].neighID[curSubNeigh[curNeighID]++] = curID;
+					}
 				}
 			}
 		}
@@ -859,9 +920,10 @@ bool checkSubvolNeigh(struct region regionArray[],
 	unsigned short * adjDirection,
 	double curSubBound[6],
 	double curNeighBound[6],
-	unsigned short * numFaceSph)
+	unsigned short * numFaceSph,
+	unsigned short dirArray[6])
 {
-	unsigned short dirArray[6];
+	//unsigned short dirArray[6];
 	unsigned short surfaceRegion;
 
 	if ((regionArray[curRegion].spec.shape == RECTANGULAR_BOX

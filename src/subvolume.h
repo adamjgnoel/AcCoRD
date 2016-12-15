@@ -80,8 +80,12 @@ struct subvolume3D {
 	unsigned short num_neigh;
 	
 	// Array of IDs of subvolumes that are neighbors to current subvolume.
-	// Length is maximum value of num_neigh for all subvolumes in current region
+	// Length is num_neigh
 	uint32_t * neighID;
+	
+	// Direction from current subvolume to each of its neighbors.
+	// Length is num_neigh
+	unsigned short * neighDir;
 	
 	// Is subvolume along boundary of region?
 	bool bBoundary;
@@ -154,7 +158,8 @@ bool checkSubvolNeigh(struct region regionArray[],
 	unsigned short * adjDirection,
 	double curSubBound[6],
 	double curNeighBound[6],
-	unsigned short * numFaceSph);
+	unsigned short * numFaceSph,
+	unsigned short dirArray[6]);
 
 // Calculate cartesian coordinates of rectangular subvolume
 void findSubvolCoor(double subBound[6],

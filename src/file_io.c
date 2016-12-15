@@ -1166,10 +1166,12 @@ void loadConfig(const char * CONFIG_NAME,
 						if(strcmp(tempString,"None") == 0)
 						{ // No molecule flow
 							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_NONE;
+							curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = false;
 							arrayLen = 0;
 						} else if(strcmp(tempString,"Uniform") == 0)
 						{ // Steady uniform flow
 							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_UNIFORM;
+							curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = true;
 							arrayLen = 3;
 						} else
 						{
@@ -1177,6 +1179,7 @@ void loadConfig(const char * CONFIG_NAME,
 							printf("WARNING %d: \"Flow Type\" in local flow exception %d of region %d not defined or has invalid value. Assigning default value \"None\" to molecule type %d in this region.\n",
 								numWarn++, curFlowExcept, curArrayItem, curMolType);
 							curSpec->subvol_spec[curArrayItem].flowType[curMolType] = FLOW_NONE;
+							curSpec->subvol_spec[curArrayItem].bFlow[curMolType] = false;
 							arrayLen = 0;
 						}
 						free(tempString);

@@ -10,9 +10,12 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added flow types FLOW_NONE and FLOW_UNIFORM
  *
  * Revision v1.0 (2016-10-31)
  * - added BURST modulation
@@ -123,5 +126,10 @@
 #define PROD_PLACEMENT_LEAVE 0 // Leave molecule next to surface
 #define PROD_PLACEMENT_FORCE 1 // Force diffusion away from surface
 #define PROD_PLACEMENT_STEADY_STATE 2 // Force diffuse based on steady-state values
+
+// Flow types
+// NOTE: Changes to list of names must be reflected in file_io.c
+#define FLOW_NONE 0
+#define FLOW_UNIFORM 1
 
 #endif // GLOBAL_PARAM_H

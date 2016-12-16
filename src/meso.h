@@ -9,9 +9,12 @@
  *
  * meso.h - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added uniform flow to the diffusion algorithm
  *
  * Revision v1.0 (2016-10-31)
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
@@ -73,7 +76,7 @@ struct mesoSubvolume3D {
 	// Diffusion transition rate from a boundary subvolume to all
 	// of its neighbours
 	// (whether or not each neighbour is in a different region)
-	// Only allocated if subvolume bBoundary == true
+	// Only allocated if subvolume bBoundary == true or there is a flow
 	// Size is NUM_MOL_TYPES x num_neigh.
 	// Each element gives the diffusion rate to the corresponding
 	// neighbour in the neighID array (in subvolume structure).
@@ -118,6 +121,7 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 	struct region regionArray[],
 	const short NUM_REGIONS,
 	uint32_t subCoorInd[numSub][3],
+	unsigned short ** subNeighDir,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 	
 // Reset propensities and reaction times for all subvolumes

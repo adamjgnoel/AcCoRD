@@ -10,9 +10,13 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - simplified detection of whether molecules flow or diffuse in each region
+ * - added uniform flow to the diffusion algorithm
  *
  * Revision v1.0 (2016-10-31)
  * - added specifying diffusion coefficient that applies to specific surface
@@ -139,7 +143,7 @@ void moveMoleculeRecent(ItemMolRecent3D * molecule, double x, double y, double z
 	molecule->z = z;
 }
 
-// Move ALL molecules in the list by the same standard deviation
+// Move ALL molecules in the list via diffusion and flow
 void diffuseMolecules(const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	ListMol3D p_list[NUM_REGIONS][NUM_MOL_TYPES],
@@ -176,8 +180,10 @@ void diffuseMolecules(const short NUM_REGIONS,
 		for(curType = 0; curType < NUM_MOL_TYPES; curType++)
 		{
 			if(isListMol3DEmpty(&p_list[curRegion][curType])
-				|| sigma[curRegion][curType] == 0.)
-				continue; // No need to validate an empty list of molecules or ones that can't move
+				|| (!regionArray[curRegion].bDiffuse[curType]
+				&& !regionArray[curRegion].spec.bFlow[curType]))
+				continue; // No need to validate an empty list of molecules
+						  // or molecules that cannot move
 			
 			curNode = p_list[curRegion][curType];
 			
@@ -195,8 +201,10 @@ void diffuseMolecules(const short NUM_REGIONS,
 		for(curType = 0; curType < NUM_MOL_TYPES; curType++)
 		{
 			if(isListMol3DEmpty(&p_list[curRegion][curType])
-				|| sigma[curRegion][curType] == 0.)
+				|| (!regionArray[curRegion].bDiffuse[curType]
+				&& !regionArray[curRegion].spec.bFlow[curType]))
 				continue; // No need to validate an empty list of molecules
+						  // or molecules that cannot move
 			
 			curNode = p_list[curRegion][curType];
 			prevNode = NULL;
@@ -214,7 +222,14 @@ void diffuseMolecules(const short NUM_REGIONS,
 					oldPoint[2] = curNode->item.z;
 					
 					// Diffuse molecule
-					diffuseOneMolecule(&curNode->item, sigma[curRegion][curType]);
+					if(regionArray[curRegion].bDiffuse[curType])
+						diffuseOneMolecule(&curNode->item, sigma[curRegion][curType]);
+					
+					// Move molecule via flow
+					if(regionArray[curRegion].spec.bFlow[curType])
+						flowTransportOneMolecule(&curNode->item,
+							regionArray[curRegion].spec.flowType[curType],
+							regionArray[curRegion].flowConstant[curType]);
 					
 					newPoint[0] = curNode->item.x;
 					newPoint[1] = curNode->item.y;
@@ -349,7 +364,14 @@ void diffuseMolecules(const short NUM_REGIONS,
 				oldPoint[2] = curNodeR->item.z;
 				
 				// Diffuse molecule
-				diffuseOneMoleculeRecent(&curNodeR->item, DIFF_COEF[curRegion][curType]);
+				if(regionArray[curRegion].bDiffuse[curType])
+					diffuseOneMoleculeRecent(&curNodeR->item, DIFF_COEF[curRegion][curType]);
+					
+				// Move molecule via flow
+				if(regionArray[curRegion].spec.bFlow[curType])
+					flowTransportOneMoleculeRecent(&curNodeR->item,
+						regionArray[curRegion].spec.flowType[curType],
+						regionArray[curRegion].spec.flowVector[curType]);
 				
 				newPoint[0] = curNodeR->item.x;
 				newPoint[1] = curNodeR->item.y;
@@ -451,6 +473,21 @@ void diffuseOneMolecule(ItemMol3D * molecule, double sigma)
 	molecule->z = generateNormal(molecule->z, sigma);
 }
 
+// Move one molecule according to a flow vector
+void flowTransportOneMolecule(ItemMol3D * molecule,
+	const unsigned short flowType,
+	double *flowConstant)
+{
+	switch(flowType)
+	{
+		case FLOW_UNIFORM:
+			molecule->x += flowConstant[0];
+			molecule->y += flowConstant[1];
+			molecule->z += flowConstant[2];
+			break;
+	}
+}
+
 // Move one molecule by some standard deviation
 void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF)
 {
@@ -458,6 +495,21 @@ void diffuseOneMoleculeRecent(ItemMolRecent3D * molecule, double DIFF_COEF)
 	molecule->x = generateNormal(molecule->x, sigma);
 	molecule->y = generateNormal(molecule->y, sigma);
 	molecule->z = generateNormal(molecule->z, sigma);
+}
+
+// Move one molecule according to a flow vector
+void flowTransportOneMoleculeRecent(ItemMolRecent3D * molecule,
+	const unsigned short flowType,
+	double *flowVector)
+{
+	switch(flowType)
+	{
+		case FLOW_UNIFORM:
+			molecule->x += flowVector[0]*molecule->dt_partial;
+			molecule->y += flowVector[1]*molecule->dt_partial;
+			molecule->z += flowVector[2]*molecule->dt_partial;
+			break;
+	}
 }
 
 // Did molecule enter mesoscopic region while diffusing?

@@ -10,9 +10,13 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added members defining flow parameters for every molecule
+ * - added member to denote which molecules can diffuse
  *
  * Revision v1.0 (2016-10-31)
  * - added local diffusion coefficients that can apply to particular region
@@ -109,7 +113,25 @@ struct spec_region3D { // Used to define a region of subvolumes
 	bool bLocalDiffusion;
 	
 	// Local diffusion coefficients (if applicable)
+	// Length is NUM_MOL_TYPES
 	double * diffusion;
+	
+	// Can each type of molecule flow?
+	// Length is NUM_MOL_TYPES
+	bool * bFlow;
+	
+	// Is the definition for this molecule's flow different from the global setting?
+	// Length is NUM_MOL_TYPES
+	bool * bFlowLocal;
+	
+	// What type of flow does each type of molecule experience?
+	// Types are defined in global_param.h
+	// Length is NUM_MOL_TYPES
+	unsigned short * flowType;
+	
+	// Flow vector/parameters for each type of molecule
+	// Size is NUM_MOL_TYPES x VECTOR_LENGTH (size of VECTOR_LENGTH depends on the type of flow)
+	double ** flowVector;
 	
 	// Region shape. There are specific restrictions on shape, depending on
 	// whether it is micro, whether its parent is micro, and whether it is
@@ -161,6 +183,20 @@ struct spec_region3D { // Used to define a region of subvolumes
 struct region { // Region boundary parameters
 	// The user-defined region parameters
 	struct spec_region3D spec;
+	
+	// Does each molecule type diffuse?
+	// Length is NUM_MOL_TYPES
+	bool * bDiffuse;
+	
+	// Is at least one type of molecule carried by flow?
+	// If true and region is mesoscopic, then additional information
+	// must be tracked for each subvolume.
+	bool bFlow;
+	
+	// Flow parameters for each type of molecule.
+	// Intended to apply for microscopic time steps of a "typical" length
+	// Size is NUM_MOL_TYPES x Y, where Y depends on the type of flow
+	double ** flowConstant;
 	
 	// What plane is the region in?
 	// Applies particularly to 2D regions.
@@ -654,6 +690,12 @@ void initializeRegionNesting(const short NUM_REGIONS,
 // Determine number of subvolumes in each region
 void findNumRegionSubvolumes(const short NUM_REGIONS,
 	struct region regionArray[]);
+
+// Allocate and initialize the flow parameters in each region
+void initializeRegionFlow(const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
+	struct region regionArray[],	
+	const struct spec_region3D subvol_spec[]);
 
 // Allocate memory for each region's neighbors
 void allocateRegionNeighbors(const short NUM_REGIONS,

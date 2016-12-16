@@ -434,7 +434,7 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 									relOverlap *= (boundOverlap[5] - boundOverlap[4])/h_i;
 																
 								mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] +=
-									flowVal/2./(h_i + h_j)*relOverlap;
+									2.*flowVal/(h_i + h_j)*relOverlap;
 							}
 						}
 					}

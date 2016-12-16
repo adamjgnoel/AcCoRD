@@ -25,9 +25,13 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD v1.0 (2016-10-31)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added import of local (region) diffusion coefficients, and all flow
+% parameters (global and local)
 %
 % Revision v1.0 (2016-10-31)
 % - modified import of region placement parameters to accommodate simpler
@@ -65,6 +69,22 @@ config.diffusionCoeff = zeros(config.numRegion,config.numMolTypes);
 for i = 1:config.numMolTypes
     config.diffusionCoeff(:,i) = ...
         configJSON.Chemical_0x20_Properties.Diffusion_0x20_Coefficients(i);
+end
+
+config.flowType = configJSON.Chemical_0x20_Properties.Global_0x20_Flow_0x20_Type;
+config.flowVector = cell(config.numRegion,config.numMolTypes);
+if ~strcmp(config.flowType, 'None') && isfield(configJSON.Chemical_0x20_Properties, 'Global_0x20_Flow_0x20_Vector')
+    for i = 1:config.numRegion
+        for j = 1:config.numMolTypes
+            if isfield(configJSON.Chemical_0x20_Properties,'Does_0x20_Molecule_0x20_Type_0x20_Flow_0x3F_')
+                if(configJSON.Chemical_0x20_Properties.Does_0x20_Molecule_0x20_Type_0x20_Flow_0x3F_(j))
+                    config.flowVector{i,j} = configJSON.Chemical_0x20_Properties.Global_0x20_Flow_0x20_Vector;
+                end
+            else                
+                config.flowVector{i,j} = configJSON.Chemical_0x20_Properties.Global_0x20_Flow_0x20_Vector;
+            end
+        end
+    end
 end
 
 config.numChemRxn = ...
@@ -168,6 +188,33 @@ for i = 1:config.numRegion
     if strcmp(config.region{i}.type, '3D Surface') || ...
         strcmp(config.region{i}.type, '2D Surface')
         config.region{i}.surfaceType = curRegion.Surface_0x20_Type;
+    end
+    
+    if isfield(curRegion, 'Local_0x20_Diffusion_0x20_Coefficients')
+        for j = 1:config.numMolTypes
+            config.diffusionCoeff(i,j) = ...
+                curRegion.Local_0x20_Diffusion_0x20_Coefficients(j);
+        end
+    end
+    
+    if isfield(curRegion, 'Local_0x20_Flow')
+        numFlowExcept = length(curRegion.Local_0x20_Flow);
+        for j = 1:numFlowExcept
+            if numFlowExcept > 1
+                curExcept = curRegion.Local_0x20_Flow{j};
+            else
+                curExcept = curRegion.Local_0x20_Flow;
+            end
+            for k = 1:config.numMolTypes
+                if(curExcept.Is_0x20_Molecule_0x20_Type_0x20_Affected_0x3F_(k))
+                    if strcmp(curExcept.Flow_0x20_Type, 'None')
+                        config.flowVector{i,k} = [];
+                    else
+                        config.flowVector{i,k} = curExcept.Flow_0x20_Vector;
+                    end
+                end
+            end
+        end
     end
     
     if strcmp(config.region{i}.shape, 'Rectangle') || ...

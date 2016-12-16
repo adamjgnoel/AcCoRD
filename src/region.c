@@ -1870,6 +1870,7 @@ void initializeRegionFlow(const short NUM_REGIONS,
 	
 	for(i = 0; i < NUM_REGIONS; i++)
 	{
+		regionArray[i].bFlow = false;
 		// Copy flow parameters from specification
 		// (assignment of subvol_spec copies pointers but not allocated memory!)
 		regionArray[i].spec.bFlow = malloc(NUM_MOL_TYPES*sizeof(bool));
@@ -1897,6 +1898,7 @@ void initializeRegionFlow(const short NUM_REGIONS,
 			}
 			if(j > 0)
 			{
+				regionArray[i].bFlow = true;
 				regionArray[i].spec.flowVector[curMolType] = malloc(j*sizeof(double));
 				if(regionArray[i].spec.flowVector[curMolType] == NULL)
 				{

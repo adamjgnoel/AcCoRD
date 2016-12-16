@@ -10,9 +10,13 @@
  * subvolume.c - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added direction of subvolume neighbors as a standalone 2D array in order
+ * to implement fluid flow in the mesoscopic regime
  *
  * Revision v1.0 (2016-10-31)
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
@@ -80,6 +84,7 @@ void allocateSubvolHelper(const uint32_t numSub,
 	uint32_t (** subCoorInd)[3],
 	uint32_t ***** subID,
 	uint32_t (*** subIDSize)[2],
+	unsigned short *** subNeighDir,
 	const short NUM_REGIONS,
 	struct region regionArray[])
 {	
@@ -89,8 +94,10 @@ void allocateSubvolHelper(const uint32_t numSub,
 	*subCoorInd = malloc(numSub*sizeof(uint32_t [3]));
 	*subIDSize = malloc(NUM_REGIONS*sizeof(*subIDSize));
 	*subID = malloc(NUM_REGIONS*sizeof(*subID));
+	*subNeighDir = malloc(numSub*sizeof(unsigned short *));
 	
-	if(subCoorInd == NULL || *subID == NULL || *subIDSize == NULL){
+	if(*subCoorInd == NULL || *subID == NULL ||
+		*subIDSize == NULL || *subNeighDir == NULL){
 		fprintf(stderr, "ERROR: Memory allocation for temporary subvolume information.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -249,8 +256,6 @@ void deleteSubvolArray(const uint32_t numSub,
 		{
 			if(subvolArray[curSub].neighID != NULL)
 				free(subvolArray[curSub].neighID);
-			if(subvolArray[curSub].neighDir != NULL)
-				free(subvolArray[curSub].neighDir);
 		}
 	}
 	
@@ -261,14 +266,27 @@ void deleteSubvolArray(const uint32_t numSub,
 void deleteSubvolHelper(uint32_t subCoorInd[][3],
 	uint32_t **** subID,
 	uint32_t (** subIDSize)[2],
+	unsigned short ** subNeighDir,
 	const short NUM_REGIONS,
-	struct region regionArray[])
+	struct region regionArray[],
+	const uint32_t numSub)
 {	
 	short i;
 	uint32_t x,y;
 	uint32_t length[2];
 	
 	if(subCoorInd != NULL) free(subCoorInd);
+	
+	// Free memory used to track subvolume neighbors
+	if(subNeighDir != NULL)
+	{
+		for(x = 0; x < numSub; x++)
+		{
+			if(subNeighDir[x] != NULL)
+				free(subNeighDir[x]);
+		}
+		free(subNeighDir);
+	}
 	
 	if(subID != NULL && subIDSize != NULL)
 	{
@@ -328,7 +346,8 @@ void buildSubvolArray(const uint32_t numSub,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	uint32_t subCoorInd[numSub][3],
 	uint32_t **** subID,
-	uint32_t (** subIDSize)[2])
+	uint32_t (** subIDSize)[2],
+	unsigned short ** subNeighDir)
 {	
 	short int i,j, curRegion, neighRegion, sphRegion, rectRegion; // Current Region
 	unsigned short curMolType;
@@ -716,14 +735,17 @@ void buildSubvolArray(const uint32_t numSub,
 	for(curID = 0; curID < numSub; curID++)
 	{
 		if(regionArray[subvolArray[curID].regionID].spec.bMicro)
+		{
+			subNeighDir[curID] = NULL;
 			continue; // Don't need to store neighbor IDs for microscopic subvolumes
+		}
 		
 		subvolArray[curID].neighID =
 			malloc(subvolArray[curID].num_neigh*sizeof(uint32_t));
-		subvolArray[curID].neighDir =
+		subNeighDir[curID] =
 			malloc(subvolArray[curID].num_neigh*sizeof(unsigned short));
 		if(subvolArray[curID].neighID == NULL ||
-			subvolArray[curID].neighDir == NULL)
+			subNeighDir[curID] == NULL)
 		{
 			fprintf(stderr, "ERROR: Memory allocation for neighbors of subvolume %" PRIu32 ".\n", curID);
 			exit(EXIT_FAILURE);
@@ -756,7 +778,7 @@ void buildSubvolArray(const uint32_t numSub,
 				{ // Neighbor is 1 "x" index "down"
 					if(subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
 					{
-						subvolArray[curID].neighDir[curSubNeigh[curID]] = LEFT;
+						subNeighDir[curID][curSubNeigh[curID]] = LEFT;
 						subvolArray[curID].neighID[curSubNeigh[curID]++] =
 							subID[curRegion][subCoorInd[curID][0]-1][subCoorInd[curID][1]][subCoorInd[curID][2]];
 					}
@@ -765,7 +787,7 @@ void buildSubvolArray(const uint32_t numSub,
 				{ // Neighbor is 1 "x" index "up"
 					if(subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]] < UINT32_MAX)
 					{
-						subvolArray[curID].neighDir[curSubNeigh[curID]] = RIGHT;
+						subNeighDir[curID][curSubNeigh[curID]] = RIGHT;
 						subvolArray[curID].neighID[curSubNeigh[curID]++] =
 							subID[curRegion][subCoorInd[curID][0]+1][subCoorInd[curID][1]][subCoorInd[curID][2]];
 					}
@@ -775,7 +797,7 @@ void buildSubvolArray(const uint32_t numSub,
 			{ // Neighbor is 1 "y" index "down"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]-1][subCoorInd[curID][2]] < UINT32_MAX)
 				{
-					subvolArray[curID].neighDir[curSubNeigh[curID]] = DOWN;
+					subNeighDir[curID][curSubNeigh[curID]] = DOWN;
 					subvolArray[curID].neighID[curSubNeigh[curID]++] =
 						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]-1][subCoorInd[curID][2]];
 				}
@@ -784,7 +806,7 @@ void buildSubvolArray(const uint32_t numSub,
 			{ // Neighbor is 1 "y" index "up"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]+1][subCoorInd[curID][2]] < UINT32_MAX)
 				{
-					subvolArray[curID].neighDir[curSubNeigh[curID]] = UP;
+					subNeighDir[curID][curSubNeigh[curID]] = UP;
 					subvolArray[curID].neighID[curSubNeigh[curID]++] =
 						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]+1][subCoorInd[curID][2]];
 				}
@@ -793,7 +815,7 @@ void buildSubvolArray(const uint32_t numSub,
 			{ // Neighbor is 1 "z" index "down"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]-1] < UINT32_MAX)
 				{
-					subvolArray[curID].neighDir[curSubNeigh[curID]] = IN;
+					subNeighDir[curID][curSubNeigh[curID]] = IN;
 					subvolArray[curID].neighID[curSubNeigh[curID]++] =
 						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]-1];
 				}
@@ -802,7 +824,7 @@ void buildSubvolArray(const uint32_t numSub,
 			{ // Neighbor is 1 "z" index "up"
 				if(subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]+1] < UINT32_MAX)
 				{
-					subvolArray[curID].neighDir[curSubNeigh[curID]] = OUT;
+					subNeighDir[curID][curSubNeigh[curID]] = OUT;
 					subvolArray[curID].neighID[curSubNeigh[curID]++] =
 						subID[curRegion][subCoorInd[curID][0]][subCoorInd[curID][1]][subCoorInd[curID][2]+1];
 				}
@@ -839,7 +861,7 @@ void buildSubvolArray(const uint32_t numSub,
 					if (!regionArray[rectRegion].spec.bMicro)
 						for(i = 0; i < numFaceSph; i++)
 						{
-							subvolArray[rectSub].neighDir[curSubNeigh[rectSub]] = dirArray[i];
+							subNeighDir[rectSub][curSubNeigh[rectSub]] = dirArray[i];
 							subvolArray[rectSub].neighID[curSubNeigh[rectSub]++] = sphSub;
 						}
 					numFaceSph = 0; // Reset value
@@ -847,7 +869,7 @@ void buildSubvolArray(const uint32_t numSub,
 				{
 					if(!regionArray[curRegion].spec.bMicro)
 					{
-						subvolArray[curID].neighDir[curSubNeigh[curID]] = adjDirection;
+						subNeighDir[curID][curSubNeigh[curID]] = adjDirection;
 						subvolArray[curID].neighID[curSubNeigh[curID]++] = curNeighID;
 					}
 					if(!regionArray[neighRegion].spec.bMicro)
@@ -855,28 +877,22 @@ void buildSubvolArray(const uint32_t numSub,
 						switch(adjDirection)
 						{
 							case LEFT:
-								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
-									RIGHT;
+								subNeighDir[curNeighID][curSubNeigh[curNeighID]] = RIGHT;
 									break;
 							case RIGHT:
-								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
-									LEFT;
+								subNeighDir[curNeighID][curSubNeigh[curNeighID]] = LEFT;
 									break;
 							case UP:
-								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
-									DOWN;
+								subNeighDir[curNeighID][curSubNeigh[curNeighID]] = DOWN;
 									break;
 							case DOWN:
-								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
-									UP;
+								subNeighDir[curNeighID][curSubNeigh[curNeighID]] = UP;
 									break;
 							case IN:
-								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
-									OUT;
+								subNeighDir[curNeighID][curSubNeigh[curNeighID]] = OUT;
 									break;
 							case OUT:
-								subvolArray[curNeighID].neighDir[curSubNeigh[curNeighID]] =
-									IN;
+								subNeighDir[curNeighID][curSubNeigh[curNeighID]] = IN;
 									break;
 						}
 						subvolArray[curNeighID].neighID[curSubNeigh[curNeighID]++] = curID;

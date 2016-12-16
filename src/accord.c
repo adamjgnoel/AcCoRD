@@ -9,9 +9,13 @@
  *
  * accord.c - main file
  *
- * Last revised for v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added direction of subvolume neighbors as a standalone 2D array in order
+ * to implement fluid flow in the mesoscopic regime
  *
  * Revision v1.0 (2016-10-31)
  * - enabled local diffusion coefficients
@@ -113,9 +117,10 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v1.0 (2016-10-31)\n");
+	printf("Version LATEST_VERSION\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
-	printf("Source code and documentation at https://github.com/adamjgnoel/AcCoRD\n");
+	printf("Source code at https://github.com/adamjgnoel/AcCoRD\n");
+	printf("User Documentation at http://adamnoel.ca/software/accord/\n");
 	
 	
 	time(&timer);
@@ -253,8 +258,10 @@ int main(int argc, char *argv[])
 	// Allocate temporary arrays for managing subvolume validity and placement
 	uint32_t (* subCoorInd)[3]; // List (within region) index coordinates for each subvolume
 	uint32_t **** subID; // Subvolume indices in master list
-	uint32_t (** subIDSize)[2]; // Reader array for subID
-	allocateSubvolHelper(numSub, &subCoorInd, &subID, &subIDSize, spec.NUM_REGIONS, regionArray);
+	uint32_t (** subIDSize)[2]; // Reader array for subID	
+	unsigned short ** subNeighDir; // Direction of each of a subvolume's neighbors
+	allocateSubvolHelper(numSub, &subCoorInd, &subID, &subIDSize, &subNeighDir,
+		spec.NUM_REGIONS, regionArray);
 	
 	// Delete temporary arrays for managing subvolume validity and placement
 	//deleteSubvolHelper(subCoorInd, subID, subIDSize, spec.NUM_REGIONS, regionArray);
@@ -265,7 +272,7 @@ int main(int argc, char *argv[])
 		spec.subvol_spec, regionArray,
 		spec.NUM_REGIONS, spec.NUM_MOL_TYPES,
 		spec.MAX_RXNS, spec.SUBVOL_BASE_SIZE,
-		DIFF_COEF, subCoorInd, subID, subIDSize);
+		DIFF_COEF, subCoorInd, subID, subIDSize, subNeighDir);
 		
 	// Determine rates associated with chemical reaction events
 	// Record dependencies (i.e., if a given rxn fires, what propensities need to be updated?)
@@ -281,7 +288,7 @@ int main(int argc, char *argv[])
 	allocateMesoSubArray(numMesoSub,&mesoSubArray);
 	initializeMesoSubArray(numMesoSub, numSub, mesoSubArray, subvolArray,
 		spec.SUBVOL_BASE_SIZE, spec.NUM_MOL_TYPES, spec.MAX_RXNS, regionArray,
-		spec.NUM_REGIONS, subCoorInd, DIFF_COEF);
+		spec.NUM_REGIONS, subCoorInd, subNeighDir, DIFF_COEF);
 	
 	// Build heap for mesoscopic subvolumes and associated arrays
 	uint32_t * heap_subvolID;
@@ -315,7 +322,8 @@ int main(int argc, char *argv[])
 	printf("Number of passive actors: %u\n", NUM_ACTORS_PASSIVE);
 	
 	// Delete temporary arrays for managing subvolume validity and placement
-	deleteSubvolHelper(subCoorInd, subID, subIDSize, spec.NUM_REGIONS, regionArray);
+	deleteSubvolHelper(subCoorInd, subID, subIDSize, subNeighDir,
+		spec.NUM_REGIONS, regionArray, numSub);
 	
 	ListMol3D molListPassive3D[spec.NUM_MOL_TYPES];
 	for(j = 0; j < spec.NUM_MOL_TYPES; j++)

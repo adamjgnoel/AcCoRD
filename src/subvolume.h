@@ -10,9 +10,13 @@
  * subvolume.h - 	structure for storing subvolume properties. Simulation
  *					environment is partitioned into subvolumes
  *
- * Last revised for AcCoRD v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added direction of subvolume neighbors as a standalone 2D array in order
+ * to implement fluid flow in the mesoscopic regime
  *
  * Revision v1.0 (2016-10-31)
  * - moved mesoscopic structure fields from subvolume struct to meso subvolume struct
@@ -83,10 +87,6 @@ struct subvolume3D {
 	// Length is num_neigh
 	uint32_t * neighID;
 	
-	// Direction from current subvolume to each of its neighbors.
-	// Length is num_neigh
-	unsigned short * neighDir;
-	
 	// Is subvolume along boundary of region?
 	bool bBoundary;
 	
@@ -105,6 +105,7 @@ void allocateSubvolHelper(const uint32_t numSub,
 	uint32_t (** subCoorInd)[3],
 	uint32_t ***** subID,
 	uint32_t (*** subIDSize)[2],
+	unsigned short *** subNeighDir,
 	const short NUM_REGIONS,
 	struct region regionArray[]);
 
@@ -118,8 +119,10 @@ void deleteSubvolArray(const uint32_t numSub,
 void deleteSubvolHelper(uint32_t subCoorInd[][3],
 	uint32_t **** subID,
 	uint32_t (** subIDSize)[2],
+	unsigned short ** subNeighDir,
 	const short NUM_REGIONS,
-	struct region regionArray[]);
+	struct region regionArray[],
+	const uint32_t numSub);
 
 // Construct the array of structures with details of each subvolume
 /* Each structure in the array subvol_spec defines a square/cube region of
@@ -136,7 +139,8 @@ void buildSubvolArray(const uint32_t numSub,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	uint32_t subCoorInd[numSub][3],
 	uint32_t **** subID,
-	uint32_t (** subIDSize)[2]);
+	uint32_t (** subIDSize)[2],
+	unsigned short ** subNeighDir);
 
 // Determine whether two subvolumes in neighboring regions are neighbors themselves
 // Assert that each subvolume is along its own region's boundary

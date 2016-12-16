@@ -188,6 +188,11 @@ struct region { // Region boundary parameters
 	// Length is NUM_MOL_TYPES
 	bool * bDiffuse;
 	
+	// Is at least one type of molecule carried by flow?
+	// If true and region is mesoscopic, then additional information
+	// must be tracked for each subvolume.
+	bool bFlow;
+	
 	// Flow parameters for each type of molecule.
 	// Intended to apply for microscopic time steps of a "typical" length
 	// Size is NUM_MOL_TYPES x Y, where Y depends on the type of flow

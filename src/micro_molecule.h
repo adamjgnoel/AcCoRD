@@ -17,6 +17,11 @@
  * Revision LATEST_VERSION
  * - simplified detection of whether molecules flow or diffuse in each region
  * - added uniform flow to the diffusion algorithm
+ * - modified meso-to-micro hybrid transition algorithm when a molecule is placed
+ * in the microscopic regime. Now, the trajectory of the molecule will be tracked
+ * to make sure that it can reach its intended destination. Reflections are added
+ * as necessary. Molecule is assumed to start from the middle of the mesoscopic
+ * subvolume.
  *
  * Revision v1.0 (2016-10-31)
  * - added specifying diffusion coefficient that applies to specific surface
@@ -190,14 +195,18 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 // Place a molecule entering microscopic region from a mesoscopic subvolume
-void placeInMicroFromMeso(const unsigned short curRegion,
+bool placeInMicroFromMeso(const unsigned short curRegion,
+	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const unsigned short destRegion,
+	uint32_t * newSub,
 	const struct region regionArray[],
 	const uint32_t curBoundSub,
 	const bool bSmallSub,
 	const unsigned short curMolType,
-	ListMolRecent3D * pRecentList,
-	const double DIFF_COEF);
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES]);
 
 void rxnFirstOrder(const unsigned short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,

@@ -10,9 +10,12 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v0.7.0.1 (public beta, 2016-08-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - renamed some switch cases to use direction macros instead of explicit integers
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)
  * - corrected calculation for spherical volume (was partially integer)
@@ -577,22 +580,22 @@ bool bLineHitInfinitePlane(const double p1[3],
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{
-				case 0:
+				case LEFT:
 					*d = (boundary1[0]-p1[0])/L[0];
 					break;
-				case 1:
+				case RIGHT:
 					*d = (boundary1[1]-p1[0])/L[0];
 					break;
-				case 2:
+				case DOWN:
 					*d = (boundary1[2]-p1[1])/L[1];
 					break;
-				case 3:
+				case UP:
 					*d = (boundary1[3]-p1[1])/L[1];
 					break;
-				case 4:
+				case IN:
 					*d = (boundary1[4]-p1[2])/L[2];
 					break;
-				case 5:
+				case OUT:
 					*d = (boundary1[5]-p1[2])/L[2];
 					break;
 				default:
@@ -668,20 +671,20 @@ bool bPointOnFace(const double p1[3],
 		case RECTANGULAR_BOX:
 			switch(planeID)
 			{
-				case 0: // yz plane
-				case 1:
+				case LEFT: // yz plane
+				case RIGHT:
 					return (p1[1] >= boundary1[2]
 						&& p1[1] <= boundary1[3]
 						&& p1[2] >= boundary1[4]
 						&& p1[2] <= boundary1[5]);
-				case 2: // xz plane
-				case 3:
+				case DOWN: // xz plane
+				case UP:
 					return (p1[0] >= boundary1[0]
 						&& p1[0] <= boundary1[1]
 						&& p1[2] >= boundary1[4]
 						&& p1[2] <= boundary1[5]);
-				case 4: // xy plane
-				case 5:
+				case IN: // xy plane
+				case OUT:
 					return (p1[1] >= boundary1[2]
 						&& p1[1] <= boundary1[3]
 						&& p1[0] >= boundary1[0]
@@ -1008,27 +1011,27 @@ bool reflectPoint(const double oldPoint[3],
 				
 			switch(*planeID)
 			{
-				case 0:
+				case LEFT:
 					// Reflect off of lower x
 					newPoint[0] = boundary1[0] + boundary1[0] - curPoint[0];
 					return true;
-				case 1:
+				case RIGHT:
 					// Reflect off of upper x
 					newPoint[0] = boundary1[1] + boundary1[1] - curPoint[0];
 					return true;
-				case 2:
+				case DOWN:
 					// Reflect off of lower y
 					newPoint[1] = boundary1[2] + boundary1[2] - curPoint[1];
 					return true;
-				case 3:
+				case UP:
 					// Reflect off of upper y
 					newPoint[1] = boundary1[3] + boundary1[3] - curPoint[1];
 					return true;
-				case 4:
+				case IN:
 					// Reflect off of lower z
 					newPoint[2] = boundary1[4] + boundary1[4] - curPoint[2];
 					return true;
-				case 5:
+				case OUT:
 					// Reflect off of upper z
 					newPoint[2] = boundary1[5] + boundary1[5] - curPoint[2];
 					return true;

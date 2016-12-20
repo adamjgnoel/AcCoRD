@@ -17,6 +17,11 @@
  * Revision LATEST_VERSION
  * - simplified detection of whether molecules flow or diffuse in each region
  * - added uniform flow to the diffusion algorithm
+ * - modified meso-to-micro hybrid transition algorithm when a molecule is placed
+ * in the microscopic regime. Now, the trajectory of the molecule will be tracked
+ * to make sure that it can reach its intended destination. Reflections are added
+ * as necessary. Molecule is assumed to start from the middle of the mesoscopic
+ * subvolume.
  *
  * Revision v1.0 (2016-10-31)
  * - added specifying diffusion coefficient that applies to specific surface
@@ -573,17 +578,29 @@ bool bEnterMesoIndirect(const short NUM_REGIONS,
 }
 
 // Place a molecule entering microscopic region from a mesoscopic subvolume
-void placeInMicroFromMeso(const unsigned short curRegion,
+bool placeInMicroFromMeso(const unsigned short curRegion,
+	const short NUM_REGIONS,
+	const unsigned short NUM_MOL_TYPES,
 	const unsigned short destRegion,
+	uint32_t * newSub,
 	const struct region regionArray[],
 	const uint32_t curBoundSub,
 	const bool bSmallSub,
 	const unsigned short curMolType,
-	ListMolRecent3D * pRecentList,
-	const double DIFF_COEF)
+	ListMolRecent3D pRecentList[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES])
 {
 	double randCoor[3];
 	double newPoint[3];
+	double length; // Length of line to the new point
+	double lengthToInterface;
+	double L[3]; // Line vector between subvolume center and new point
+	double intersectPoint[3];
+	short newRegion, transRegion;
+	bool bPointChange, bReaction;
+	short curRxn;
+	
 	unsigned short faceDir;
 	double curRand;
 	
@@ -597,7 +614,7 @@ void placeInMicroFromMeso(const unsigned short curRegion,
 		faceDir = 0;
 	
 	curRand = generateUniform();
-	randCoor[0] = sqrt(2*DIFF_COEF*regionArray[destRegion].spec.dt)*
+	randCoor[0] = sqrt(2*DIFF_COEF[curRegion][curMolType]*regionArray[destRegion].spec.dt)*
 		(0.729614*curRand - 0.70252*curRand*curRand)/
 		(1 - 1.47494*curRand + 0.484371*curRand*curRand);
 	if(bSmallSub)
@@ -676,13 +693,76 @@ void placeInMicroFromMeso(const unsigned short curRegion,
 			curRegion, destRegion);
 			exit(EXIT_FAILURE);
 	}
-	if(!addMoleculeRecent(pRecentList,
-		newPoint[0], newPoint[1], newPoint[2], 0))
-	{ // Creation of molecule failed
-		fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
-			curMolType, curRegion, destRegion);
-		exit(EXIT_FAILURE);
+	
+	defineLine(regionArray[curRegion].boundSubCenterCoor[destRegion][curBoundSub],
+		newPoint, L, &length);
+	
+	// Check trajectory of molecule from center of subvolume to new point
+	if(bLineHitInfinitePlane(
+		regionArray[curRegion].boundSubCenterCoor[destRegion][curBoundSub],
+		L, length, RECTANGULAR_BOX,
+		regionArray[curRegion].boundSubCoor[destRegion][curBoundSub],
+		regionArray[curRegion].boundVirtualNeighDir[destRegion][curBoundSub][faceDir],
+		true, &lengthToInterface, intersectPoint, false))
+	{
+		// Check whether the intersection point is on the subvolume face
+		// If not, then correct
+		if(intersectPoint[0] <
+			regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0])
+			intersectPoint[0] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][0];
+		else if(intersectPoint[0] >
+			regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1])
+			intersectPoint[0] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][1];
+				
+		if(intersectPoint[1] <
+			regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2])
+			intersectPoint[1] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][2];
+		else if(intersectPoint[1] >
+			regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][3])
+			intersectPoint[1] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][3];
+				
+		if(intersectPoint[2] <
+			regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4])
+			intersectPoint[2] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][4];
+		else if(intersectPoint[2] >
+			regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][5])
+			intersectPoint[2] =
+				regionArray[curRegion].boundSubCoor[destRegion][curBoundSub][5];
+		
+		// "Push" slightly into microscopic region
+		pushPoint(intersectPoint, intersectPoint, 0.01*(length-lengthToInterface), L);
+		
+		// Follow trajectory to the new molecule point
+		validateMolecule(newPoint, intersectPoint, NUM_REGIONS, NUM_MOL_TYPES,
+			destRegion, &newRegion, &transRegion, &bPointChange,
+			regionArray, curMolType, &bReaction, true, 0, chem_rxn,
+			DIFF_COEF, &curRxn);
+		
+		if(regionArray[newRegion].spec.bMicro)
+		{
+			if(!addMoleculeRecent(&pRecentList[newRegion][curMolType],
+				newPoint[0], newPoint[1], newPoint[2], 0))
+			{ // Creation of molecule failed
+				fprintf(stderr,"ERROR: Memory allocation to create molecule of type %u transitioning from region %u to region %u.\n",
+					curMolType, curRegion, destRegion);
+				exit(EXIT_FAILURE);
+			}
+			return true;
+		} else
+		{ // Molecule ended up back in mesoscopic regime
+			*newSub = regionArray[newRegion].neighID[transRegion]
+				[findNearestSub(newRegion, regionArray,
+				transRegion, newPoint[0], newPoint[1], newPoint[2])];
+			return false;
+		}
 	}
+	
+	
 }
 
 // Check first order reactions for all molecules in list

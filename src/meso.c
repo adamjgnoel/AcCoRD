@@ -148,6 +148,7 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 	double boundOverlap[6]; // Overlap area of adjacent subvolumes
 	bool bFlow; // Can molecules flow to neighboring subvolume?
 	double flowVal; // Value of flow vector in direction of neighbor subvolume
+	double flowProp; // Flow propensity
 	double relOverlap; // Relative overlap of neighboring subvolume
 	uint32_t curNeighID = 0; // Current Subvolume neighbour ID
 	uint32_t neighID = 0; // Subvolume neighbour ID in master subvolume list
@@ -239,68 +240,6 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 					{
 						mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] =
 							DIFF_COEF[curRegion][curMolType]/h_i/h_i;
-						
-						if(regionArray[curRegion].spec.bFlow[curMolType])
-						{ // Current molecule type can flow. Need to correct propensity if neighboring
-						  // subvolume is in flow direction
-							bFlow = false;
-							flowVal = 0.;
-							switch(regionArray[curRegion].spec.flowType[curMolType])
-							{
-								case FLOW_UNIFORM:
-									switch(subNeighDir[curSub][curNeighID])
-									{
-										case LEFT:
-											if(regionArray[curRegion].spec.flowVector[curMolType][0] < 0.)
-											{
-												bFlow = true;
-												flowVal = -regionArray[curRegion].spec.flowVector[curMolType][0];
-											}
-											break;
-										case RIGHT:
-											if(regionArray[curRegion].spec.flowVector[curMolType][0] > 0.)
-											{
-												bFlow = true;
-												flowVal = regionArray[curRegion].spec.flowVector[curMolType][0];
-											}
-											break;
-										case DOWN:
-											if(regionArray[curRegion].spec.flowVector[curMolType][1] < 0.)
-											{
-												bFlow = true;
-												flowVal = -regionArray[curRegion].spec.flowVector[curMolType][1];
-											}
-											break;
-										case UP:
-											if(regionArray[curRegion].spec.flowVector[curMolType][1] > 0.)
-											{
-												bFlow = true;
-												flowVal = regionArray[curRegion].spec.flowVector[curMolType][1];
-											}
-											break;
-										case IN:
-											if(regionArray[curRegion].spec.flowVector[curMolType][2] < 0.)
-											{
-												bFlow = true;
-												flowVal = -regionArray[curRegion].spec.flowVector[curMolType][2];
-											}
-											break;
-										case OUT:
-											if(regionArray[curRegion].spec.flowVector[curMolType][2] > 0.)
-											{
-												bFlow = true;
-												flowVal = regionArray[curRegion].spec.flowVector[curMolType][2];
-											}
-											break;
-									}
-									break;
-							}
-							if(bFlow)
-							{
-								mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] +=
-									flowVal/h_i;
-							}
-						}
 					}						
 				} else
 				{
@@ -367,63 +306,72 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 								*= 2*h_i/sqrt(DIFF_COEF[curRegion][curMolType]
 								*PI*regionArray[neighRegion].spec.dt);
 						}
-						
-						if(regionArray[curRegion].spec.bFlow[curMolType])
-						{ // Current molecule type can flow. Need to correct propensity if neighboring
-						  // subvolume is in flow direction
-							bFlow = false;
-							flowVal = 0.;
-							switch(regionArray[curRegion].spec.flowType[curMolType])
-							{
-								case FLOW_UNIFORM:
-									switch(subNeighDir[curSub][curNeighID])
-									{
-										case LEFT:
-											if(regionArray[curRegion].spec.flowVector[curMolType][0] < 0.)
-											{
-												bFlow = true;
-												flowVal = -regionArray[curRegion].spec.flowVector[curMolType][0];
-											}
-											break;
-										case RIGHT:
-											if(regionArray[curRegion].spec.flowVector[curMolType][0] > 0.)
-											{
-												bFlow = true;
-												flowVal = regionArray[curRegion].spec.flowVector[curMolType][0];
-											}
-											break;
-										case DOWN:
-											if(regionArray[curRegion].spec.flowVector[curMolType][1] < 0.)
-											{
-												bFlow = true;
-												flowVal = -regionArray[curRegion].spec.flowVector[curMolType][1];
-											}
-											break;
-										case UP:
-											if(regionArray[curRegion].spec.flowVector[curMolType][1] > 0.)
-											{
-												bFlow = true;
-												flowVal = regionArray[curRegion].spec.flowVector[curMolType][1];
-											}
-											break;
-										case IN:
-											if(regionArray[curRegion].spec.flowVector[curMolType][2] < 0.)
-											{
-												bFlow = true;
-												flowVal = -regionArray[curRegion].spec.flowVector[curMolType][2];
-											}
-											break;
-										case OUT:
-											if(regionArray[curRegion].spec.flowVector[curMolType][2] > 0.)
-											{
-												bFlow = true;
-												flowVal = regionArray[curRegion].spec.flowVector[curMolType][2];
-											}
-											break;
-									}
-									break;
-							}
-							if(bFlow)
+					}
+				}
+				// Correct transition rates with flow parameters
+				for(curMolType = 0; curMolType < NUM_MOL_TYPES; curMolType++)
+				{
+					if(regionArray[curRegion].spec.bFlow[curMolType])
+					{ // Current molecule type can flow. Need to correct propensity if neighboring
+					  // subvolume is in flow direction
+						bFlow = false;
+						flowVal = 0.;
+						switch(regionArray[curRegion].spec.flowType[curMolType])
+						{
+							case FLOW_UNIFORM:
+								switch(subNeighDir[curSub][curNeighID])
+								{
+									case LEFT:
+										if(fabs(regionArray[curRegion].spec.flowVector[curMolType][0]) > 0.)
+										{
+											bFlow = true;
+											flowVal = -regionArray[curRegion].spec.flowVector[curMolType][0];
+										}
+										break;
+									case RIGHT:
+										if(fabs(regionArray[curRegion].spec.flowVector[curMolType][0]) > 0.)
+										{
+											bFlow = true;
+											flowVal = regionArray[curRegion].spec.flowVector[curMolType][0];
+										}
+										break;
+									case DOWN:
+										if(fabs(regionArray[curRegion].spec.flowVector[curMolType][1]) > 0.)
+										{
+											bFlow = true;
+											flowVal = -regionArray[curRegion].spec.flowVector[curMolType][1];
+										}
+										break;
+									case UP:
+										if(fabs(regionArray[curRegion].spec.flowVector[curMolType][1]) > 0.)
+										{
+											bFlow = true;
+											flowVal = regionArray[curRegion].spec.flowVector[curMolType][1];
+										}
+										break;
+									case IN:
+										if(fabs(regionArray[curRegion].spec.flowVector[curMolType][2]) > 0.)
+										{
+											bFlow = true;
+											flowVal = -regionArray[curRegion].spec.flowVector[curMolType][2];
+										}
+										break;
+									case OUT:
+										if(fabs(regionArray[curRegion].spec.flowVector[curMolType][2]) > 0.)
+										{
+											bFlow = true;
+											flowVal = regionArray[curRegion].spec.flowVector[curMolType][2];
+										}
+										break;
+								}
+								break;
+						}
+						if(bFlow)
+						{
+							// Calculate flow propensity
+							if(curRegion == neighRegion)
+								flowProp = flowVal/2./h_i;
+							else
 							{
 								relOverlap = 1.;
 								if(fabs(boundOverlap[0] - boundOverlap[1]) > boundAdjError)
@@ -432,10 +380,25 @@ void initializeMesoSubArray(const uint32_t numMesoSub,
 									relOverlap *= (boundOverlap[3] - boundOverlap[2])/h_i;
 								if(fabs(boundOverlap[4] - boundOverlap[5]) > boundAdjError)
 									relOverlap *= (boundOverlap[5] - boundOverlap[4])/h_i;
-																
-								mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] +=
-									2.*flowVal/(h_i + h_j)*relOverlap;
+								
+								flowProp = flowVal/(h_i + h_j)*relOverlap;
 							}
+							
+							if(fabs(flowProp) >
+								mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID])
+							{ // Flow is "strong" (Peclet number above 2)
+								if(flowVal > 0)
+									// "Diffusion" rate is only due to flow
+									mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] =
+										2*flowProp;
+								else
+									// Transitions in this direction will not occur
+									mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] =	0.;
+							} else
+							{
+								mesoSubArray[curMesoSub].diffRateNeigh[curMolType][curNeighID] +=
+									flowProp;
+							}								
 						}
 					}
 				}

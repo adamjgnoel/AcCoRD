@@ -16,6 +16,9 @@
  * Revision LATEST_VERSION
  * - added direction of subvolume neighbors as a standalone 2D array in order
  * to implement fluid flow in the mesoscopic regime
+ * - modified meso-to-micro transition algorithm to allow a molecule to immediately
+ * reflect back into the mesoscopic regime if it hits a boundary while being placed
+ * in the microscopic regime
  *
  * Revision v1.0 (2016-10-31)
  * - enabled local diffusion coefficients
@@ -909,11 +912,7 @@ int main(int argc, char *argv[])
 					
 					// Add molecule to destination
 					if(regionArray[subvolArray[destSub].regionID].spec.bMicro)
-					{ // Destination is in a microscopic region				
-						// Coordinates of source subvolume are "somewhere" in
-						// regionArray[curRegion].boundSubCenterCoor[destRegion][curBoundSub]
-						// curBoundSub found by searching
-						// curSub == regionArray[curRegion].neighID[destRegion][]
+					{ // Destination is in a microscopic region
 						
 						// Find ID of current subvolume in region boundary list
 						destRegion = subvolArray[destSub].regionID;
@@ -923,10 +922,26 @@ int main(int argc, char *argv[])
 						if(curBoundSub < UINT32_MAX)
 						{ // Add new molecule to random location next to source subvolume
 					
-							placeInMicroFromMeso(curRegion, destRegion, regionArray,
+							if(!placeInMicroFromMeso(curRegion, spec.NUM_REGIONS,
+								spec.NUM_MOL_TYPES, destRegion, &destSub,
+								regionArray,
 								curBoundSub, spec.B_HYBRID_SMALL_SUB, curMolType,
-								&microMolListRecent[destRegion][curMolType],
-								DIFF_COEF[curRegion][curMolType]);
+								microMolListRecent, spec.chem_rxn, DIFF_COEF))
+							{ // Molecule "bounced back" to meso
+							  // destSub is now the mesoID
+								curDestMeso = destSub;
+								destSub = mesoSubArray[curDestMeso].subID;
+								mesoSubArray[curDestMeso].num_mol[curMolType] += 1ULL;
+								numMolChange[0] = 1ULL;
+								
+								// Update propensities of destination subvolume
+								// and its location in the heap
+								updateMesoSub(destSub, false, numMolChange, bTrue, curMolType, true,
+									numMesoSub,	mesoSubArray, subvolArray, tCur, spec.NUM_REGIONS,
+									spec.NUM_MOL_TYPES, regionArray);
+								heapMesoUpdate(numMesoSub, mesoSubArray, heap_subvolID,
+									mesoSubArray[subvolArray[destSub].mesoID].heapID, heap_childID, b_heap_childValid);
+							}
 						} else
 						{
 							// Error

@@ -17,6 +17,8 @@
  * - added flow parameters (based on either no flow or uniform flow).
  * Global settings apply to any subset of molecule types but can be modified for any
  * individual molecule type in any region.
+ * - corrected default subvolume base size if is is not defined correctly
+ * - corrected detection of missing surface reaction probability for surface reactions
  *
  * Revision v1.0 (2016-10-31)
  * - added warnings for defining passive actor parameters for active actors or

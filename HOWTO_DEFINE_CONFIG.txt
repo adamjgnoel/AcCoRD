@@ -9,9 +9,13 @@
 //
 // HOWTO_READ_CONFIG.txt - explains how to define simulation inputs
 //
-// Last revised for AcCoRD v1.0 (2016-10-31)
+// Last revised for AcCoRD v1.1 (2016-12-24)
 //
 // Revision history:
+//
+// Revision v1.1 (2016-12-24)
+// - added flow parameters, which can be defined globally and then with exceptions
+// in individual regions. Flow types available are "None" and "Uniform"
 //
 // Revision v1.0 (2016-10-31)
 // - added "Burst" modulation, which does not modulate binary data but always
@@ -175,6 +179,22 @@
 		
 		"Diffusion Coefficients": [1e-9],
 		// An array of length "Number of Molecule Types". Units are metre^2/second
+		
+		"Global Flow Type": "None",
+		// Default flow type used everywhere. Can be "None" or "Uniform".
+		// Exceptions can be defined for any region.
+		// "Uniform" is a steady uniform flow (constant everywhere and at all times).
+		// If flow is uniform, then "Global Flow Vector" must be defined, and
+		// "Does Molecule Type Flow?" is optional.
+		
+		"Global Flow Vector": [1e-3, 0, 0]
+		// Array of parameter values used for the global flow.
+		// If "Global Flow Type" is "Uniform", then this vector has size 3 and is the constant flow
+		// along the {x,y,z} directions in metre/second.
+		
+		"Does Molecule Type Flow?": [true]
+		// Array of length "Number of Molecule Types". Each element is a Boolean defining
+		// whether the corresponding type of molecule follows the global flow type.
 		
 		"Chemical Reaction Specification": [
 		// Array of chemical reactions in the environment. No reactions are required (can leave array empty)
@@ -408,6 +428,26 @@
 				// (one for each dimension)
 				// This method was the original convention and could be deprecated in
 				// a future release.
+				
+				"Local Flow": [
+				// Optional array of objects to define local exceptions to the global flow
+				// parameters. There can be multiple exceptions, but only the first exception
+				// specified for a particular molecule type will apply to that type (later
+				// exceptions in the same region will be ignored)
+					{
+						"Is Molecule Type Affected?": [true],
+						// An array of length "Number of Molecule Types". Indicates which
+						// molecule types are changed by this exception
+						
+						"Flow Type": "Uniform",
+						// Flow type for this exception. See description of "Global Flow Type"
+						// in the "Chemical Properties" for details
+						
+						"Flow Vector": [0, 1e-3, 0]
+						// Flow vector for this exception. See description of "Global Flow Vector"
+						// in the "Chemical Properties" for details
+					}
+				]
 								
 				//
 				//!!!!  The following parameters apply to Rectangular Box regions ONLY !!!!

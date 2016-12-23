@@ -16,6 +16,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 2,
 		"Diffusion Coefficients": [1e-9, 0],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur in the destination region.",

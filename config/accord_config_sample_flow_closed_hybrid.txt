@@ -1,0 +1,132 @@
+{
+	"Description": "Diffusion with flow around a square pipe. There are two microscopic regions and
+	two mesoscopic regions. Molecule positions are recorded so a video can be generated.",
+	"Output Filename": "accord_sample_flow_closed_hybrid",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 0.1,
+		"Global Microscopic Time Step": 1e-4,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100,
+		"Small Subvolumes at Hybrid Interface?": false,
+		"Max Intrastep Micro to Meso Distance": 5e-6
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-9],
+		"Global Flow Type": "None",
+		"Chemical Reaction Specification": []
+	},
+	"Environment":	{
+		"Subvolume Base Size": 1e-6,
+		"Region Specification": [
+			{
+				"Notes": "Positive x flow.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor Coordinate": [0, 0, 0],
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Per Dimension": [45, 5, 5],
+				"Local Flow": [
+					{
+						"Is Molecule Type Affected?": [true],
+						"Flow Type": "Uniform",
+						"Flow Vector": [0.005, 0, 0]
+					}
+				]
+			},
+			{
+				"Notes": "Positive z flow.",
+				"Label": "B",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor Coordinate": [45e-6, 0, 0],
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": false,
+				"Number of Subvolumes Per Dimension": [5, 5, 45],
+				"Local Flow": [
+					{
+						"Is Molecule Type Affected?": [true],
+						"Flow Type": "Uniform",
+						"Flow Vector": [0, 0, 0.005]
+					}
+				]
+			},
+			{
+				"Notes": "Negative x flow.",
+				"Label": "C",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor Coordinate": [5e-6, 0, 45e-6],
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": true,
+				"Number of Subvolumes Per Dimension": [45, 5, 5],
+				"Local Flow": [
+					{
+						"Is Molecule Type Affected?": [true],
+						"Flow Type": "Uniform",
+						"Flow Vector": [-0.005, 0, 0]
+					}
+				]
+			},
+			{
+				"Notes": "Negative z flow.",
+				"Label": "D",
+				"Parent Label": "",
+				"Shape": "Rectangular Box",
+				"Type": "Normal",
+				"Anchor Coordinate": [0, 0, 5e-6],
+				"Integer Subvolume Size": 1,
+				"Is Region Microscopic?": false,
+				"Number of Subvolumes Per Dimension": [5, 5, 45],
+				"Local Flow": [
+					{
+						"Is Molecule Type Affected?": [true],
+						"Flow Type": "Uniform",
+						"Flow Vector": [0, 0, -0.005]
+					}
+				]
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Initial molecule distribution",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["A"],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Is Actor Activity Recorded?": true,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Modulation Scheme": "Burst",
+				"Modulation Strength": 100,
+				"Is Molecule Type Released?": [true]
+		},
+		{
+				"Notes": "Observer of entire environment",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["A", "B", "C", "D"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [true]
+		}
+		]		
+	}
+}

@@ -20,6 +20,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 2,
 		"Diffusion Coefficients": [2e-9, 5e-9],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": []
 	},
 	"Environment":	{

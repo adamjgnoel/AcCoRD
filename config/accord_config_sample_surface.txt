@@ -14,6 +14,7 @@
 		"Number of Repeats": 10,
 		"Final Simulation Time": 0.1,
 		"Global Microscopic Time Step": 1e-3,
+		"Global Flow Type": "None",
 		"Random Number Seed": 1,
 		"Max Number of Progress Updates": 100
 	},

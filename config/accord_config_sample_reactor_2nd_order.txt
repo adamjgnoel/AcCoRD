@@ -18,6 +18,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 4,
 		"Diffusion Coefficients": [0, 0, 0, 0],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Enzyme binding.",

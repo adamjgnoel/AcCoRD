@@ -25,11 +25,11 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.1 (2016-12-24)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.1 (2016-12-24)
 % - added import of local (region) diffusion coefficients, and all flow
 % parameters (global and local)
 %
@@ -71,7 +71,12 @@ for i = 1:config.numMolTypes
         configJSON.Chemical_0x20_Properties.Diffusion_0x20_Coefficients(i);
 end
 
-config.flowType = configJSON.Chemical_0x20_Properties.Global_0x20_Flow_0x20_Type;
+if isfield(configJSON.Chemical_0x20_Properties, 'Global_0x20_Flow_0x20_Vector')
+    config.flowType = configJSON.Chemical_0x20_Properties.Global_0x20_Flow_0x20_Type;
+else
+    config.flowType = 'None';
+end
+
 config.flowVector = cell(config.numRegion,config.numMolTypes);
 if ~strcmp(config.flowType, 'None') && isfield(configJSON.Chemical_0x20_Properties, 'Global_0x20_Flow_0x20_Vector')
     for i = 1:config.numRegion

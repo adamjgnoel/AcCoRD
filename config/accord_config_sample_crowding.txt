@@ -13,6 +13,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 1,
 		"Diffusion Coefficients": [1e-9],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Binding reaction.",

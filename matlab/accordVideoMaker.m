@@ -95,9 +95,13 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v1.0 (2016-10-31)
+% Last revised for AcCoRD v1.1 (2016-12-24)
 %
 % Revision history:
+%
+% Revision v1.1 (2016-12-24)
+% - corrected instructions that are displayed to the command line when
+% running
 %
 % Revision v1.0 (2016-10-31)
 % - expanded the bMakeVideo bool to also be an int to specify how many

@@ -27,11 +27,11 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD LATEST_RELEASE
+% Last revised for AcCoRD v1.1 (2016-12-24)
 %
 % Revision history:
 %
-% Revision LATEST_RELEASE
+% Revision v1.1 (2016-12-24)
 % - changed import algorithm to read entire output file in one call and
 % store contents in a cell array, and then scan the elements of the cell
 % array. Now about an order of magnitude faster at reading the simulation

@@ -9,11 +9,11 @@
  *
  * meso.h - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.1 (2016-12-24)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.1 (2016-12-24)
  * - added uniform flow to the diffusion algorithm
  *
  * Revision v1.0 (2016-10-31)

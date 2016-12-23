@@ -10,11 +10,11 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.1 (2016-12-24)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.1 (2016-12-24)
  * - added flow types FLOW_NONE and FLOW_UNIFORM
  *
  * Revision v1.0 (2016-10-31)

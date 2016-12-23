@@ -9,11 +9,11 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.1 (2016-12-24)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.1 (2016-12-24)
  * - added direction of subvolume neighbors as a standalone 2D array in order
  * to implement fluid flow in the mesoscopic regime
  * - modified meso-to-micro transition algorithm to allow a molecule to immediately
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version LATEST_VERSION\n");
+	printf("Version v1.1 (2016-12-24)\n");
 	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
 	printf("Source code at https://github.com/adamjgnoel/AcCoRD\n");
 	printf("User Documentation at http://adamnoel.ca/software/accord/\n");

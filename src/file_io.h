@@ -9,11 +9,11 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.1 (2016-12-24)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.1 (2016-12-24)
  * - added flow parameters (based on either no flow or uniform flow).
  * Global settings apply to any subset of molecule types but can be modified for any
  * individual molecule type in any region.

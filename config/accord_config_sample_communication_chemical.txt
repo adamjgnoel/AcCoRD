@@ -105,7 +105,7 @@
 				"Probability of Bit 1": 0.5,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 2,
-				"Modulation Strength": 1200000,
+				"Modulation Strength": 120000,
 				"Is Molecule Type Released?": [true, false]
 		},
 		{

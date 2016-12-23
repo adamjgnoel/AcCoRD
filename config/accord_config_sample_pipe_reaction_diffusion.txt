@@ -3,8 +3,8 @@
 	"Description": "This configuration demonstrates reaction-diffusion in the mesoscopic
 		regime. We define a chain of subvolumes that form a pipe. Molecules are added
 		by an active actor at one end of the chamber and can convert into an immobile product molecule at the other end. This file has no 2nd order reactions so it also has
-		a microscopic equivalent. 1 repeat of this simulation should take less than 1 minute to
-		execute on a personal computer (it is much slower).",
+		a microscopic equivalent. 1 repeat of this simulation should less than 1 second to
+		execute on a personal computer.",
 	"Output Filename": "accord_sample_pipe_reaction_diffusion",
 	"Warning Override": false,
 	"Simulation Control": {
@@ -78,7 +78,7 @@
 				"Probability of Bit 1": 1,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 1,
-				"Modulation Strength": 1000,
+				"Modulation Strength": 50,
 				"Is Molecule Type Released?": [true, false]
 		},
 		{

@@ -5,6 +5,8 @@
 ./accord_dub.out accord_config_sample_communication.txt;
 ./accord_dub.out accord_config_sample_communication_chemical.txt;
 ./accord_dub.out accord_config_sample_crowding.txt;
+./accord_dub.out accord_config_sample_flow.txt;
+./accord_dub.out accord_config_sample_flow_closed_hybrid.txt;
 ./accord_dub.out accord_config_sample_hybrid.txt;
 ./accord_dub.out accord_config_sample_pipe_reaction_diffusion.txt;
 ./accord_dub.out accord_config_sample_pipe_reaction_diffusion_microscopic.txt;

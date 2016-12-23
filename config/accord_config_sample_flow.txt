@@ -1,5 +1,6 @@
 {
-	"Description": "Point to sphere communication with a passive RX and steady flow towards the RX.",
+	"Description": "Point to sphere communication with a passive RX and steady flow towards the RX. Molecules
+	within the RX flow at a different rate",
 	"Output Filename": "accord_sample_flow",
 	"Warning Override": false,
 	"Simulation Control": {
@@ -34,9 +35,7 @@
 			},
 			{
 				"Notes": "RX region. Even though this receiver is passive, we define
-				it as an explicit region so that we can observe its molecules
-				distinctly from those outside the receiver and show them as a different
-				color in the video.",
+				it as an explicit region so that we can define a different flow inside.",
 				"Label": "RX",
 				"Parent Label": "A",
 				"Shape": "Sphere",
@@ -49,7 +48,7 @@
 					{
 						"Is Molecule Type Affected?": [true],
 						"Flow Type": "Uniform",
-						"Flow Vector": [15e-4, 0, 0]
+						"Flow Vector": [2e-4, 0, 0]
 					}
 				]
 			}
@@ -78,38 +77,9 @@
 				"Is Molecule Type Released?": [true]
 		},
 		{
-				"Notes": "Spherical actor added to draw transmitter.",
-				"Is Location Defined by Regions?": false,
-				"Shape": "Sphere",
-				"Outer Boundary": [0, 0, 0, 0.1e-6],
-				"Is Actor Active?": false,
-				"Start Time": 1e-10,
-				"Is There Max Number of Actions?": false,
-				"Is Actor Independent?": true,
-				"Action Interval": 1e9999,
-				"Is Actor Activity Recorded?": true,
-				"Is Time Recorded with Activity?": false,
-				"Is Molecule Type Observed?": [false],
-				"Is Molecule Position Observed?": [false]
-		},
-		{
 				"Notes": "Spherical observer at receiver.",
 				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["RX"],
-				"Is Actor Active?": false,
-				"Start Time": 1e-10,
-				"Is There Max Number of Actions?": false,
-				"Is Actor Independent?": true,
-				"Action Interval": 2.5e-4,
-				"Is Actor Activity Recorded?": true,
-				"Is Time Recorded with Activity?": false,
-				"Is Molecule Type Observed?": [true],
-				"Is Molecule Position Observed?": [true]
-		},
-		{
-				"Notes": "Global observer for molecules outside receiver.",
-				"Is Location Defined by Regions?": true,
-				"List of Regions Defining Location": ["A"],
 				"Is Actor Active?": false,
 				"Start Time": 1e-10,
 				"Is There Max Number of Actions?": false,

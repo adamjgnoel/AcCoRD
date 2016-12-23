@@ -162,7 +162,7 @@
 				"Is Molecule Position Observed?": [false, false]
 		},
 		{
-				"Notes": "Transmitter 1. Releases 1 molecule per 10 cubic microns",
+				"Notes": "Transmitter 1. Releases 1 molecule per 100 cubic microns",
 				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
@@ -180,11 +180,11 @@
 				"Probability of Bit 1": 1,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 1,
-				"Modulation Strength": 25000,
+				"Modulation Strength": 2500,
 				"Is Molecule Type Released?": [true, false]
 		},
 		{
-				"Notes": "Transmitter 2. Releases 10000 molecules (i.e., 100 for every 1% of system volume).",
+				"Notes": "Transmitter 2. Releases 1000 molecules (i.e., 10 for every 1% of system volume).",
 				"Is Location Defined by Regions?": false,
 				"Shape": "Rectangular Box",
 				"Outer Boundary": [0, 100e-6, 0, 50e-6, 0, 50e-6],
@@ -202,7 +202,7 @@
 				"Probability of Bit 1": 1,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 1,
-				"Modulation Strength": 10000,
+				"Modulation Strength": 1000,
 				"Is Molecule Type Released?": [false, true]
 		}
 		]		

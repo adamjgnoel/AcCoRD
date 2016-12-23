@@ -11,16 +11,16 @@
 	"Output Filename": "accord_sample_surface",
 	"Warning Override": false,
 	"Simulation Control": {
-		"Number of Repeats": 10,
+		"Number of Repeats": 1,
 		"Final Simulation Time": 0.1,
 		"Global Microscopic Time Step": 1e-3,
-		"Global Flow Type": "None",
 		"Random Number Seed": 1,
 		"Max Number of Progress Updates": 100
 	},
 	"Chemical Properties": {
 		"Number of Molecule Types": 10,
 		"Diffusion Coefficients": [5e-12, 5e-12, 5e-12, 5e-12, 5e-12, 5e-12, 0, 0, 0, 0],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Fast irreversible adsorption at surface",

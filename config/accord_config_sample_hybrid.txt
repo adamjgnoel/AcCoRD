@@ -2,7 +2,7 @@
 	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
 	"Description": "This configuration is a simple hybrid environment, with 1 microscopic
 		region and 1 mesoscopic region. Both regions are rectangular boxes and they are
-		adjacent. There are 1000 molecules initialized uniformaly, so about one half
+		adjacent. There are 200 molecules initialized uniformaly, so about one half
 		of the molecules should remain in each region over time.",
 	"Output Filename": "accord_sample_hybrid",
 	"Warning Override": false,
@@ -91,7 +91,7 @@
 				"Is Molecule Position Observed?": [false, false]
 		},
 		{
-				"Notes": "Transmitter 1. 1000 molecules",
+				"Notes": "Transmitter 1. 200 molecules",
 				"Is Location Defined by Regions?": true,
 				"List of Regions Defining Location": ["Right", "Left"],
 				"Is Actor Active?": true,
@@ -108,7 +108,7 @@
 				"Probability of Bit 1": 1,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 1,
-				"Modulation Strength": 1000,
+				"Modulation Strength": 200,
 				"Is Molecule Type Released?": [true, false]
 		}
 		]		

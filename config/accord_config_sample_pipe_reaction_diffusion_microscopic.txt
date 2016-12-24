@@ -2,7 +2,7 @@
 	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
 	"Description": "This configuration demonstrates reaction-diffusion in the mesoscopic
 		regime. We define a chain of subvolumes that form a pipe. Molecules are added
-		by an active actor at one end of the chamber and can convert into an immobile product molecule at the other end. This file has no 2nd order reactions so it can be done in the microscopic regime. 1 repeat of this simulation should take about 1 minute to
+		by an active actor at one end of the chamber and can convert into an immobile product molecule at the other end. This file has no 2nd order reactions so it can be done in the microscopic regime. 1 repeat of this simulation should less than 10 seconds to
 		execute on a personal computer.",
 	"Output Filename": "accord_sample_pipe_reaction_diffusion_microscopic",
 	"Warning Override": false,
@@ -16,6 +16,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 2,
 		"Diffusion Coefficients": [1e-9, 0],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur in the destination region.",
@@ -76,7 +77,7 @@
 				"Probability of Bit 1": 1,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 1,
-				"Modulation Strength": 1000,
+				"Modulation Strength": 50,
 				"Is Molecule Type Released?": [true, false]
 		},
 		{

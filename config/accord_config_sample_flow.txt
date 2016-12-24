@@ -1,0 +1,95 @@
+{
+	"Description": "Point to sphere communication with a passive RX and steady flow towards the RX. Molecules
+	within the RX flow at a different rate",
+	"Output Filename": "accord_sample_flow",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 0.025,
+		"Global Microscopic Time Step": 2.5e-4,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 1,
+		"Diffusion Coefficients": [1e-10],
+		"Global Flow Type": "Uniform",
+		"Global Flow Vector": [5e-4, 0, 0],
+		"Does Molecule Type Flow?": [true],
+		"Chemical Reaction Specification": [
+		]
+	},
+	"Environment":	{
+		"Subvolume Base Size": 1e-12,
+		"Region Specification": [
+			{
+				"Notes": "Spherical region with infinite radius.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Sphere",
+				"Type": "Normal",
+				"Anchor X Coordinate": 0,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Radius": 1e9999
+			},
+			{
+				"Notes": "RX region. Even though this receiver is passive, we define
+				it as an explicit region so that we can define a different flow inside.",
+				"Label": "RX",
+				"Parent Label": "A",
+				"Shape": "Sphere",
+				"Type": "Normal",
+				"Anchor X Coordinate": 2e-6,
+				"Anchor Y Coordinate": 0,
+				"Anchor Z Coordinate": 0,
+				"Radius": 1e-6,
+				"Local Flow": [
+					{
+						"Is Molecule Type Affected?": [true],
+						"Flow Type": "Uniform",
+						"Flow Vector": [2e-4, 0, 0]
+					}
+				]
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Point Transmitter at origin",
+				"Is Location Defined by Regions?": false,
+				"Shape": "Point",
+				"Outer Boundary": [0, 0, 0],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Is Actor Activity Recorded?": true,
+				"Random Number of Molecules?": false,
+				"Random Molecule Release Times?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Bits Random?": false,
+				"Bit Sequence": [1],
+				"Modulation Scheme": "CSK",
+				"Modulation Bits": 1,
+				"Modulation Strength": 100,
+				"Is Molecule Type Released?": [true]
+		},
+		{
+				"Notes": "Spherical observer at receiver.",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["RX"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 2.5e-4,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true],
+				"Is Molecule Position Observed?": [true]
+		}
+		]		
+	}
+}

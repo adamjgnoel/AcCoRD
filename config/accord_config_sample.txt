@@ -17,6 +17,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 1,
 		"Diffusion Coefficients": [1e-9],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": []
 	},
 	"Environment":	{
@@ -50,10 +51,7 @@
 				"Random Molecule Release Times?": false,
 				"Release Interval": 0,
 				"Slot Interval": 0,
-				"Bits Random?": true,
-				"Probability of Bit 1": 1,
-				"Modulation Scheme": "CSK",
-				"Modulation Bits": 1,
+				"Modulation Scheme": "Burst",
 				"Modulation Strength": 2,
 				"Is Molecule Type Released?": [true]
 		},

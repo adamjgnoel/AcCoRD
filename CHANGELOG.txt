@@ -2,7 +2,17 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v1.0 (2016-10-31)
+This document is the CHANGELOG for AcCoRD v1.1 (2016-12-24)
+- [NEW] added net fluid flow. Can be defined globally and in individual regions. Each molecule can have its own flow specification. Currently, only type of flow available is steady uniform flow.
+- [NEW] added two new sample configuration files that use flow. One is a simple unbounded region with a single flow vector. The second is a hybrid box with a different flow vector in each region.
+- [ENHANCEMENT] increased MATLAB import time by about an order of magnitude. Simulation output files are now fully scanned in a single call, instead of being read line-by-line.
+- [ENHANCEMENT] simplified microscopic algorithm to detect whether a given type of molecule is able to move in a given region
+- [FIX] improved algorithm that places mesoscopic molecules in the microscopic regime so that the proposed molecule trajectory is checked for boundary collisions before the molecule is placed.
+- [FIX] added import of local (region) diffusion coefficients to MATLAB
+- [FIX] corrected the default subvolume base size if it is defined incorrectly
+- [FIX] corrected the detection of a missing surface reaction probability for surface reactions
+
+Changes introduced in AcCoRD v1.0 (2016-10-31)
 - [NEW] added "Burst" modulation, which does not modulate binary data but always releases molecules. Can release multiple types of molecules
 - [NEW] added local diffusion coefficients defined for individual regions
 - [NEW] added local diffusion coefficient to apply specifically to calculate a surface interaction reaction probability

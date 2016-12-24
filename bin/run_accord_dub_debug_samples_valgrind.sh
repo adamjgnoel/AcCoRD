@@ -5,6 +5,8 @@ valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_con
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_communication.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_communication_chemical.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_crowding.txt;
+valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_flow.txt;
+valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_flow_closed_hybrid.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_hybrid.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_pipe_reaction_diffusion.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_pipe_reaction_diffusion_microscopic.txt;

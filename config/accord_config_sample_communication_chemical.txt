@@ -24,6 +24,7 @@
 	"Chemical Properties": {
 		"Number of Molecule Types": 2,
 		"Diffusion Coefficients": [1e-9, 0],
+		"Global Flow Type": "None",
 		"Chemical Reaction Specification": [
 			{							
 				"Notes": "Conversion. Can only occur at the receiver.",
@@ -104,7 +105,7 @@
 				"Probability of Bit 1": 0.5,
 				"Modulation Scheme": "CSK",
 				"Modulation Bits": 2,
-				"Modulation Strength": 1200000,
+				"Modulation Strength": 120000,
 				"Is Molecule Type Released?": [true, false]
 		},
 		{

@@ -10,11 +10,11 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.1 (2016-12-24)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.1 (2016-12-24)
  * - simplified detection of whether molecules flow or diffuse in each region
  * - added uniform flow to the diffusion algorithm
  * - modified meso-to-micro hybrid transition algorithm when a molecule is placed

@@ -6,6 +6,8 @@ accord_win.exe accord_config_sample_all_shapes_micro.txt
 accord_win.exe accord_config_sample_communication.txt
 accord_win.exe accord_config_sample_communication_chemical.txt
 accord_win.exe accord_config_sample_crowding.txt
+accord_win.exe accord_config_sample_flow.txt
+accord_win.exe accord_config_sample_flow_closed_hybrid.txt
 accord_win.exe accord_config_sample_hybrid.txt
 accord_win.exe accord_config_sample_pipe_reaction_diffusion.txt
 accord_win.exe accord_config_sample_pipe_reaction_diffusion_microscopic.txt

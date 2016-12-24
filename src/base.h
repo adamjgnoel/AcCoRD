@@ -10,11 +10,11 @@
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.1 (2016-12-24)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.1 (2016-12-24)
  * - renamed some switch cases to use direction macros instead of explicit integers
  *
  * Revision v0.7.0.1 (public beta, 2016-08-30)

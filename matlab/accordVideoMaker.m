@@ -17,7 +17,7 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % accordVideoMaker.m - Generate a video file from AcCoRD simulation output.
 %   Or, generate a sequence of images frp, AcCoRD simulation output
 %   Due to the large number of complex input arguments, this function
-%   should as specified by the accordVideoMarkerWrapper function or a
+%   should as specified by the accordVideoMakerWrapper function or a
 %   similarly-structured function or script. Input arguments specify what
 %   components of the simulation environment to draw and how, including the
 %   regions, actors, and molecules. Inputs also specify how to display the
@@ -76,7 +76,7 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % customMolProp - cell array of structure of molecule properties to change
 %   from AcCoRD defaults. Can be passed as empty if no defaults are to be
 %   changed. Indexing in this cell array matches that of the molToPlot cell
-%   array. See accordBuildMarkerStruct for structure fields and their
+%   array. See accordBuildMolStruct for structure fields and their
 %   default values.
 % cameraAnchorArray - cell array of cell arrays defining anchor points for
 %   the camera display. Can be passed as an empty cell array. Each anchor
@@ -95,9 +95,15 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v1.1 (2016-12-24)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - updated call to build function for plotting molecules to accommodate
+% plotting molecules as shapes instead of just markers
+% - updated deletion of plotted molecules to accommodate plotting molecules
+% as shapes instead of just markers
 %
 % Revision v1.1 (2016-12-24)
 % - corrected instructions that are displayed to the command line when
@@ -144,7 +150,7 @@ figureProp = accordBuildFigureStruct(customFigProp);
 axesProp = accordBuildAxesStruct(customAxesProp);
 regionDispStruct = accordBuildDispStruct(regionToPlot, customRegionProp);
 actorDispStruct = accordBuildDispStruct(actorToPlot, customActorProp);
-molStructArray = accordBuildMarkerStruct(numPassiveObservers, molToPlot, customMolProp);
+molStructArray = accordBuildMolStruct(numPassiveObservers, molToPlot, customMolProp);
 
 if bMakeVideo
     %% Plot Static Environment (Video Background)
@@ -395,7 +401,7 @@ for i = 1:numFrames
             end
             % Remove plots of molecules
             for j = 1:numPassiveObservers
-                delete(hPoints{j});
+                delete(hPoints{j}{:});
             end
             if bDynamicAnnotation && frameAnnotation(i) > 0
                 % Remove annotations

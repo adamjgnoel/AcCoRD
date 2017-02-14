@@ -27,11 +27,15 @@ function hPoints = accordPlotSingleObservation(hAxes, data, actorInd, molStruct,
 %   object to plot has dimension of order 1
 %
 % OUTPUTS
-% hPoints - array of handles to plots made at this observation point
+% hPoints - cell array of handles to plots made at this observation point
 %
-% Last revised for AcCoRD v0.6 (public beta, 2016-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added plotting molecules as shapes instead of only as markers. Added
+% the sphere shape
 %
 % Revision v0.6 (public beta, 2016-05-30)
 % - Created file
@@ -43,22 +47,46 @@ if isempty(molStruct)
     molStruct = accordBuildMarkerStruct(1:data.passiveRecordNumMolTypes);
 end
 
-hPoints = zeros(1, molStruct.numToDisp);
+hPoints = cell(1, molStruct.numToDisp);
 
 for i = 1:molStruct.numToDisp
     curMol = molStruct.indToDisp(i);
     if ~isempty(data.passiveRecordPos{actorInd}{curMol})
-        hPoints(i) = ...
-            scatter3(hAxes, scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,1),...
-            scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,2),...
-            scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,3));
-        set(hPoints(i),'DisplayName', molStruct.dispStr{1}{i});
-        set(hPoints(i),'SizeData', molStruct.size(i));
-        set(hPoints(i),'LineWidth', molStruct.lineWidth(i));
-        set(hPoints(i),'MarkerEdgeColor', molStruct.edgeColor{1}{i});
-        set(hPoints(i),'MarkerFaceColor', molStruct.faceColor{1}{i});
-        set(hPoints(i),'Marker', molStruct.marker{1}{i});
+        switch molStruct.shape{1}{i}
+            case 'marker'
+                % Plot all molecules as a scatter plot
+                hPoints{i} = ...
+                    scatter3(hAxes, scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,1),...
+                    scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,2),...
+                    scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,3));
+                set(hPoints(i),'DisplayName', molStruct.dispStr{1}{i});
+                set(hPoints(i),'SizeData', molStruct.size(i));
+                set(hPoints(i),'LineWidth', molStruct.lineWidth(i));
+                set(hPoints(i),'MarkerEdgeColor', molStruct.edgeColor{1}{i});
+                set(hPoints(i),'MarkerFaceColor', molStruct.faceColor{1}{i});
+                set(hPoints(i),'Marker', molStruct.marker{1}{i});
+            case 'sphere'
+                % Plot each molecule as an individual 3D sphere
+                numMol = data.passiveRecordCount{actorInd}(realization,curMol,obsInd);
+                hPoints{i} = zeros(1,numMol);
+                curVertices = zeros(molStruct.numVertices(i), 3);
+                % Prepare 
+                for n = 1:numMol
+                    % TODO: Rotate?
+                    for j = 1:3
+                        curVertices(:,j) = scale*(molStruct.vertices{i}(:,j) + ...
+                            data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(n,j));
+                    end
+                    hPoints{i}(n) = patch('Vertices',curVertices,'Faces', ...
+                        molStruct.faces{i}, 'FaceColor', molStruct.faceColor{1}{i}, ...
+                        'EdgeColor', molStruct.edgeColor{1}{i}, ...
+                        'FaceAlpha', molStruct.opaque(i), ...
+                        'LineWidth', molStruct.lineWidth(i), ...
+                        'LineStyle', molStruct.lineStyle{1}{i}, ...
+                        'DisplayName', molStruct.dispStr{1}{i});
+                end
+        end
     else
-        hPoints(i) = scatter3(hAxes, NaN, NaN, NaN);
+        hPoints{i} = scatter3(hAxes, NaN, NaN, NaN);
     end
 end

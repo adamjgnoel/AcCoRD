@@ -21,3 +21,5 @@ bin/accord_ppp.pbs
 bsc*
 accord_config_0*
 accord_plot_*
+config/config_descriptions.txt
+*.fig

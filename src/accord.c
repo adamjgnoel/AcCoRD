@@ -9,9 +9,12 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - corrected limit on the number of actions made by passive actors
  *
  * Revision v1.1 (2016-12-24)
  * - added direction of subvolume neighbors as a standalone 2D array in order
@@ -579,7 +582,9 @@ int main(int argc, char *argv[])
 					
 				} else
 				{	// Actor is passive. Make required observations as specified
-								
+					
+					actorCommonArray[heapTimer[0]].curAction++;
+					
 					// Initialize molecule list for coordinates
 					for(j = 0; j < spec.NUM_MOL_TYPES; j++)
 					{
@@ -697,10 +702,19 @@ int main(int argc, char *argv[])
 					// Update timer structure array
 					if (actorCommonArray[heapTimer[0]].spec.bIndependent)
 					{	// Actor is independent. Next action time is known
-						actorCommonArray[heapTimer[0]].nextTime +=
-							actorCommonArray[heapTimer[0]].spec.actionInterval;
-						timerArray[heapTimer[0]].nextTime +=
-							actorCommonArray[heapTimer[0]].spec.actionInterval;
+						if(!actorCommonArray[heapTimer[0]].spec.bMaxAction
+							|| actorCommonArray[heapTimer[0]].curAction < actorCommonArray[heapTimer[0]].spec.numMaxAction)
+						{
+							actorCommonArray[heapTimer[0]].nextTime +=
+								actorCommonArray[heapTimer[0]].spec.actionInterval;
+							timerArray[heapTimer[0]].nextTime +=
+								actorCommonArray[heapTimer[0]].spec.actionInterval;
+						}
+						else
+						{
+							actorCommonArray[heapTimer[0]].nextTime = INFINITY;
+							timerArray[heapTimer[0]].nextTime = INFINITY;
+						}
 					} else
 					{	// Actor is dependent. Next action time is unknown
 						actorCommonArray[heapTimer[0]].nextTime = INFINITY;

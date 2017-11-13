@@ -46,9 +46,12 @@ function [hFig, hAxes, hCurve] = accordPlotMaker(hAxes, fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v1.0 (2016-10-31)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - corrected the range generated for 3D Empirical PMF (was off by 1)
 %
 % Revision v1.0 (2016-10-31)
 % - changed mutual information calculations to use log2 (i.e., bits) instead of
@@ -308,7 +311,7 @@ switch obsSpec.obsType
     case '3D Empirical PMF'
         % Plotting time-varying PMF. Every sampled time has its own
         % PMF (i.e., probability mass function)
-        numYMax = max(obsMatrixSampled(:))+1;
+        numYMax = max(obsMatrixSampled(:))+2;
         
         xData = zeros(numPlotInd,numYMax);
         yData = zeros(numPlotInd,numYMax);

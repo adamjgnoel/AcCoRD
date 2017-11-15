@@ -9,9 +9,12 @@
  *
  * meso.c - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - corrected calculation of diffusion propensity when more than 1 molecule is added to a subvolume
  *
  * Revision v1.1 (2016-12-24)
  * - added uniform flow to the diffusion algorithm
@@ -581,7 +584,7 @@ void updateMesoSub(const uint32_t curSub,
 					curDiffRate = mesoSubArray[curMeso].diffRateNeigh[j][i];
 				
 				mesoSubArray[curMeso].rxnProp[j*subvolArray[curSub].num_neigh+i]
-					= curDiffRate*curMolChange[j]*mesoSubArray[curMeso].num_mol[j];
+					= curDiffRate*mesoSubArray[curMeso].num_mol[j];
 			}
 					
 			// Update Chemical reaction propensities

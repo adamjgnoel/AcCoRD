@@ -27,9 +27,13 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD v1.1 (2016-12-24)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - updated code that writes to output file so that filename is not cropped
+% if "fileName" has a period in it
 %
 % Revision v1.1 (2016-12-24)
 % - changed import algorithm to read entire output file in one call and
@@ -233,6 +237,9 @@ end
 
 %% Write output to a .mat file
 if bWrite
-    [~,fileName,~] = fileparts(fileName);
-    save([fileName '_out'], 'data', 'config');
+    [~,fileName,fileEnd] = fileparts(fileName);
+    if ~isempty(fileEnd)
+        fileName = [fileName fileEnd];
+    end
+    save([fileName '_out.mat'], 'data', 'config');
 end

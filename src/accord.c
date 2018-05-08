@@ -15,6 +15,8 @@
  *
  * Revision LATEST_RELEASE
  * - corrected limit on the number of actions made by passive actors
+ * - fixed typo in comment describing implementation of reactions for "new"
+ * microscopic molecules (created in current time step)
  *
  * Revision v1.1 (2016-12-24)
  * - added direction of subvolume neighbors as a standalone 2D array in order
@@ -811,7 +813,7 @@ int main(int argc, char *argv[])
 						
 							if(!isListMol3DRecentEmpty(&microMolListRecent[i][j])
 								&& regionArray[i].numFirstRxnWithReactant[j] > 0)
-							{ // Check 1st order reactions of "old" molecules
+							{ // Check 1st order reactions of "new" molecules
 								rxnFirstOrderRecent(spec.NUM_REGIONS,
 									spec.NUM_MOL_TYPES, i, microMolListRecent,
 									microMolList, regionArray, j, DIFF_COEF,

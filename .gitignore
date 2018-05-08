@@ -9,6 +9,7 @@ fig*
 *.mat
 bin/run_accord_dub.sh
 bin/run_accord_rc.sh
+bin/accord*.sh
 *.pbs
 *.asv
 *.mp4
@@ -17,4 +18,16 @@ bsc*
 accord_config_0*
 accord_plot_*
 config/config_descriptions.txt
+config/accord_config_a*
+config/accord_config_j*
+config/accord_config_t*
 *.fig
+matlab/accord_0*
+matlab/accord_a*
+matlab/accord_j*
+matlab/accord_t*
+matlab/accord_m*
+matlab/impulse*
+matlab/meso*
+matlab/noel*
+matlab/point*

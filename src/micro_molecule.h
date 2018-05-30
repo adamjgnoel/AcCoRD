@@ -10,9 +10,14 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - fixed implementation of replication reactions, where a first order reactant produces
+ * at least one copy of itself. If such a reactant reacted again within the same
+ * microscopic time step, then the new molecule(s) previously went missing.
  *
  * Revision v1.1 (2016-12-24)
  * - simplified detection of whether molecules flow or diffuse in each region
@@ -240,7 +245,8 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 	const struct region regionArray[],
 	unsigned short curMolType,	
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	const bool bRecent);
+	const bool bRecent,
+	bool * bProductIsReactant);
 
 // If a molecule is the product of a surface reaction and it is supposed
 // to be released from the surface, find the destination region

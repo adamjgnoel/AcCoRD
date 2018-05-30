@@ -10,9 +10,14 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_RELEASE
  *
  * Revision history:
+ *
+ * Revision LATEST_RELEASE
+ * - fixed implementation of replication reactions, where a first order reactant produces
+ * at least one copy of itself. If such a reactant reacted again within the same
+ * microscopic time step, then the new molecule(s) previously went missing.
  *
  * Revision v1.1 (2016-12-24)
  * - simplified detection of whether molecules flow or diffuse in each region
@@ -807,7 +812,7 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 				{
 					rxnFirstOrderProductPlacement(curNode, curNodeRecent,
 						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
-						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, false);
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, false, NULL);
 				}
 				
 				// Remove current molecule from list
@@ -857,7 +862,7 @@ void rxnFirstOrder(const unsigned short NUM_REGIONS,
 				{					
 					rxnFirstOrderProductPlacement(curNode, curNodeRecent,
 						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
-						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, false);
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, false, NULL);
 				}
 				
 				// Remove current molecule from list
@@ -906,6 +911,8 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 	unsigned short curProd;
 	unsigned short curRxn;
 	bool bRemove;
+	bool bProductIsReactant; // bool to catch cases where first molecule
+		// in list reacts but its product should go at the start of the list
 	double uniCumProb[regionArray[curRegion].numFirstRxnWithReactant[curMolType]];
 	double minRxnTimeRV;
 	uint32_t numMolOrig = numMolCheck[curRegion][curMolType];
@@ -946,7 +953,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 				{
 					rxnFirstOrderProductPlacement(curNodeOld, curNode,
 						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
-						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true);
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true, &bProductIsReactant);
 				}
 				
 				// Remove current molecule from list
@@ -957,9 +964,18 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 		
 			if(prevNode == NULL && bRemove)
 			{	// prevNode does not change, but we removed first molecule in list.
-				// nextNode is now the start of the list
-				// (i.e., we must update pointer to list)
-				pRecentList[curRegion][curMolType] = nextNode;
+				if(bProductIsReactant)
+				{ 	// A new molecule is at the start of the list. prevNode must be update to point to previous node
+					prevNode = pRecentList[curRegion][curMolType];
+					while(prevNode->next != curNode)
+						prevNode = prevNode->next;
+					prevNode->next = nextNode;
+					bProductIsReactant = false;
+				} else
+				{ 	// nextNode is now the start of the list
+					// (i.e., we must update pointer to list)
+					pRecentList[curRegion][curMolType] = nextNode;
+				}			
 			} else if(!bRemove){
 				prevNode = curNode;
 			}
@@ -1017,7 +1033,7 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 				{					
 					rxnFirstOrderProductPlacement(curNodeOld, curNode,
 						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
-						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true);
+						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true, &bProductIsReactant);
 				}
 				
 				// Remove current molecule from list
@@ -1029,9 +1045,18 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 		
 		if(prevNode == NULL && bRemove)
 		{	// prevNode does not change, but we removed first molecule in list.
-			// nextNode is now the start of the list
-			// (i.e., we must update pointer to list)
-			pRecentList[curRegion][curMolType] = nextNode;
+			if(bProductIsReactant)
+			{ 	// A new molecule is at the start of the list. prevNode must be update to point to previous node
+				prevNode = pRecentList[curRegion][curMolType];
+				while(prevNode->next != curNode)
+					prevNode = prevNode->next;
+				prevNode->next = nextNode;
+				bProductIsReactant = false;
+			} else
+			{ 	// nextNode is now the start of the list
+				// (i.e., we must update pointer to list)
+				pRecentList[curRegion][curMolType] = nextNode;
+			}
 		} else if(!bRemove){
 			prevNode = curNode;
 		}
@@ -1056,7 +1081,8 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 	const struct region regionArray[],
 	unsigned short curMolType,	
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	const bool bRecent)
+	const bool bRecent,
+	bool * bProductIsReactant)
 {
 	double curTime, timeLeft; // Time of reaction and time remaining in time step
 	double curRand, dist;
@@ -1074,6 +1100,7 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 		point[0] = curMolRecent->item.x;
 		point[1] = curMolRecent->item.y;
 		point[2] = curMolRecent->item.z;
+		*bProductIsReactant = false; // bProductIsReactant only exists if bRecent is true
 	} else
 	{
 		point[0] = curMol->item.x;
@@ -1112,6 +1139,9 @@ void rxnFirstOrderProductPlacement(const NodeMol3D * curMol,
 	{
 		// Find actual ID of current product molecule
 		curProdID = regionArray[curRegion].productID[curRxn][curProd];
+		
+		if(bRecent && curProdID == curMolType)
+			*bProductIsReactant = true;
 		
 		// Reset location of new product
 		newPoint[0] = point[0];

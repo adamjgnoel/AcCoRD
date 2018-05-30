@@ -27,11 +27,11 @@ function [data, config] = accordImport(fileName, seedRange, bWrite)
 %		first "."
 % config - structure with simulation configuration defined in user configuration file
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.2 (2018-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.2 (2018-05-30)
 % - updated code that writes to output file so that filename is not cropped
 % if "fileName" has a period in it
 %

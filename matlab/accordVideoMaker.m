@@ -95,11 +95,11 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.2 (2018-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.2 (2018-05-30)
 % - updated call to build function for plotting molecules to accommodate
 % plotting molecules as shapes instead of just markers
 % - updated deletion of plotted molecules to accommodate plotting molecules

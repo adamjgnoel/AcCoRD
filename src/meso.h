@@ -9,9 +9,12 @@
  *
  * meso.h - heap of all mesoscopic subvolumes in simulation environment
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD v1.2 (2018-05-30)
  *
  * Revision history:
+ *
+ * Revision v1.2 (2018-05-30)
+ * - corrected calculation of diffusion propensity when more than 1 molecule is added to a subvolume
  *
  * Revision v1.1 (2016-12-24)
  * - added uniform flow to the diffusion algorithm

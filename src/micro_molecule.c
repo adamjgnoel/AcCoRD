@@ -10,11 +10,11 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD LATEST_RELEASE
+ * Last revised for AcCoRD v1.2 (2018-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v1.2 (2018-05-30)
  * - fixed implementation of replication reactions, where a first order reactant produces
  * at least one copy of itself. If such a reactant reacted again within the same
  * microscopic time step, then the new molecule(s) previously went missing.

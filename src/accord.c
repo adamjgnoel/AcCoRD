@@ -9,11 +9,11 @@
  *
  * accord.c - main file
  *
- * Last revised for AcCoRD LATEST_RELEASE
+ * Last revised for AcCoRD v1.2 (2018-05-30)
  *
  * Revision history:
  *
- * Revision LATEST_RELEASE
+ * Revision v1.2 (2018-05-30)
  * - corrected limit on the number of actions made by passive actors
  * - fixed typo in comment describing implementation of reactions for "new"
  * microscopic molecules (created in current time step)
@@ -125,10 +125,10 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v1.1 (2016-12-24)\n");
-	printf("Copyright 2016 Adam Noel. All rights reserved.\n");
+	printf("Version v1.2 (2018-05-30)\n");
+	printf("Copyright 2016-2018 Adam Noel. All rights reserved.\n");
 	printf("Source code at https://github.com/adamjgnoel/AcCoRD\n");
-	printf("User Documentation at http://adamnoel.ca/software/accord/\n");
+	printf("User Documentation at https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/\n");
 	
 	
 	time(&timer);

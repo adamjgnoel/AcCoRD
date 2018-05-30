@@ -2,14 +2,14 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v1.1 (2016-12-24)
+This document is the README for AcCoRD v1.2 (2018-05-30)
 
 # Introduction
 
 Welcome to the AcCoRD Simulator (Actor-based Communication via Reaction-Diffusion). AcCoRD is a simulation tool for molecular communication. It is a hybrid microscopic/mesoscopic simulator that functions as a generic solver of stochastic advection-reaction-diffusion but which has been developed from the perspective of communications analysis. The focus is to efficiently generate the statistics of molecule observations at some location (i.e., at a receiver).
 
 Quicklinks:
-* User-friendly external webpage (includes links to feature list, download page, and instructions for use): http://adamnoel.ca/software/accord
+* User-friendly external webpage (includes links to feature list, download page, and instructions for use): https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/
 * Old AcCoRD releases: https://github.com/adamjgnoel/AcCoRD/releases
 * Main AcCoRD development page on Github: https://github.com/adamjgnoel/accord
 * Maintenance of existing issues and planned features: https://github.com/adamjgnoel/AcCoRD/issues
@@ -36,7 +36,7 @@ Most identified content on the Issues page are planned features.
 
 # Publications
 
-Publications that either describe or use AcCoRD can be found at this page: http://adamnoel.ca/software/accord/publications/
+Publications that either describe or use AcCoRD can be found at this page: https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/publications/
 
 # Known Issues and Limitations
 
@@ -56,7 +56,7 @@ This list is current as of v1.1. See https://github.com/adamjgnoel/AcCoRD/issues
 # Future Features
 
 Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details. Here is a list of some planned end-user features (in no particular order):
-* Expand flow model. Currently, flow must be steady and uniform.
+* Expand flow model. Currently, flow must be steady and uniform (within a given region).
 * Allow dependent actors, whose behavior depends on the observations of passive actors. This would allow implementation of more complex communication networks (e.g., relays)
 * Add actors that track changes to molecule composition in their volumes
 * Improve implementation of 2nd order chemical reactions in microscopic regions
@@ -71,22 +71,22 @@ Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/
 
 # Installation
 
-Download and installation instructions can be found on this page: http://adamnoel.ca/software/accord/downloads/
+Download and installation instructions can be found on this page: https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/downloads/
 
 
 # Basic Usage
 
-Usage instructions can be found on this page: http://adamnoel.ca/software/accord/instructions/
+Usage instructions can be found on this page: https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/instructions/
 
 
 # Licensing
 
-Main AcCoRD files are copyright 2016 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
+Main AcCoRD files are copyright 2016-2018 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
 
 # Credits
 
-Developed and maintained by Adam Noel (http://www.adamnoel.ca)
+Developed and maintained by Adam Noel (https://warwick.ac.uk/fac/sci/eng/staff/ajgn)
 
 Testing: M. Halimeh (v0.2 to v0.4) and T. Schwering (v0.3 to v0.5)
 
-Supervision and Support: Profs. K. C. Cheung, A. Hafid, D. Makrakis, and R. Schober.
+Supervision and Support: Profs. K. C. Cheung (to v1.0), A. Hafid (v0.4 to v1.0), D. Makrakis (v0.4 to v1.1), and R. Schober  (to v1.0).

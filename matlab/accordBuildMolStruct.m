@@ -22,11 +22,11 @@ function molStruct = accordBuildMolStruct(numActor, indToDisp, propChange)
 % OUTPUTS
 % molStruct - structure with marker display parameters
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.2 (2018-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.2 (2018-05-30)
 % - renamed to accordBuildMolStruct from accordBuildMarkerStruct
 % - added properties to enable drawing of molecules as 3D shapes as an
 % alternative to drawing as plot markers. Added details for 'sphere'

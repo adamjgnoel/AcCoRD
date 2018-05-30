@@ -29,11 +29,11 @@ function hPoints = accordPlotSingleObservation(hAxes, data, actorInd, molStruct,
 % OUTPUTS
 % hPoints - cell array of handles to plots made at this observation point
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.2 (2018-05-30)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.2 (2018-05-30)
 % - added plotting molecules as shapes instead of only as markers. Added
 % the sphere shape
 %

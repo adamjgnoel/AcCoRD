@@ -2,7 +2,17 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v1.1 (2016-12-24)
+This document is the CHANGELOG for AcCoRD v1.2 (2018-05-30)
+- [NEW] added plotting molecules as 3D shapes instead of only as markers, which is useful for visualizing depth. Added the sphere shape as an option.
+- [NEW] online documentation migrated to University of Warwick
+- [FIX] corrected implementation of replication reactions, where a first order reactant produces at least one copy of itself. If such a reactant had reacted again within the same microscopic time step, then the new molecule(s) previously went missing.
+- [FIX] corrected calculation of diffusion propensity when more than 1 molecule is added to a subvolume
+- [FIX] corrected limit on the number of actions made by passive actors.
+- [FIX] updated code that writes to MATLAB output file so that filename is not cropped if "fileName" has a period in it
+- [FIX] corrected the range generated for 3D Empirical PMFs (was off by 1).
+- [FIX] fixed typo in comment describing implementation of reactions for "new" microscopic molecules (created in current time step).
+
+Changes introduced in AcCoRD v1.1 (2016-12-24)
 - [NEW] added net fluid flow. Can be defined globally and in individual regions. Each molecule can have its own flow specification. Currently, only type of flow available is steady uniform flow.
 - [NEW] added two new sample configuration files that use flow. One is a simple unbounded region with a single flow vector. The second is a hybrid box with a different flow vector in each region.
 - [ENHANCEMENT] increased MATLAB import time by about an order of magnitude. Simulation output files are now fully scanned in a single call, instead of being read line-by-line.

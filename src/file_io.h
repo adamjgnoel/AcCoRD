@@ -9,9 +9,13 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - changed checks for the "Random Molecule Release Times?" "Slot Interval" parameters
+ * for active actors, since whether they are needed depends on the values of other parameters.
  *
  * Revision v1.1 (2016-12-24)
  * - added flow parameters (based on either no flow or uniform flow).

@@ -25,9 +25,14 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD v1.1 (2016-12-24)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - modified checks on some optional active actor parameters ("Slot
+% Interval" and "Random Molecule Release Times?"), since they are only
+% conditionally needed
 %
 % Revision v1.1 (2016-12-24)
 % - added import of local (region) diffusion coefficients, and all flow
@@ -360,12 +365,20 @@ for i = 1:config.numActor
         
         config.activeActor{curActive}.bRandNumMolecules = ...
             curActor.Random_0x20_Number_0x20_of_0x20_Molecules_0x3F_;
-        config.activeActor{curActive}.bRandReleaseTimes = ...
-            curActor.Random_0x20_Molecule_0x20_Release_0x20_Times_0x3F_;
+        if config.activeActor{curActive}.bRandNumMolecules
+            config.activeActor{curActive}.bRandReleaseTimes = ...
+                curActor.Random_0x20_Molecule_0x20_Release_0x20_Times_0x3F_;
+        else
+            config.activeActor{curActive}.bRandNumMolecules = false;
+        end
         config.activeActor{curActive}.releaseInterval = ...
             curActor.Release_0x20_Interval;
-        config.activeActor{curActive}.slotInterval = ...
-            curActor.Slot_0x20_Interval;
+        if config.activeActor{curActive}.bRandNumMolecules
+            config.activeActor{curActive}.slotInterval = 0;
+        else
+            config.activeActor{curActive}.slotInterval = ...
+                curActor.Slot_0x20_Interval;
+        end
         
         config.activeActor{curActive}.modScheme = ...
             curActor.Modulation_0x20_Scheme;

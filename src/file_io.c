@@ -9,9 +9,13 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - changed checks for the "Random Molecule Release Times?" "Slot Interval" parameters
+ * for active actors, since whether they are needed depends on the values of other parameters.
  *
  * Revision v1.1 (2016-12-24)
  * - added flow parameters (based on either no flow or uniform flow).
@@ -2022,16 +2026,28 @@ void loadConfig(const char * CONFIG_NAME,
 					cJSON_GetObjectItem(curObj, "Random Number of Molecules?")->valueint;
 			}
 			
-			if(!cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_True))
-			{ // Actor does not have a valid value for Random Molecule Release Times?
-				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid value for \"Random Molecule Release Times?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].bTimeReleaseRand = false;
+			// Random release times is only needed if "Random Number of Molecules?" is true
+			if(curSpec->actorSpec[curArrayItem].bNumReleaseRand = true)
+			{
+				if(!cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_True))
+				{ // Actor does not have a valid value for Random Molecule Release Times?
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not have a valid value for \"Random Molecule Release Times?\". Assigning default value \"false\".\n", numWarn++, curArrayItem);
+					curSpec->actorSpec[curArrayItem].bTimeReleaseRand = false;
+				} else
+				{
+					curSpec->actorSpec[curArrayItem].bTimeReleaseRand = 
+						cJSON_GetObjectItem(curObj, "Random Molecule Release Times?")->valueint;
+				}
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].bTimeReleaseRand = 
-					cJSON_GetObjectItem(curObj, "Random Molecule Release Times?")->valueint;
+				if(cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_Number))
+				{
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not need \"Random Molecule Release Times?\" defined. Ignoring.\n", numWarn++, curArrayItem);
+				}
 			}
+			
 		
 			if(!cJSON_bItemValid(curObj,"Release Interval", cJSON_Number) ||
 				cJSON_GetObjectItem(curObj,"Release Interval")->valuedouble < 0)
@@ -2045,17 +2061,28 @@ void loadConfig(const char * CONFIG_NAME,
 					cJSON_GetObjectItem(curObj, "Release Interval")->valuedouble;
 			}
 		
-			if(!cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number) ||
-				cJSON_GetObjectItem(curObj,"Slot Interval")->valuedouble < 0)
-			{ // Actor does not have a valid Action Interval
-				bWarn = true;
-				printf("WARNING %d: Actor %d does not have a valid \"Slot Interval\". Assigning default value \"0\" seconds.\n", numWarn++, curArrayItem);
-				curSpec->actorSpec[curArrayItem].slotInterval = 0.;
+			// Slot interval is only needed if "Random Molecule Release Times?" is false
+			if(curSpec->actorSpec[curArrayItem].bTimeReleaseRand = true)
+			{ // Release times within release interval are random; no slot interval needed
+				if(cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number))
+				{
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not need \"Slot Interval\" defined. Ignoring.\n", numWarn++, curArrayItem);
+				}
 			} else
 			{
-				curSpec->actorSpec[curArrayItem].slotInterval = 
-					cJSON_GetObjectItem(curObj, "Slot Interval")->valuedouble;
-			}		
+				if(!cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number) ||
+					cJSON_GetObjectItem(curObj,"Slot Interval")->valuedouble < 0)
+				{ // Actor does not have a valid Action Interval
+					bWarn = true;
+					printf("WARNING %d: Actor %d does not have a valid \"Slot Interval\". Assigning default value \"0\" seconds.\n", numWarn++, curArrayItem);
+					curSpec->actorSpec[curArrayItem].slotInterval = 0.;
+				} else
+				{
+					curSpec->actorSpec[curArrayItem].slotInterval = 
+						cJSON_GetObjectItem(curObj, "Slot Interval")->valuedouble;
+				}
+			}
 		
 			if(!cJSON_bItemValid(curObj,"Modulation Scheme", cJSON_String))
 			{ // Actor does not have a defined Modulation Scheme

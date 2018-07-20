@@ -36,9 +36,14 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 % hAxes - handle to axes in plotted figure. Use for making changes to
 %   axes.
 %
-% Last revised for AcCoRD v1.0 (2016-10-31)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - fixed bug that prevent an environment from being plotted if the plot
+% list included a point region or actor. A new warning is added to state
+% that point actors and regions are not plotted
 %
 % Revision v1.0 (2016-10-31)
 % - added parameter to control the number of visible faces in spherical objects
@@ -235,6 +240,8 @@ function [scaleDim, plane] = accordCalculateRegionPlotParam(region, config)
         end
     elseif strcmp(region.shape, 'Sphere')
         scaleDim = region.radius;
+    elseif strcmp(region.shape, 'Point')
+        scaleDim = 0;
     end
 end
 
@@ -261,7 +268,7 @@ function h = accordPlotShape(shape, scale, scaleDim, sphereSize, plane, moveDim,
                     end
                 end
             end
-        elseif strcmp(shape, 'Sphere')
+        elseif strcmp(shape, 'Sphere') || strcmp(shape, 'Point')
             % Shape can only have one subvolume
             h = accordPlotShape(shape, scale, ...
                 [subSize,subSize,subSize], sphereSize, plane, ...
@@ -317,6 +324,10 @@ function h = accordPlotShape(shape, scale, scaleDim, sphereSize, plane, moveDim,
             Y = scaleDim*Y;
             Z = scaleDim*Z;
             [curFaces, curVertices, ~] = surf2patch(X,Y,Z);
+        elseif strcmp(shape, 'Point')
+            warning('The "Point" shape is not plotted in an empty environment. If you want to see an object there, then add a small passive sphere at the same location\n');
+            h = 0;
+            return;
         else
             warning('Shape %s not recognized\n',shape);
             h = 0;

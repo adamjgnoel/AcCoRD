@@ -30,6 +30,9 @@ function config =  accordConfigImport(configJSON)
 % Revision history:
 %
 % Revision LATEST_VERSION
+% - fixed detection of actors that are defined as the union of more than 1
+% region. JSON imported the list of regions as a string array and not a
+% cell array
 % - modified checks on some optional active actor parameters ("Slot
 % Interval" and "Random Molecule Release Times?"), since they are only
 % conditionally needed
@@ -288,7 +291,7 @@ for i = 1:config.numActor
     if config.actor{i}.bDefinedByRegions
         % Actor is defined by a list of regions
         
-        if iscell(curActor.List_0x20_of_0x20_Regions_0x20_Defining_0x20_Location)
+        if isstring(curActor.List_0x20_of_0x20_Regions_0x20_Defining_0x20_Location)
             config.actor{i}.numRegion = ...
                 length(curActor.List_0x20_of_0x20_Regions_0x20_Defining_0x20_Location);
         elseif ~isempty(curActor.List_0x20_of_0x20_Regions_0x20_Defining_0x20_Location)

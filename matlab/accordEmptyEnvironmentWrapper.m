@@ -25,9 +25,14 @@ function [hFig, hAxes] = accordEmptyEnvironmentWrapper()
 % hFig - handle to plotted figure. Use for making changes.
 % hAxes - handle to axes in plotted figure. Use for making changes.
 %
-% Last revised for AcCoRD v0.7 (public beta, 2016-07-09)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - modified default list of actors and regions to plot so that EVERYTHING
+% is plotted and not just the first region and first actor. This default
+% list is more user friendly.
 %
 % Revision v0.7 (public beta, 2016-07-09)
 % - Created file
@@ -41,6 +46,14 @@ function [hFig, hAxes] = accordEmptyEnvironmentWrapper()
 %   a valid AcCoRD JSON-formatted configuration file in order to be
 %   imported correctly.
 fileToLoad = '..\config\accord_config_sample.txt';
+
+% Load the file so that we can use the full list of regions and actors as
+% the defaults to plot
+addpath('JSONlab');
+opt.SimplifyCell = 1;
+opt.FastArrayParser = 1;
+opt.ShowProgress = 0;
+config = accordConfigImport(loadjson(fileToLoad, opt));
 
 % scale - scaling of physical dimensions of region and actor coordinates.
 %   Needed to mitigate patch display problems. Recommend that smallest
@@ -60,7 +73,7 @@ customAxesProp = [];
 
 % regionToPlot - array of indices of regions to be plotted. No regions need
 %   to be plotted.
-regionToPlot = 1;
+regionToPlot = 1:config.numRegion;
 
 % customRegionProp - structure of region properties to change from AcCoRD
 %   defaults. Can be passed as empty if no defaults are to be changed. See
@@ -74,7 +87,7 @@ customRegionProp = [];
 %   by the argument "passiveActorToPlot". Actors are drawn after regions,
 %   so if an actor is defined by region(s) then it will be drawn on top of
 %   its region(s). No actors need to be plotted
-actorToPlot = 1;
+actorToPlot = 1:config.numActor;
 
 % customActorProp - structure of actor properties to change from AcCoRD
 %   defaults. Can be passed as empty if no defaults are to be changed. See

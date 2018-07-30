@@ -25,11 +25,11 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.3 (2018-07-31)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.3 (2018-07-31)
 % - fixed detection of actors that are defined as the union of more than 1
 % region. JSON imported the list of regions as a string array and not a
 % cell array

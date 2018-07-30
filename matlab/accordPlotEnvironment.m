@@ -36,11 +36,11 @@ function [hFig, hAxes] = accordPlotEnvironment(config, axesProp, figureProp, ...
 % hAxes - handle to axes in plotted figure. Use for making changes to
 %   axes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.3 (2018-07-31)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.3 (2018-07-31)
 % - fixed bug that prevent an environment from being plotted if the plot
 % list included a point region or actor. A new warning is added to state
 % that point actors and regions are not plotted

@@ -4,6 +4,7 @@
 update_instructions.txt
 AcCoRD_wiki.txt
 *results/
+*doc/
 test*
 fig*
 *.mat

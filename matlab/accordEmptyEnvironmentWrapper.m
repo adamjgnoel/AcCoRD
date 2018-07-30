@@ -25,11 +25,11 @@ function [hFig, hAxes] = accordEmptyEnvironmentWrapper()
 % hFig - handle to plotted figure. Use for making changes.
 % hAxes - handle to axes in plotted figure. Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.3 (2018-07-31)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.3 (2018-07-31)
 % - modified default list of actors and regions to plot so that EVERYTHING
 % is plotted and not just the first region and first actor. This default
 % list is more user friendly.

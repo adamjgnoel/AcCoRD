@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v1.2 (2018-05-30)
+This document is the README for AcCoRD v1.3 (2018-07-31)
 
 # Introduction
 
@@ -40,7 +40,7 @@ Publications that either describe or use AcCoRD can be found at this page: https
 
 # Known Issues and Limitations
 
-This list is current as of v1.1. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
+This list is current as of v1.3. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details.
 * Full 2D simulations are mostly untested
 * 2nd order chemical reactions in microscopic regions need a binding radius specified.
 * There is an option to set whether actor is independent but the value is ignored since dependent actors have not yet been implemented
@@ -76,7 +76,7 @@ Download and installation instructions can be found on this page: https://warwic
 
 # Basic Usage
 
-Usage instructions can be found on this page: https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/instructions/
+Usage instructions can be found in the User's Manual that is included with the software download
 
 
 # Licensing

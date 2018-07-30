@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	double fracComplete;
 	
 	printf("AcCoRD (Actor-based Communication via Reaction-Diffusion)\n");
-	printf("Version v1.2 (2018-05-30)\n");
+	printf("Version v1.3 (2018-07-31)\n");
 	printf("Copyright 2016-2018 Adam Noel. All rights reserved.\n");
 	printf("Source code at https://github.com/adamjgnoel/AcCoRD\n");
 	printf("User Documentation at https://warwick.ac.uk/fac/sci/eng/staff/ajgn/software/accord/\n");

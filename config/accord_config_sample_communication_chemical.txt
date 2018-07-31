@@ -100,7 +100,6 @@
 				"Random Number of Molecules?": true,
 				"Random Molecule Release Times?": true,
 				"Release Interval": 1e-3,
-				"Slot Interval": 0,
 				"Bits Random?": true,
 				"Probability of Bit 1": 0.5,
 				"Modulation Scheme": "CSK",

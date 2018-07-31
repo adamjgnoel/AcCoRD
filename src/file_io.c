@@ -2027,7 +2027,7 @@ void loadConfig(const char * CONFIG_NAME,
 			}
 			
 			// Random release times is only needed if "Random Number of Molecules?" is true
-			if(curSpec->actorSpec[curArrayItem].bNumReleaseRand = true)
+			if(curSpec->actorSpec[curArrayItem].bNumReleaseRand == true)
 			{
 				if(!cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_True))
 				{ // Actor does not have a valid value for Random Molecule Release Times?
@@ -2041,6 +2041,7 @@ void loadConfig(const char * CONFIG_NAME,
 				}
 			} else
 			{
+				curSpec->actorSpec[curArrayItem].bTimeReleaseRand = false;
 				if(cJSON_bItemValid(curObj,"Random Molecule Release Times?", cJSON_Number))
 				{
 					bWarn = true;
@@ -2062,7 +2063,7 @@ void loadConfig(const char * CONFIG_NAME,
 			}
 		
 			// Slot interval is only needed if "Random Molecule Release Times?" is false
-			if(curSpec->actorSpec[curArrayItem].bTimeReleaseRand = true)
+			if(curSpec->actorSpec[curArrayItem].bTimeReleaseRand == true)
 			{ // Release times within release interval are random; no slot interval needed
 				if(cJSON_bItemValid(curObj,"Slot Interval", cJSON_Number))
 				{

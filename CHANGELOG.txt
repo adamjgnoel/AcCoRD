@@ -8,7 +8,6 @@ This document is the CHANGELOG for AcCoRD v1.3 (2018-07-31)
 - [ENHANCEMENT] added checks on some active actor parameters because they are only conditionally necessary
 - [FIX] fixed detection of actors that are defined as the union of more than 1 region. JSON imported the list of regions as a string array and not a cell array
 - [FIX] fixed bug that prevent an environment from being plotted if the plot list included a point region or actor. A new warning is added to state that point actors and regions are not plotted
-- [FIX] 
 
 Changes introduced in AcCoRD v1.2 (2018-05-30)
 - [NEW] added plotting molecules as 3D shapes instead of only as markers, which is useful for visualizing depth. Added the sphere shape as an option.

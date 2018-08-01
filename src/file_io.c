@@ -9,9 +9,14 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.3 (2018-07-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.3 (2018-07-31)
  * - changed checks for the "Random Molecule Release Times?" "Slot Interval" parameters
@@ -639,6 +644,8 @@ void loadConfig(const char * CONFIG_NAME,
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_NORMAL;
 						else if(strcmp(tempString,"Absorbing") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_ABSORBING;
+						else if(strcmp(tempString,"A Priori Absorbing") == 0)
+							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_A_PRIORI_ABSORBING;
 						else if(strcmp(tempString,"Desorbing") == 0)
 							curSpec->chem_rxn[curArrayItem].surfRxnType = RXN_DESORBING;
 						else if(strcmp(tempString,"Receptor Binding") == 0)
@@ -658,6 +665,7 @@ void loadConfig(const char * CONFIG_NAME,
 						switch(curSpec->chem_rxn[curArrayItem].surfRxnType)
 						{
 							case RXN_ABSORBING:
+							case RXN_A_PRIORI_ABSORBING:
 							case RXN_DESORBING:
 							case RXN_MEMBRANE_IN:
 							case RXN_MEMBRANE_OUT:
@@ -681,6 +689,10 @@ void loadConfig(const char * CONFIG_NAME,
 									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_MIXED;
 								else if(strcmp(tempString,"Steady State") == 0)
 									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_STEADY_STATE;
+								else if(strcmp(tempString,"A Priori Sphere") == 0)
+									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_A_PRIORI_SPHERE;
+								else if(strcmp(tempString,"A Priori Plane") == 0)
+									curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_A_PRIORI_INFINITE_PLANE;
 								else
 								{
 									bWarn = true;
@@ -700,6 +712,7 @@ void loadConfig(const char * CONFIG_NAME,
 						switch(curSpec->chem_rxn[curArrayItem].surfRxnType)
 						{
 							case RXN_ABSORBING:
+							case RXN_A_PRIORI_ABSORBING:						
 							case RXN_DESORBING:
 								// Reaction needs bReleaseProduct array defined
 								bNeedReleaseType = false; // By default, we don't need to define release type
@@ -783,6 +796,87 @@ void loadConfig(const char * CONFIG_NAME,
 									bWarn = true;
 									printf("WARNING %d: Reaction %d is a surface reaction but does not need \"Products Released?\" defined. Ignoring.\n", numWarn++, curArrayItem);
 								}
+						}
+						
+						// Check for the additional parameters needed for A Priori absorption
+						if(curSpec->chem_rxn[curArrayItem].surfRxnType == RXN_A_PRIORI_ABSORBING)
+						{
+							if(!cJSON_bItemValid(curObj,"Surface Reaction Threshold Type", cJSON_String))
+							{ // Reaction does not have a valid Surface Reaction Threshold Type
+								bWarn = true;
+								printf("WARNING %d: Chemical reaction %d does not have a valid \"Surface Reaction Threshold Type\". Assigning default value \"None\".\n", numWarn++, curArrayItem);
+								tempString = stringWrite("None");								
+							} else
+							{
+								tempString =
+									stringWrite(cJSON_GetObjectItem(curObj,
+									"Surface Reaction Threshold Type")->valuestring);
+							}
+							
+							if(strcmp(tempString,"None") == 0)
+							{
+								curSpec->chem_rxn[curArrayItem].bRxnThreshold = false;
+								curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_DISTANCE;
+								curSpec->chem_rxn[curArrayItem].rxnThreshold = Inf;
+							} else
+							{
+								curSpec->chem_rxn[curArrayItem].bRxnThreshold = true;
+								
+								if(!cJSON_bItemValid(curObj,"Surface Reaction Threshold Value", cJSON_Number)
+									|| cJSON_GetObjectItem(curObj,"Surface Reaction Threshold Value")->valuedouble < 0.)
+								{ // Reaction does not have a valid Surface Reaction Threshold Value
+									bWarn = true;
+									printf("WARNING %d: Chemical reaction %d does not have a \"Surface Reaction Threshold Value\". Disabling threshold.\n", numWarn++, curArrayItem);
+									curSpec->chem_rxn[curArrayItem].bRxnThreshold = false;
+									curSpec->chem_rxn[curArrayItem].rxnThreshold = Inf;
+								}
+								else
+								{
+									curSpec->chem_rxn[curArrayItem].rxnThreshold =
+										cJSON_GetObjectItem(curObj,"Surface Reaction Threshold Value")->valuedouble;
+										
+									if(strcmp(tempString,"Distance") == 0)
+										curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_DISTANCE;
+									else if(strcmp(tempString,"Probability") == 0)
+										curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_PROB;
+									else
+									{
+										bWarn = true;
+										printf("WARNING %d: Chemical reaction %d has an invalid \"Surface Reaction Threshold Type\". Setting to default value \"None\".\n", numWarn++, curArrayItem);
+										curSpec->chem_rxn[curArrayItem].bRxnThreshold = false;
+										curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_DISTANCE;
+										curSpec->chem_rxn[curArrayItem].rxnThreshold = Inf;
+									}	
+								}								
+							}
+							free(tempString);								
+								
+							// Reaction must have an APMC-type transition probability defined
+							if (curSpec->chem_rxn[curArrayItem].rxnProbType != RXN_PROB_A_PRIORI_SPHERE
+								&& curSpec->chem_rxn[curArrayItem].rxnProbType != RXN_PROB_A_PRIORI_INFINITE_PLANE)
+							{
+								bWarn = true;
+								printf("WARNING %d: Chemical reaction %d is an A Priori type reaction but has a non-A Priori type \"Surface Transition Probability\". Setting to default value \"A Priori Plane\".\n", numWarn++, curArrayItem);
+								curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_A_PRIORI_INFINITE_PLANE;
+							}
+						} else
+						{
+							// Reaction should not have the surface reaction threshold parameters defined
+							if(cJSON_bItemValid(curObj,"Surface Reaction Threshold Type", cJSON_String)
+								|| cJSON_bItemValid(curObj,"Surface Reaction Threshold Value", cJSON_String))
+							{
+								bWarn = true;
+								printf("WARNING %d: Reaction %d is a surface reaction that does not need either \"Surface Reaction Threshold Type\" or \"Surface Reaction Threshold Value\" defined. Ignoring.\n", numWarn++, curArrayItem);
+							}
+							
+							// Reaction should not have APMC-type transition probabilities
+							if (curSpec->chem_rxn[curArrayItem].rxnProbType == RXN_PROB_A_PRIORI_SPHERE
+								|| curSpec->chem_rxn[curArrayItem].rxnProbType == RXN_PROB_A_PRIORI_INFINITE_PLANE)
+							{
+								bWarn = true;
+								printf("WARNING %d: Chemical reaction %d is not an A Priori type reaction but has an A Priori type \"Surface Transition Probability\". Setting to default value \"Normal\".\n", numWarn++, curArrayItem);
+								curSpec->chem_rxn[curArrayItem].rxnProbType = RXN_PROB_NORMAL;
+							}
 						}
 						
 					} else

@@ -134,6 +134,7 @@
 // Types of thresholding for A Priori surface reactions
 #define RXN_THRESHOLD_DISTANCE 0
 #define RXN_THRESHOLD_PROB 1
+#define RXN_THRESHOLD_REGION 2
 
 // Types of molecule placement strategies when leaving surface
 // NOTE: Changes to list of names must be reflected in file_io.c

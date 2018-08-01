@@ -105,6 +105,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 	unsigned short k; // Current molecule type OR reaction exception
 	unsigned short curProd; // Index of current product (if a reaction has multiple
 							// products of the same molecule type)
+	unsigned short n; // Additional counting index
 	uint32_t num_reactants; // Number of reactants in a reaction
 	uint32_t numTotalProd; // Total number of products in a reaction
 	
@@ -167,7 +168,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 		regionArray[i].numZerothRxn = 0;
 		regionArray[i].numFirstRxn = 0;
 		regionArray[i].numSecondRxn = 0;
-		
+				
 		if(regionArray[i].numChemRxn == 0)
 			continue; // No reactions in this region; no need to allocate memory
 		
@@ -579,6 +580,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 							switch(chem_rxn[curRxn].surfRxnType)
 							{
 								case RXN_ABSORBING:
+								case RXN_A_PRIORI_ABSORBING:
 									if(regionArray[i].bSurfRxnIn[j])
 									{ // Molecule already has an absorbing reaction
 										fprintf(stderr, "ERROR: Molecule type %u in region %u (Label: \"%s\") has more than one absorbing reaction specified.\n",
@@ -588,11 +590,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 									regionArray[i].bSurfRxnIn[j] = true;
 									regionArray[i].rxnInID[j] = k;
 									
-									// Determine reaction probability given full time step
-									regionArray[i].surfRxnInProb[j] =
-										calculateAbsorptionProb(i, j, k,
-										regionArray[i].spec.dt, NUM_REGIONS,
-										regionArray, NUM_MOL_TYPES);
+									if(chem_rxn[curRxn].surfRxnType == RXN_ABSORBING)
+									{
+										// Determine reaction probability given full time step
+										regionArray[i].surfRxnInProb[j] =
+											calculateAbsorptionProb(i, j, k,
+											regionArray[i].spec.dt, NUM_REGIONS,
+											regionArray, NUM_MOL_TYPES);								
+									}
 									break;
 								case RXN_MEMBRANE_IN:
 									if(regionArray[i].bSurfRxnIn[j])
@@ -714,6 +719,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						
 						break;
 					case RXN_ABSORBING:
+					case RXN_A_PRIORI_ABSORBING:
 					case RXN_MEMBRANE_IN:
 					case RXN_MEMBRANE_OUT:
 						// Absorbing reactions aren't included in calculation of cumulative
@@ -729,6 +735,126 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				exp(-regionArray[i].spec.dt*regionArray[i].uniSumRate[j]);
 		}
 		
+	}
+	
+	// Allocate member for A Priori surface reactions
+	// A Priori reactions have to be treated separately because they do not
+	// occur in the region(s) for which they are defined
+	for(i = 0; i < NUM_REGIONS; i++)
+	{		
+		if(regionArray[i].spec.surfaceType == NO_SURFACE)
+		{
+			regionArray[i].numApmcRxn =
+				malloc(NUM_MOL_TYPES*sizeof(unsigned short));
+			regionArray[i].apmcRxnRegion =
+				malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
+			regionArray[i].apmcRxnID =
+				malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
+			regionArray[i].uniCumProbApmc =
+				malloc(NUM_MOL_TYPES*sizeof(double *));
+			
+			if(regionArray[i].numApmcRxn == NULL
+				|| regionArray[i].apmcRxnRegion == NULL
+				|| regionArray[i].apmcRxnID == NULL
+				|| regionArray[i].uniCumProbApmc == NULL)
+			{
+				fprintf(stderr, "ERROR: Memory allocation for a priori chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
+				exit(EXIT_FAILURE);
+			}
+			
+			for(j = 0; j < NUM_MOL_TYPES; j++)
+				regionArray[i].numApmcRxn[j] = 0;
+				
+			// Count number of A Priori reactions that could apply for each molecule type
+			// Each surface region with some a priori reaction is counted separately
+			for(j = 0; j < NUM_REGIONS; j++)
+			{
+				if(regionArray[j].spec.surfaceType == NO_SURFACE
+					|| regionArray[j].numChemRxn == 0)
+					continue; // A Priori reactions will only be associated with surface regions
+					
+				for(k = 0; k < regionArray[j].numChemRxn; k++)
+				{
+					curRxn = rxnInRegionID[k][j]; // Current reaction in chem_rxn array
+					if(chem_rxn[curRxn].bSurface
+						&& chem_rxn[curRxn].surfRxnType == RXN_A_PRIORI_ABSORBING)
+					{ // We have an a priori type reaction. Check whether it applies
+						if(chem_rxn[curRxn].bRxnThreshold
+							&& chem_rxn[curRxn].rxnThresholdType == RXN_THRESHOLD_REGION
+							&& !regionArray[j].isRegionNeigh[i])
+							continue; // A Priori reaction is controlled by region proximity
+										// but these two regions aren't neighbours
+										
+						// Current A Priori reaction applies. Add to count for corresponding
+						// molecule type
+						regionArray[i].numApmcRxn[regionArray[j].uniReactant[k]]++;
+					}
+				}
+			}
+			
+			// Allocate memory for the A Priori reactions
+			for(j = 0; j < NUM_MOL_TYPES; j++)
+			{
+				if(regionArray[i].numApmcRxn[j] > 0)
+				{
+					regionArray[i].apmcRxnRegion[j] =
+						malloc(regionArray[i].numApmcRxn[j]*sizeof(unsigned short));
+					regionArray[i].apmcRxnID[j] =
+						malloc(regionArray[i].numApmcRxn[j]*sizeof(unsigned short));
+					regionArray[i].uniCumProbApmc[j] =
+						malloc(regionArray[i].numApmcRxn[j]*sizeof(double));
+						
+					if(regionArray[i].apmcRxnRegion[j] == NULL
+						|| regionArray[i].apmcRxnID[j] == NULL
+						|| regionArray[i].uniCumProbApmc[j] == NULL)
+					{
+						fprintf(stderr, "ERROR: Memory allocation for a priori chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
+						exit(EXIT_FAILURE);
+					}
+					
+					for(k = 0; k < regionArray[i].numApmcRxn[j]; k++)
+					{
+						regionArray[i].apmcRxnRegion[j][k] = USHRT_MAX;
+					}
+				}
+			}
+			
+			// Assign A Priori reactions
+			for(j = 0; j < NUM_REGIONS; j++)
+			{
+				if(regionArray[j].spec.surfaceType == NO_SURFACE
+					|| regionArray[j].numChemRxn == 0)
+					continue; // A Priori reactions will only be associated with surface regions
+					
+				for(k = 0; k < regionArray[j].numChemRxn; k++)
+				{
+					curRxn = rxnInRegionID[k][j]; // Current reaction in chem_rxn array
+					if(chem_rxn[curRxn].bSurface
+						&& chem_rxn[curRxn].surfRxnType == RXN_A_PRIORI_ABSORBING)
+					{ // We have an a priori type reaction. Check whether it applies
+						if(chem_rxn[curRxn].bRxnThreshold
+							&& chem_rxn[curRxn].rxnThresholdType == RXN_THRESHOLD_REGION
+							&& !regionArray[j].isRegionNeigh[i])
+							continue; // A Priori reaction is controlled by region proximity
+										// but these two regions aren't neighbours
+										
+						// Current A Priori reaction applies. Assign details to current region
+						n = 0;
+						while(regionArray[i].apmcRxnRegion[regionArray[j].uniReactant[k]][n] < USHRT_MAX)
+							n++;
+						regionArray[i].apmcRxnRegion[regionArray[j].uniReactant[k]][n] = j;
+						regionArray[i].apmcRxnID[regionArray[j].uniReactant[k]][n] = curRxn;
+						regionArray[i].uniCumProbApmc[regionArray[j].uniReactant[k]][n] = 0;
+					}
+				}
+			}
+		} else
+		{
+			regionArray[i].numApmcRxn = NULL;
+			regionArray[i].apmcRxnRegion = NULL;
+			regionArray[i].apmcRxnID = NULL;
+			regionArray[i].uniCumProbApmc = NULL;
+		}
 	}
 	
 	// Free memory of temporary parameters
@@ -776,6 +902,14 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 				free(regionArray[i].uniCumProb[j]);
 			if(regionArray[i].uniRelativeRate[j] != NULL)
 				free(regionArray[i].uniRelativeRate[j]);
+
+			// A Priori surface reactions
+			if(regionArray[i].apmcRxnRegion != NULL && regionArray[i].apmcRxnRegion[j] != NULL)
+				free(regionArray[i].apmcRxnRegion[j]);
+			if(regionArray[i].apmcRxnID != NULL && regionArray[i].apmcRxnID[j] != NULL)
+				free(regionArray[i].apmcRxnID[j]);
+			if(regionArray[i].uniCumProbApmc != NULL && regionArray[i].uniCumProbApmc[j] != NULL)
+				free(regionArray[i].uniCumProbApmc[j]);
 		}
 		
 		if(regionArray[i].globalRxnID != NULL) free(regionArray[i].globalRxnID);
@@ -820,6 +954,12 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		if(regionArray[i].rxnOutID != NULL) free(regionArray[i].rxnOutID);
 		if(regionArray[i].surfRxnOutProb != NULL) free(regionArray[i].surfRxnOutProb);
 		if(regionArray[i].bUseRxnOutProb != NULL) free(regionArray[i].bUseRxnOutProb);
+		
+		// A Priori surface reactions
+		if(regionArray[i].numApmcRxn != NULL) free(regionArray[i].numApmcRxn);
+		if(regionArray[i].apmcRxnRegion != NULL) free(regionArray[i].apmcRxnRegion);
+		if(regionArray[i].apmcRxnID != NULL) free(regionArray[i].apmcRxnID);
+		if(regionArray[i].uniCumProbApmc != NULL) free(regionArray[i].uniCumProbApmc);
 	}
 }
 

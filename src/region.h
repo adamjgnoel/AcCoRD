@@ -10,9 +10,14 @@
  * region.h - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.1 (2016-12-24)
  * - added members defining flow parameters for every molecule
@@ -532,6 +537,26 @@ struct region { // Region boundary parameters
 	// Membrane reaction is for passing from the "outer" direction
 	// Length NUM_MOL_TYPES
 	bool * bUseRxnOutProb;
+	
+	// A Priori surface reaction parameters (micro only)
+	
+	// Number of A Priori surface reactions that apply to given molecule type
+	// Length NUM_MOL_TYPES
+	unsigned short * numApmcRxn;
+	
+	// Regions of A priori surface reactions that apply to given molecule type
+	// Size NUM_MOL_TYPES x numApmcRxn
+	unsigned short ** apmcRxnRegion;
+	
+	// IDs of A priori surface reactions that apply to given molecule type
+	// Indexing is from global reaction list and not region where corresponding
+	// reaction is defined
+	// Size NUM_MOL_TYPES x numApmcRxn
+	unsigned short ** apmcRxnID;
+	
+	// Cumulative probabilities for current A priori reactions
+	// Size NUM_MOL_TYPES x numApmcRxn
+	double ** uniCumProbApmc;
 };
 
 /*

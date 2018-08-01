@@ -839,6 +839,8 @@ void loadConfig(const char * CONFIG_NAME,
 										curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_DISTANCE;
 									else if(strcmp(tempString,"Probability") == 0)
 										curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_PROB;
+									else if(strcmp(tempString,"Current Region") == 0)
+										curSpec->chem_rxn[curArrayItem].rxnThresholdType = RXN_THRESHOLD_REGION;
 									else
 									{
 										bWarn = true;

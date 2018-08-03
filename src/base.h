@@ -10,9 +10,12 @@
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added function to find closest point on a boundary from some other point
  *
  * Revision v1.1 (2016-12-24)
  * - renamed some switch cases to use direction macros instead of explicit integers

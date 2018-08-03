@@ -9,9 +9,14 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.3 (2018-07-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.3 (2018-07-31)
  * - changed checks for the "Random Molecule Release Times?" "Slot Interval" parameters

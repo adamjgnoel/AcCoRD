@@ -10,9 +10,14 @@
  * region.c - 	operations for (microscopic or mesoscopic) regions in
  * 				simulation environment
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.1 (2016-12-24)
  * - added members defining flow parameters for every molecule

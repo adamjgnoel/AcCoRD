@@ -10,9 +10,14 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.2 (2018-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.2 (2018-05-30)
  * - fixed implementation of replication reactions, where a first order reactant produces

@@ -562,6 +562,11 @@ struct region { // Region boundary parameters
 	// Cumulative probabilities for current A priori reactions
 	// Size NUM_MOL_TYPES x numApmcRxn
 	double ** uniCumProbApmc;
+	
+	// Intermediate parameter alpha for A Priori surface reactions
+	// Needed if the absorption has a finite reaction rate
+	// Length NUM_MOL_TYPES
+	double * apmcAlpha;
 };
 
 /*

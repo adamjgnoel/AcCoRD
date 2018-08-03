@@ -754,12 +754,15 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
 			regionArray[i].uniCumProbApmc =
 				malloc(NUM_MOL_TYPES*sizeof(double *));
+			regionArray[i].apmcAlpha =
+				malloc(NUM_MOL_TYPES*sizeof(double));
 			
 			if(regionArray[i].numApmcRxn == NULL
 				|| regionArray[i].apmcRxnRegion == NULL
 				|| regionArray[i].apmcRxnID == NULL
 				|| regionArray[i].apmcGlobalRxnID == NULL
-				|| regionArray[i].uniCumProbApmc == NULL)
+				|| regionArray[i].uniCumProbApmc == NULL
+				|| regionArray[i].apmcAlpha == NULL)
 			{
 				fprintf(stderr, "ERROR: Memory allocation for a priori chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
 				exit(EXIT_FAILURE);
@@ -852,6 +855,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						regionArray[i].apmcRxnID[regionArray[j].uniReactant[k]][n] = k;
 						regionArray[i].apmcGlobalRxnID[regionArray[j].uniReactant[k]][n] = curRxn;
 						regionArray[i].uniCumProbApmc[regionArray[j].uniReactant[k]][n] = 0;
+						regionArray[i].apmcAlpha[regionArray[j].uniReactant[k]] =
+							(chem_rxn[curRxn].k*regionArray[j].boundary[3] + DIFF_COEF[i][regionArray[j].uniReactant[k]])/DIFF_COEF[i][regionArray[j].uniReactant[k]]/regionArray[j].boundary[3];
 					}
 				}
 			}
@@ -862,6 +867,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].apmcRxnID = NULL;
 			regionArray[i].apmcGlobalRxnID = NULL;
 			regionArray[i].uniCumProbApmc = NULL;
+			regionArray[i].apmcAlpha = NULL;
 		}
 	}
 	
@@ -981,6 +987,7 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 			if(regionArray[i].apmcRxnID != NULL) free(regionArray[i].apmcRxnID);
 			if(regionArray[i].apmcGlobalRxnID != NULL) free(regionArray[i].apmcGlobalRxnID);
 			if(regionArray[i].uniCumProbApmc != NULL) free(regionArray[i].uniCumProbApmc);
+			if(regionArray[i].apmcAlpha != NULL) free(regionArray[i].apmcAlpha);
 		}
 	}
 }
@@ -1158,8 +1165,8 @@ bool testApmcRxn(const double oldPoint[3],
 	const short NUM_REGIONS,
 	const struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
-	const struct chem_rxn_struct * chem_rxn,
-	const double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned short * curGlobalRxn)
 {
 	unsigned short curApmcRxn = 0; // Current reaction indexed in apmcRxnID
@@ -1196,9 +1203,15 @@ bool testApmcRxn(const double oldPoint[3],
 			case RXN_PROB_A_PRIORI_SPHERE:
 				// TODO: Add version with flow
 				// TODO: Add reference to equation source
-				curProb = regionArray[curSurfRegion].boundary[3] /
-					(dist + regionArray[curSurfRegion].boundary[3]) *
-					erfc(dist/sqrt(4*DIFF_COEF[curRegion][curMolType]*dt));
+				if (chem_rxn[*curGlobalRxn].k < Inf)
+				{ // Schulten and Kosztin, "Lectures in Theoretical Biophysics", Eq. (3.114)					
+					curProb = 0; // Placeholder (TODO: Need to resolve numerical issues here)
+				} else
+				{ // Schulten and Kosztin, "Lectures in Theoretical Biophysics", Eq. (3.116)
+					curProb = regionArray[curSurfRegion].boundary[3] /
+						(dist + regionArray[curSurfRegion].boundary[3]) *
+						erfc(dist/sqrt(4*DIFF_COEF[curRegion][curMolType]*dt));
+				}
 				break;
 			case RXN_PROB_A_PRIORI_INFINITE_PLANE:
 				// TODO: Find flow along projection from point to boundary

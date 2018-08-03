@@ -236,8 +236,8 @@ bool testApmcRxn(const double oldPoint[3],
 	const short NUM_REGIONS,
 	const struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES,
-	const struct chem_rxn_struct * chem_rxn,
-	const double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
 	unsigned short * curGlobalRxn);
 
 #endif // CHEM_RXN_H

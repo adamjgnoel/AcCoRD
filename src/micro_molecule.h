@@ -283,13 +283,13 @@ bool validateMolecule(double newPoint[3],
 	short * transRegion,
 	bool * bPointChange,
 	const struct region regionArray[],
-	short molType,
+	unsigned short molType,
 	bool * bReaction,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	short * curRxn);
+	unsigned short * curRxn);
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
 // start and end points
@@ -305,9 +305,9 @@ bool followMolecule(const double startPoint[3],
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
-	short molType,
+	unsigned short molType,
 	bool * bReaction,
-	short * curRxn,
+	unsigned short * curRxn,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],

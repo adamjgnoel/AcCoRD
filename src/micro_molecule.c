@@ -175,13 +175,14 @@ void diffuseMolecules(const short NUM_REGIONS,
 	
 	double oldPoint[3];
 	double newPoint[3];
-	short curRegion, curType, newRegion, newType, transRegion;
+	unsigned short curType, newType;
+	short curRegion, newRegion, transRegion;
 	uint32_t newSub, curBoundSub;
 	bool bInRegion, bPointChange;
 	int curMol = 0;
 	
 	bool bReaction;
-	short curRxn, curProd;
+	unsigned short curRxn, curProd;
 
 	bool bRemove, bValidDiffusion;
 	uint32_t minSub;
@@ -722,7 +723,7 @@ bool placeInMicroFromMeso(const unsigned short curRegion,
 	double intersectPoint[3];
 	short newRegion, transRegion;
 	bool bPointChange, bReaction;
-	short curRxn;
+	unsigned short curRxn;
 	
 	unsigned short faceDir;
 	double curRand;
@@ -1461,7 +1462,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	bool bSameRegion;		// Are current and neighboring molecules in same region?
 	short curMolType, secondMolType;
 	short curRxnSecond, curRxnNeighSecond, curRxnRegion, curRxnNeighRegion, curRxn;
-	short diffRxn; 		// ID of reaction while a reactant or product is diffusing
+	unsigned short diffRxn; 		// ID of reaction while a reactant or product is diffusing
 						// to/from site
 	short curProd, curProdRxn;
 	NodeMol3D * curNode, * prevNode, * nextNode;
@@ -1947,13 +1948,13 @@ bool validateMolecule(double newPoint[3],
 	short * transRegion,
 	bool * bPointChange,
 	const struct region regionArray[],
-	short molType,
+	unsigned short molType,
 	bool * bReaction,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	short * curRxn)
+	unsigned short * curRxn)
 {
 	double trajLine[3];
 	double lineLength;
@@ -1996,9 +1997,9 @@ bool followMolecule(const double startPoint[3],
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
-	short molType,
+	unsigned short molType,
 	bool * bReaction,
-	short * curRxn,
+	unsigned short * curRxn,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],

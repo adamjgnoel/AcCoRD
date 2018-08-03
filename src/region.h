@@ -18,6 +18,8 @@
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface
  * reaction type. Includes settings for how to define the a priori absorption
  * probability calculation and whether/how to apply a threshold to turn it off
+ * - corrected check on molecule transitions between parent and child regions
+ * when a molecule is initialized at the parent/child boundary
  *
  * Revision v1.1 (2016-12-24)
  * - added members defining flow parameters for every molecule

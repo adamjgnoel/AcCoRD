@@ -189,7 +189,7 @@ void diffuseMolecules(const short NUM_REGIONS,
 	
 	// A Priori surface reaction parameters
 	bool bApmc; // Is there an A Priori surface reaction that we need to consider?
-	bool bApmcCur; // Did current molecule have an A Priori surface reaction?
+	bool bApmcCur; // Did current molecule have (or attempt) an A Priori surface reaction?
 	unsigned short curGlobalRxn;
 	
 	// Indicate that every microscopic molecule in a "normal" list
@@ -280,10 +280,10 @@ void diffuseMolecules(const short NUM_REGIONS,
 							bReaction = false;
 							bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS,
 								NUM_MOL_TYPES, curRegion, &newRegion, &transRegion, &bPointChange,
-								regionArray, curType, &bReaction,
+								regionArray, curType, &bReaction, &bApmcCur,
 								false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn);
 							
-							if(bApmc && !bValidDiffusion)
+							if(bApmc && bApmcCur)
 							{ // Molecule hit region excluded by A Priori test
 								// Need to revert diffusion step and re-attempt
 								moveMolecule(&curNode->item, oldPoint[0], oldPoint[1], oldPoint[2]);
@@ -479,15 +479,15 @@ void diffuseMolecules(const short NUM_REGIONS,
 						// Once molecule is validated, we can proceed directly to transferring
 						// it to the relevant "normal" list and remove it from this list				
 						bReaction = false;
-						bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+						validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
 							&newRegion, &transRegion, &bPointChange,
-							regionArray, curType, &bReaction,
+							regionArray, curType, &bReaction, &bApmcCur,
 							true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
 							
-						if(bApmc && !bValidDiffusion)
+						if(bApmc && bApmcCur)
 						{ // Molecule hit region excluded by A Priori test
 							// Need to revert diffusion step and re-attempt
-							moveMolecule(&curNode->item, oldPoint[0], oldPoint[1], oldPoint[2]);
+							moveMoleculeRecent(&curNodeR->item, oldPoint[0], oldPoint[1], oldPoint[2]);
 						}
 						else
 							break; // We can break out of this while loop
@@ -722,7 +722,7 @@ bool placeInMicroFromMeso(const unsigned short curRegion,
 	double L[3]; // Line vector between subvolume center and new point
 	double intersectPoint[3];
 	short newRegion, transRegion;
-	bool bPointChange, bReaction;
+	bool bPointChange, bReaction, bApmcRevert;
 	unsigned short curRxn;
 	
 	unsigned short faceDir;
@@ -864,7 +864,7 @@ bool placeInMicroFromMeso(const unsigned short curRegion,
 		// Follow trajectory to the new molecule point
 		validateMolecule(newPoint, intersectPoint, NUM_REGIONS, NUM_MOL_TYPES,
 			destRegion, &newRegion, &transRegion, &bPointChange,
-			regionArray, curMolType, &bReaction, true, 0, chem_rxn,
+			regionArray, curMolType, &bReaction, &bApmcRevert, true, 0, chem_rxn,
 			DIFF_COEF, &curRxn);
 		
 		if(regionArray[newRegion].spec.bMicro)
@@ -1484,6 +1484,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 	bool bAddProdMicro;		// Product molecule is going in a microscopic region
 	uint32_t newSub, curBoundSub; // Index of subvolume of product that ends up in meso region
 	bool bRxn;				// Current molecule reacted
+	bool bApmcRxn; 			// Current molecule went to a failed A Priori surface reaction
 	short numReactant1Add; 	// # of products same type as reactant 1 in same region
 	short numReactant2Add; 	// # of products same type as reactant 2 in same region
 	
@@ -1641,7 +1642,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 									validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
 										NUM_MOL_TYPES, curRegion, &rxnRegion, &transRegion,
 										&bPointChange, regionArray, curMolType,
-										&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+										&bDiffRxn, &bApmcRxn, true, 0., chem_rxn, DIFF_COEF,
 										&diffRxn);
 									
 									if(bPointChange)
@@ -1659,7 +1660,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 									validateMolecule(rxnCoor, reactantPoint, NUM_REGIONS,
 										NUM_MOL_TYPES, neighRegion, &rxnRegion, &transRegion,
 										&bPointChange, regionArray, secondMolType,
-										&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+										&bDiffRxn, &bApmcRxn, true, 0., chem_rxn, DIFF_COEF,
 										&diffRxn);
 									
 									if(bPointChange
@@ -1731,7 +1732,7 @@ void rxnSecondOrder(const unsigned short NUM_REGIONS,
 													validateMolecule(rxnProdCoor, rxnCoor, NUM_REGIONS,
 														NUM_MOL_TYPES, rxnRegion, &destRegion, &transRegion,
 														&bPointChange, regionArray, curProd,
-														&bDiffRxn, true, 0., chem_rxn, DIFF_COEF,
+														&bDiffRxn, &bApmcRxn, true, 0., chem_rxn, DIFF_COEF,
 														&diffRxn);
 													
 													if(bDiffRxn &&
@@ -1950,6 +1951,7 @@ bool validateMolecule(double newPoint[3],
 	const struct region regionArray[],
 	unsigned short molType,
 	bool * bReaction,
+	bool * bApmcRevert,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
@@ -1978,7 +1980,7 @@ bool validateMolecule(double newPoint[3],
 		return followMolecule(oldPoint, newPoint, trajLine,
 			lineLength, curRegion,
 			newRegion, transRegion, bPointChange, NUM_REGIONS, NUM_MOL_TYPES,
-			regionArray, molType, bReaction, curRxn,
+			regionArray, molType, bReaction, curRxn, bApmcRevert,
 			bRecent, dt, chem_rxn, DIFF_COEF, 0);
 	}
 }
@@ -2000,6 +2002,7 @@ bool followMolecule(const double startPoint[3],
 	unsigned short molType,
 	bool * bReaction,
 	unsigned short * curRxn,
+	bool * bApmcRevert,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
@@ -2019,6 +2022,7 @@ bool followMolecule(const double startPoint[3],
 	int i;
 	unsigned short curProd, rxnID;
 	* bReaction = false;
+	* bApmcRevert = false;
 	bool bContinue = false;
 	bool bReflect = false;
 	double rxnProb, kPrime, kminus1Prime;
@@ -2101,7 +2105,8 @@ bool followMolecule(const double startPoint[3],
 				return followMolecule(curIntersectPoint, endPoint, lineVector,
 					lineLength, startRegion, endRegion, transRegion, bPointChange,
 					NUM_REGIONS, NUM_MOL_TYPES, regionArray, molType,
-					bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1);
+					bReaction, curRxn, bApmcRevert, bRecent, dt,
+					chem_rxn, DIFF_COEF, depth+1);
 			}
 		}
 		
@@ -2152,6 +2157,7 @@ bool followMolecule(const double startPoint[3],
 								endPoint[1] = startPoint[1];
 								endPoint[2] = startPoint[2];
 								*bPointChange = true;
+								*bApmcRevert = true;
 								return false;
 							}
 							if(bRecent)
@@ -2349,7 +2355,8 @@ bool followMolecule(const double startPoint[3],
 				return followMolecule(curIntersectPoint, endPoint, lineVector,
 					lineLength, *endRegion, endRegion, transRegion, bPointChange,
 					NUM_REGIONS, NUM_MOL_TYPES, regionArray, molType,
-					bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1)
+					bReaction, curRxn, bApmcRevert, bRecent, dt,
+					chem_rxn, DIFF_COEF, depth+1)
 					&& startRegion == *endRegion;
 			} else
 			{
@@ -2392,7 +2399,8 @@ bool followMolecule(const double startPoint[3],
 	followMolecule(nearestIntersectPoint, newEndPoint, lineVector,
 			lineLength, startRegion, endRegion, transRegion, bPointChange,
 			NUM_REGIONS, NUM_MOL_TYPES, regionArray,
-			molType, bReaction, curRxn, bRecent, dt, chem_rxn, DIFF_COEF, depth+1);
+			molType, bReaction, curRxn, bApmcRevert, bRecent,
+			dt, chem_rxn, DIFF_COEF, depth+1);
 	
 	endPoint[0] = newEndPoint[0];
 	endPoint[1] = newEndPoint[1];

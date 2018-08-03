@@ -18,6 +18,8 @@
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface
  * reaction type. Includes settings for how to define the a priori absorption
  * probability calculation and whether/how to apply a threshold to turn it off
+ * - corrected check on molecule transitions between parent and child regions
+ * when a molecule is initialized at the parent/child boundary
  *
  * Revision v1.1 (2016-12-24)
  * - added members defining flow parameters for every molecule
@@ -1193,7 +1195,7 @@ bool bLineHitRegion(const double p1[3],
 				if(bLineHitInfinitePlane(p1, L, length, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[endRegion][curPlane],
 					regionArray[startRegion].regionNeighFaceDir[endRegion][curPlane],
-					false, d, intersectPoint, false)
+					false, d, intersectPoint, true)
 					&& bPointOnFace(intersectPoint, RECTANGULAR_BOX,
 					regionArray[startRegion].boundRegionFaceCoor[endRegion][curPlane], regionArray[startRegion].regionNeighFaceDir[endRegion][curPlane])
 					&& *d < minDist)
@@ -1218,7 +1220,7 @@ bool bLineHitRegion(const double p1[3],
 			return bLineHitInfinitePlane(p1, L, length, SPHERE,
 				regionArray[startRegion].boundRegionFaceCoor[endRegion][0],
 				regionArray[startRegion].regionNeighFaceDir[endRegion][0], bInside,
-				d, intersectPoint, false);
+				d, intersectPoint, true);
 		default:
 			fprintf(stderr,"ERROR: Boundary type %d invalid for boundary intersection between regions %u and %u.\n", boundary1Type, startRegion, endRegion);
 			return false;		

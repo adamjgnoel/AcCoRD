@@ -31,6 +31,8 @@ function config =  accordConfigImport(configJSON)
 %
 % Revision LATEST_VERSION
 % - added A Priori Absorption as a surface reaction type
+% - fixed loading of surface reaction parameters when there are products
+% that are not released away from the surface
 %
 % Revision v1.3 (2018-07-31)
 % - fixed detection of actors that are defined as the union of more than 1

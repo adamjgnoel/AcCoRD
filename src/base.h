@@ -197,6 +197,13 @@ double distanceToBoundary(const double point[3],
 	const int boundary1Type,
 	const double boundary1[]);
 
+// Determine closest point on boundary to current point
+// Unlike closestFace, uses actual straightline distance
+void closestPoint(const double point[3],
+	double newPoint[3],
+	const int boundary1Type,
+	const double boundary1[]);
+
 // Determine closest boundary face from point
 // Distance is checked along face normals only (i.e., we assume that we're already
 // at one of the faces)

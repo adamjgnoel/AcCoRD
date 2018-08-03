@@ -25,9 +25,12 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD v1.3 (2018-07-31)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added A Priori Absorption as a surface reaction type
 %
 % Revision v1.3 (2018-07-31)
 % - fixed detection of actors that are defined as the union of more than 1
@@ -164,14 +167,16 @@ for i = 1:config.numChemRxn
         config.chemRxn{i}.reactants(j) = curRxn.Reactants(j);
         config.chemRxn{i}.products(j) = curRxn.Products(j);
         if strcmp(config.chemRxn{i}.surfRxnType, 'Adsorbing') || ...
-            strcmp(config.chemRxn{i}.surfRxnType, 'Desorbing')
+            strcmp(config.chemRxn{i}.surfRxnType, 'Desorbing') || ...
+            strcmp(config.chemRxn{i}.surfRxnType, 'A Priori Absorbing')
             config.chemRxn{i}.bProdReleased(j) = ...
                 curRxn.Products_0x20_Released_0x3F_(j);
         end
     end
     
     if (strcmp(config.chemRxn{i}.surfRxnType, 'Adsorbing') || ...
-        strcmp(config.chemRxn{i}.surfRxnType, 'Desorbing')) && ...
+        strcmp(config.chemRxn{i}.surfRxnType, 'Desorbing') || ...
+            strcmp(config.chemRxn{i}.surfRxnType, 'A Priori Absorbing')) && ...
         sum(config.chemRxn{i}.products) > 0
         config.chemRxn{i}.releaseType =...
             curRxn.Release_0x20_Placement_0x20_Type;

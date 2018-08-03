@@ -225,4 +225,19 @@ double calculateMembraneProb(const short curRegion,
 	const struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES);
 
+// Test A Priori surface reaction(s) for given molecule
+bool testApmcRxn(const double oldPoint[3],
+	double newPoint[3],
+	const short curRegion,
+	short * newRegion,
+	unsigned short * newRegionRxn,
+	const unsigned short curMolType,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	const struct chem_rxn_struct * chem_rxn,
+	const double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	unsigned short * curGlobalRxn);
+
 #endif // CHEM_RXN_H

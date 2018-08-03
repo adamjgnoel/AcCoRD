@@ -549,10 +549,15 @@ struct region { // Region boundary parameters
 	unsigned short ** apmcRxnRegion;
 	
 	// IDs of A priori surface reactions that apply to given molecule type
+	// Indexing is from reacting region reaction list
+	// Size NUM_MOL_TYPES x numApmcRxn
+	unsigned short ** apmcRxnID;
+	
+	// IDs of A priori surface reactions that apply to given molecule type
 	// Indexing is from global reaction list and not region where corresponding
 	// reaction is defined
 	// Size NUM_MOL_TYPES x numApmcRxn
-	unsigned short ** apmcRxnID;
+	unsigned short ** apmcGlobalRxnID;
 	
 	// Cumulative probabilities for current A priori reactions
 	// Size NUM_MOL_TYPES x numApmcRxn

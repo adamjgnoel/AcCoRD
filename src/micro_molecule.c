@@ -10,9 +10,14 @@
  * micro_molecule.c - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.2 (2018-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.2 (2018-05-30)
  * - fixed implementation of replication reactions, where a first order reactant produces
@@ -181,6 +186,11 @@ void diffuseMolecules(const short NUM_REGIONS,
 	bool bRemove, bValidDiffusion;
 	uint32_t minSub;
 	
+	// A Priori surface reaction parameters
+	bool bApmc; // Is there an A Priori surface reaction that we need to consider?
+	bool bApmcCur; // Did current molecule have an A Priori surface reaction?
+	unsigned short curGlobalRxn;
+	
 	// Indicate that every microscopic molecule in a "normal" list
 	// needs to be moved.
 	// We do this to avoid moving a molecule more than once if it is moved
@@ -219,6 +229,16 @@ void diffuseMolecules(const short NUM_REGIONS,
 			curNode = p_list[curRegion][curType];
 			prevNode = NULL;
 			
+			// Check whether we have a possible A Priori surface reaction
+			if(regionArray[curRegion].spec.surfaceType == NO_SURFACE
+				&& regionArray[curRegion].numApmcRxn[curType] > 0)
+				bApmc = true;
+			else
+			{
+				bApmc = false;
+				bApmcCur = false;
+			}
+			
 			while(curNode != NULL)
 			{
 				nextNode = curNode->next;
@@ -231,27 +251,71 @@ void diffuseMolecules(const short NUM_REGIONS,
 					oldPoint[1] = curNode->item.y;
 					oldPoint[2] = curNode->item.z;
 					
-					// Diffuse molecule
-					if(regionArray[curRegion].bDiffuse[curType])
-						diffuseOneMolecule(&curNode->item, sigma[curRegion][curType]);
+					if (bApmc)
+					{// Apply A Priori surface reaction test
+						bApmcCur = testApmcRxn(oldPoint, newPoint, curRegion, &newRegion, &curRxn,
+							curType, regionArray[curRegion].spec.dt, NUM_REGIONS,
+							regionArray, NUM_MOL_TYPES, chem_rxn, DIFF_COEF, &curGlobalRxn);
+					}
 					
-					// Move molecule via flow
-					if(regionArray[curRegion].spec.bFlow[curType])
-						flowTransportOneMolecule(&curNode->item,
-							regionArray[curRegion].spec.flowType[curType],
-							regionArray[curRegion].flowConstant[curType]);
+					if(!bApmc || !bApmcCur)
+					{ // Diffusion for this molecule can proceed
+						while(true)
+						{
+							// Diffuse molecule
+							if(regionArray[curRegion].bDiffuse[curType])
+								diffuseOneMolecule(&curNode->item, sigma[curRegion][curType]);
+							
+							// Move molecule via flow
+							if(regionArray[curRegion].spec.bFlow[curType])
+								flowTransportOneMolecule(&curNode->item,
+									regionArray[curRegion].spec.flowType[curType],
+									regionArray[curRegion].flowConstant[curType]);
+							
+							newPoint[0] = curNode->item.x;
+							newPoint[1] = curNode->item.y;
+							newPoint[2] = curNode->item.z;
+										
+							bReaction = false;
+							bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS,
+								NUM_MOL_TYPES, curRegion, &newRegion, &transRegion, &bPointChange,
+								regionArray, curType, &bReaction,
+								false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn);
+							
+							if(bApmc && !bValidDiffusion)
+							{ // Molecule hit region excluded by A Priori test
+								// Need to revert diffusion step and re-attempt
+								moveMolecule(&curNode->item, oldPoint[0], oldPoint[1], oldPoint[2]);
+							}
+							else
+								break; // We can break out of this while loop
+						}
+					}
 					
-					newPoint[0] = curNode->item.x;
-					newPoint[1] = curNode->item.y;
-					newPoint[2] = curNode->item.z;
-								
-					bReaction = false;
-					bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS,
-						NUM_MOL_TYPES, curRegion, &newRegion, &transRegion, &bPointChange,
-						regionArray, curType, &bReaction,
-						false, regionArray[curRegion].spec.dt, chem_rxn, DIFF_COEF, &curRxn);
-					
-					if(regionArray[newRegion].spec.bMicro)
+					if(bApmc && bApmcCur)
+					{ // Need to fire corresponding surface reaction
+						bRemove = true;
+						if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
+						{
+							for(curProd = 0;
+								curProd < regionArray[newRegion].numRxnProducts[curRxn];
+								curProd++)
+							{
+								// Add the (curProd)th product to the corresponding molecule list
+								if(!addMolecule(
+									&p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]],
+									newPoint[0], newPoint[1], newPoint[2]))
+								{ // Creation of molecule failed
+									fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+									regionArray[newRegion].productID[curRxn][curProd], curRxn);
+									exit(EXIT_FAILURE);						
+								}
+								// Indicate that product molecule doesn't need to be
+								// moved again
+								p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]]->item.bNeedUpdate = false;
+							}
+						}						
+					} else if(regionArray[newRegion].spec.bMicro)
 					{
 						// Check for entering meso region within time step, even though
 						// we weren't in meso region at end of time step
@@ -367,35 +431,89 @@ void diffuseMolecules(const short NUM_REGIONS,
 			
 			curNodeR = p_listRecent[curRegion][curType];
 			curMol = 0;
+			
+			// Check whether we have a possible A Priori surface reaction
+			if(regionArray[curRegion].spec.surfaceType == NO_SURFACE
+				&& regionArray[curRegion].numApmcRxn[curType] > 0)
+				bApmc = true;
+			else
+			{
+				bApmc = false;
+				bApmcCur = false;
+			}
+			
 			while(curNodeR != NULL)
 			{				
 				oldPoint[0] = curNodeR->item.x;
 				oldPoint[1] = curNodeR->item.y;
 				oldPoint[2] = curNodeR->item.z;
-				
-				// Diffuse molecule
-				if(regionArray[curRegion].bDiffuse[curType])
-					diffuseOneMoleculeRecent(&curNodeR->item, DIFF_COEF[curRegion][curType]);
 					
-				// Move molecule via flow
-				if(regionArray[curRegion].spec.bFlow[curType])
-					flowTransportOneMoleculeRecent(&curNodeR->item,
-						regionArray[curRegion].spec.flowType[curType],
-						regionArray[curRegion].spec.flowVector[curType]);
+				if (bApmc)
+				{// Apply A Priori surface reaction test
+					bApmcCur = testApmcRxn(oldPoint, newPoint, curRegion, &newRegion, &curRxn,
+						curType, curNodeR->item.dt_partial, NUM_REGIONS,
+						regionArray, NUM_MOL_TYPES, chem_rxn, DIFF_COEF, &curGlobalRxn);
+				}
 				
-				newPoint[0] = curNodeR->item.x;
-				newPoint[1] = curNodeR->item.y;
-				newPoint[2] = curNodeR->item.z;
 				
-				// Once molecule is validated, we can proceed directly to transferring
-				// it to the relevant "normal" list and remove it from this list				
-				bReaction = false;
-				validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
-					&newRegion, &transRegion, &bPointChange,
-					regionArray, curType, &bReaction,
-					true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
-					
-				if(regionArray[newRegion].spec.bMicro)
+				if(!bApmc || !bApmcCur)
+				{ // Diffusion for this molecule can proceed
+					while(true)
+					{
+						
+						// Diffuse molecule
+						if(regionArray[curRegion].bDiffuse[curType])
+							diffuseOneMoleculeRecent(&curNodeR->item, DIFF_COEF[curRegion][curType]);
+							
+						// Move molecule via flow
+						if(regionArray[curRegion].spec.bFlow[curType])
+							flowTransportOneMoleculeRecent(&curNodeR->item,
+							regionArray[curRegion].spec.flowType[curType],
+							regionArray[curRegion].spec.flowVector[curType]);
+						
+						newPoint[0] = curNodeR->item.x;
+						newPoint[1] = curNodeR->item.y;
+						newPoint[2] = curNodeR->item.z;
+						
+						// Once molecule is validated, we can proceed directly to transferring
+						// it to the relevant "normal" list and remove it from this list				
+						bReaction = false;
+						bValidDiffusion = validateMolecule(newPoint, oldPoint, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
+							&newRegion, &transRegion, &bPointChange,
+							regionArray, curType, &bReaction,
+							true, curNodeR->item.dt_partial, chem_rxn, DIFF_COEF, &curRxn);
+							
+						if(bApmc && !bValidDiffusion)
+						{ // Molecule hit region excluded by A Priori test
+							// Need to revert diffusion step and re-attempt
+							moveMolecule(&curNode->item, oldPoint[0], oldPoint[1], oldPoint[2]);
+						}
+						else
+							break; // We can break out of this while loop
+					}
+				}
+				
+				
+				if(bApmc && bApmcCur)
+				{ // Need to fire corresponding surface reaction
+					if(regionArray[newRegion].numRxnProducts[curRxn] > 0)
+					{
+						for(curProd = 0;
+							curProd < regionArray[newRegion].numRxnProducts[curRxn];
+							curProd++)
+						{
+							// Add the (curProd)th product to the corresponding molecule list
+							if(!addMolecule(
+								&p_list[newRegion][regionArray[newRegion].productID[curRxn][curProd]],
+								newPoint[0], newPoint[1], newPoint[2]))
+							{ // Creation of molecule failed
+								fprintf(stderr, "ERROR: Memory allocation to create molecule of type %u from reaction %u.\n",
+								regionArray[newRegion].productID[curRxn][curProd], curRxn);
+								exit(EXIT_FAILURE);						
+							}
+						}
+					}						
+				} else if(regionArray[newRegion].spec.bMicro)
 				{ // Region is microscopic.
 					
 					if(regionArray[newRegion].bHasMesoNeigh
@@ -2025,6 +2143,16 @@ bool followMolecule(const double startPoint[3],
 						if(regionArray[*endRegion].bSurfRxnIn[molType])
 						{ // Absorption is possible
 							*curRxn = regionArray[*endRegion].rxnInID[molType];
+							// Check for A Priori surface reaction
+							if(chem_rxn[regionArray[*endRegion].globalRxnID[*curRxn]].surfRxnType == RXN_A_PRIORI_ABSORBING)
+							{ // Reaction is A Priori. Need to invalidate diffusion
+								// step and re-try
+								endPoint[0] = startPoint[0];
+								endPoint[1] = startPoint[1];
+								endPoint[2] = startPoint[2];
+								*bPointChange = true;
+								return false;
+							}
 							if(bRecent)
 							{
 								// Need to calculate absorption probability

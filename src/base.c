@@ -10,9 +10,12 @@
  * base.c - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added function to find closest point on a boundary from some other point
  *
  * Revision v1.1 (2016-12-24)
  * - renamed some switch cases to use direction macros instead of explicit integers
@@ -1130,6 +1133,121 @@ double distanceToBoundary(const double point[3],
 		default:
 			fprintf(stderr,"ERROR: Cannot determine the distance from a point to a %s.\n", boundaryString(boundary1Type));
 			return 0.;
+	}
+}
+
+// Determine closest point on boundary to current point
+// Unlike closestFace, uses actual straightline distance
+void closestPoint(const double point[3],
+	double newPoint[3],
+	const int boundary1Type,
+	const double boundary1[])
+{
+	double dist = 0.;
+	double dist2;
+	unsigned int face;
+	double L[3];
+	
+	switch (boundary1Type)
+	{
+		case RECTANGULAR_BOX:
+			if(bPointInBoundary(point, boundary1Type, boundary1))
+			{
+				// Point is inside box find closest face
+				dist = point[0] - boundary1[0];
+				dist2 = boundary1[1] - point[0];
+				face = 0;
+				newPoint[0] = point[0];
+				newPoint[1] = point[1];
+				newPoint[2] = point[2];
+				if(dist2 < dist)
+				{
+					dist = dist2;
+					face = 1;
+				}
+				dist2 = point[1] - boundary1[2];
+				if(dist2 < dist)
+				{
+					dist = dist2;
+					face = 2;
+				}
+				dist2 = boundary1[3] - point[1];
+				if(dist2 < dist)
+				{
+					dist = dist2;
+					face = 3;
+				}
+				dist2 = point[2] - boundary1[4];
+				if(dist2 < dist)
+				{
+					dist = dist2;
+					face = 4;
+				}
+				dist2 = boundary1[5] - point[2];
+				if(dist2 < dist)
+				{
+					dist = dist2;
+					face = 5;
+				}
+				switch(face)
+				{
+					case 0:
+						newPoint[0] = boundary1[0];
+						break;
+					case 1:
+						newPoint[0] = boundary1[1];
+						break;
+					case 2:
+						newPoint[1] = boundary1[2];
+						break;
+					case 3:
+						newPoint[1] = boundary1[3];
+						break;
+					case 4:
+						newPoint[2] = boundary1[4];
+						break;
+					case 5:
+						newPoint[2] = boundary1[5];
+						break;
+				}
+			} else
+			{ // Point is outside box
+				if(point[0] < boundary1[0])
+					newPoint[0] = boundary1[0];
+				else if(point[0] > boundary1[1])
+					newPoint[0] = boundary1[1];
+				else
+					newPoint[0] = point[0];
+				if(point[1] < boundary1[2])
+					newPoint[1] = boundary1[2];
+				else if(point[1] > boundary1[3])
+					newPoint[1] = boundary1[3];
+				else
+					newPoint[1] = point[1];					
+				if(point[2] < boundary1[4])
+					newPoint[2] = boundary1[4];
+				else if(point[2] > boundary1[5])
+					newPoint[2] = boundary1[5];
+				else
+					newPoint[2] = point[2];
+			}
+			return;
+		case SPHERE:
+			// Define line from point to center of sphere
+			defineLine(point, boundary1, L, &dist);
+			if(dist > boundary1[3])
+			{ // Point is outside sphere
+				bLineHitInfinitePlane(point, L, dist, SPHERE, boundary1, 0, false, &dist,
+					newPoint, false);
+			} else
+			{ // Point is inside sphere
+				bLineHitInfinitePlane(point, L, 2*boundary1[3], SPHERE, boundary1, 0, true, &dist,
+					newPoint, false);
+			}			
+			return;
+		default:
+			fprintf(stderr,"ERROR: Cannot determine the distance from a point to a %s.\n", boundaryString(boundary1Type));
+			return;
 	}
 }
 

@@ -750,12 +750,15 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 				malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
 			regionArray[i].apmcRxnID =
 				malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
+			regionArray[i].apmcGlobalRxnID =
+				malloc(NUM_MOL_TYPES*sizeof(unsigned short *));
 			regionArray[i].uniCumProbApmc =
 				malloc(NUM_MOL_TYPES*sizeof(double *));
 			
 			if(regionArray[i].numApmcRxn == NULL
 				|| regionArray[i].apmcRxnRegion == NULL
 				|| regionArray[i].apmcRxnID == NULL
+				|| regionArray[i].apmcGlobalRxnID == NULL
 				|| regionArray[i].uniCumProbApmc == NULL)
 			{
 				fprintf(stderr, "ERROR: Memory allocation for a priori chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
@@ -801,11 +804,14 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						malloc(regionArray[i].numApmcRxn[j]*sizeof(unsigned short));
 					regionArray[i].apmcRxnID[j] =
 						malloc(regionArray[i].numApmcRxn[j]*sizeof(unsigned short));
+					regionArray[i].apmcGlobalRxnID[j] =
+						malloc(regionArray[i].numApmcRxn[j]*sizeof(unsigned short));
 					regionArray[i].uniCumProbApmc[j] =
 						malloc(regionArray[i].numApmcRxn[j]*sizeof(double));
 						
 					if(regionArray[i].apmcRxnRegion[j] == NULL
 						|| regionArray[i].apmcRxnID[j] == NULL
+						|| regionArray[i].apmcGlobalRxnID[j] == NULL
 						|| regionArray[i].uniCumProbApmc[j] == NULL)
 					{
 						fprintf(stderr, "ERROR: Memory allocation for a priori chemical reactions in region %u (label: \"%s\").\n", i, regionArray[i].spec.label);
@@ -843,7 +849,8 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 						while(regionArray[i].apmcRxnRegion[regionArray[j].uniReactant[k]][n] < USHRT_MAX)
 							n++;
 						regionArray[i].apmcRxnRegion[regionArray[j].uniReactant[k]][n] = j;
-						regionArray[i].apmcRxnID[regionArray[j].uniReactant[k]][n] = curRxn;
+						regionArray[i].apmcRxnID[regionArray[j].uniReactant[k]][n] = k;
+						regionArray[i].apmcGlobalRxnID[regionArray[j].uniReactant[k]][n] = curRxn;
 						regionArray[i].uniCumProbApmc[regionArray[j].uniReactant[k]][n] = 0;
 					}
 				}
@@ -853,6 +860,7 @@ void initializeRegionChemRxn(const short NUM_REGIONS,
 			regionArray[i].numApmcRxn = NULL;
 			regionArray[i].apmcRxnRegion = NULL;
 			regionArray[i].apmcRxnID = NULL;
+			regionArray[i].apmcGlobalRxnID = NULL;
 			regionArray[i].uniCumProbApmc = NULL;
 		}
 	}
@@ -877,8 +885,6 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 	
 	for(i = 0; i < NUM_REGIONS; i++)
 	{
-		if(regionArray[i].numChemRxn == 0)
-			continue; // No reactions in this region; no need to free memory
 		
 		for(j = 0; j < regionArray[i].numChemRxn; j++)
 		{
@@ -896,70 +902,86 @@ void deleteRegionChemRxn(const short NUM_REGIONS,
 		
 		for(j = 0; j < NUM_MOL_TYPES; j++)
 		{
-			if(regionArray[i].firstRxnWithReactantID[j] != NULL)
-				free(regionArray[i].firstRxnWithReactantID[j]);
-			if(regionArray[i].uniCumProb[j] != NULL)
-				free(regionArray[i].uniCumProb[j]);
-			if(regionArray[i].uniRelativeRate[j] != NULL)
-				free(regionArray[i].uniRelativeRate[j]);
-
+			if(regionArray[i].numChemRxn > 0)
+			{
+				if(regionArray[i].firstRxnWithReactantID[j] != NULL)
+					free(regionArray[i].firstRxnWithReactantID[j]);
+				if(regionArray[i].uniCumProb[j] != NULL)
+					free(regionArray[i].uniCumProb[j]);
+				if(regionArray[i].uniRelativeRate[j] != NULL)
+					free(regionArray[i].uniRelativeRate[j]);
+			}
+			
 			// A Priori surface reactions
-			if(regionArray[i].apmcRxnRegion != NULL && regionArray[i].apmcRxnRegion[j] != NULL)
-				free(regionArray[i].apmcRxnRegion[j]);
-			if(regionArray[i].apmcRxnID != NULL && regionArray[i].apmcRxnID[j] != NULL)
-				free(regionArray[i].apmcRxnID[j]);
-			if(regionArray[i].uniCumProbApmc != NULL && regionArray[i].uniCumProbApmc[j] != NULL)
-				free(regionArray[i].uniCumProbApmc[j]);
+			if(regionArray[i].spec.surfaceType == NO_SURFACE
+				&& regionArray[i].numApmcRxn[j] > 0)
+			{
+				if(regionArray[i].apmcRxnRegion != NULL && regionArray[i].apmcRxnRegion[j] != NULL)
+					free(regionArray[i].apmcRxnRegion[j]);
+				if(regionArray[i].apmcRxnID != NULL && regionArray[i].apmcRxnID[j] != NULL)
+					free(regionArray[i].apmcRxnID[j]);
+				if(regionArray[i].apmcGlobalRxnID != NULL && regionArray[i].apmcGlobalRxnID[j] != NULL)
+					free(regionArray[i].apmcGlobalRxnID[j]);
+				if(regionArray[i].uniCumProbApmc != NULL && regionArray[i].uniCumProbApmc[j] != NULL)
+					free(regionArray[i].uniCumProbApmc[j]);
+			}
 		}
 		
-		if(regionArray[i].globalRxnID != NULL) free(regionArray[i].globalRxnID);
-		if(regionArray[i].bGlobalRxnID != NULL) free(regionArray[i].bGlobalRxnID);
-		if(regionArray[i].bReversible != NULL) free(regionArray[i].bReversible);
-		if(regionArray[i].reverseRxnID != NULL) free(regionArray[i].reverseRxnID);
-		if(regionArray[i].numMolChange != NULL) free(regionArray[i].numMolChange);
-		if(regionArray[i].bMolAdd != NULL) free(regionArray[i].bMolAdd);
-		if(regionArray[i].numRxnProducts != NULL) free(regionArray[i].numRxnProducts);
-		if(regionArray[i].productID != NULL) free(regionArray[i].productID);
-		if(regionArray[i].bReleaseProduct != NULL) free(regionArray[i].bReleaseProduct);
-		if(regionArray[i].releaseType != NULL) free(regionArray[i].releaseType);
-		if(regionArray[i].bUpdateProp != NULL) free(regionArray[i].bUpdateProp);
-		if(regionArray[i].rxnOrder != NULL) free(regionArray[i].rxnOrder);
-		if(regionArray[i].rxnRate != NULL) free(regionArray[i].rxnRate);
-		if(regionArray[i].zerothRxn != NULL) free(regionArray[i].zerothRxn);
-		if(regionArray[i].firstRxn != NULL) free(regionArray[i].firstRxn);
-		if(regionArray[i].secondRxn != NULL) free(regionArray[i].secondRxn);
-		if(regionArray[i].tZeroth != NULL) free(regionArray[i].tZeroth);
-		if(regionArray[i].rxnRateZerothMicro != NULL) free(regionArray[i].rxnRateZerothMicro);
-		if(regionArray[i].uniReactant != NULL) free(regionArray[i].uniReactant);
-		if(regionArray[i].numFirstRxnWithReactant != NULL)
-			free(regionArray[i].numFirstRxnWithReactant);
-		if(regionArray[i].firstRxnWithReactantID != NULL)
-			free(regionArray[i].firstRxnWithReactantID);
-		if(regionArray[i].numSecondRxnWithReactant != NULL)
-			free(regionArray[i].numSecondRxnWithReactant);
-		if(regionArray[i].uniSumRate != NULL) free(regionArray[i].uniSumRate);
-		if(regionArray[i].uniCumProb != NULL) free(regionArray[i].uniCumProb);
-		if(regionArray[i].uniRelativeRate != NULL) free(regionArray[i].uniRelativeRate);
-		if(regionArray[i].minRxnTimeRV != NULL) free(regionArray[i].minRxnTimeRV);
-		if(regionArray[i].rBind != NULL) free(regionArray[i].rBind);
-		if(regionArray[i].rBindSq != NULL) free(regionArray[i].rBindSq);
-		if(regionArray[i].rUnbind != NULL) free(regionArray[i].rUnbind);
-		if(regionArray[i].biReactants != NULL) free(regionArray[i].biReactants);
-		if(regionArray[i].rxnProbType != NULL) free(regionArray[i].rxnProbType);
-		if(regionArray[i].rxnDiffCoef != NULL) free(regionArray[i].rxnDiffCoef);
-		if(regionArray[i].bSurfRxnIn != NULL) free(regionArray[i].bSurfRxnIn);
-		if(regionArray[i].rxnInID != NULL) free(regionArray[i].rxnInID);
-		if(regionArray[i].surfRxnInProb != NULL) free(regionArray[i].surfRxnInProb);
-		if(regionArray[i].bSurfRxnOut != NULL) free(regionArray[i].bSurfRxnOut);
-		if(regionArray[i].rxnOutID != NULL) free(regionArray[i].rxnOutID);
-		if(regionArray[i].surfRxnOutProb != NULL) free(regionArray[i].surfRxnOutProb);
-		if(regionArray[i].bUseRxnOutProb != NULL) free(regionArray[i].bUseRxnOutProb);
+		if(regionArray[i].numChemRxn > 0)
+		{
+			if(regionArray[i].globalRxnID != NULL) free(regionArray[i].globalRxnID);
+			if(regionArray[i].bGlobalRxnID != NULL) free(regionArray[i].bGlobalRxnID);
+			if(regionArray[i].bReversible != NULL) free(regionArray[i].bReversible);
+			if(regionArray[i].reverseRxnID != NULL) free(regionArray[i].reverseRxnID);
+			if(regionArray[i].numMolChange != NULL) free(regionArray[i].numMolChange);
+			if(regionArray[i].bMolAdd != NULL) free(regionArray[i].bMolAdd);
+			if(regionArray[i].numRxnProducts != NULL) free(regionArray[i].numRxnProducts);
+			if(regionArray[i].productID != NULL) free(regionArray[i].productID);
+			if(regionArray[i].bReleaseProduct != NULL) free(regionArray[i].bReleaseProduct);
+			if(regionArray[i].releaseType != NULL) free(regionArray[i].releaseType);
+			if(regionArray[i].bUpdateProp != NULL) free(regionArray[i].bUpdateProp);
+			if(regionArray[i].rxnOrder != NULL) free(regionArray[i].rxnOrder);
+			if(regionArray[i].rxnRate != NULL) free(regionArray[i].rxnRate);
+			if(regionArray[i].zerothRxn != NULL) free(regionArray[i].zerothRxn);
+			if(regionArray[i].firstRxn != NULL) free(regionArray[i].firstRxn);
+			if(regionArray[i].secondRxn != NULL) free(regionArray[i].secondRxn);
+			if(regionArray[i].tZeroth != NULL) free(regionArray[i].tZeroth);
+			if(regionArray[i].rxnRateZerothMicro != NULL) free(regionArray[i].rxnRateZerothMicro);
+			if(regionArray[i].uniReactant != NULL) free(regionArray[i].uniReactant);
+			if(regionArray[i].numFirstRxnWithReactant != NULL)
+				free(regionArray[i].numFirstRxnWithReactant);
+			if(regionArray[i].firstRxnWithReactantID != NULL)
+				free(regionArray[i].firstRxnWithReactantID);
+			if(regionArray[i].numSecondRxnWithReactant != NULL)
+				free(regionArray[i].numSecondRxnWithReactant);
+			if(regionArray[i].uniSumRate != NULL) free(regionArray[i].uniSumRate);
+			if(regionArray[i].uniCumProb != NULL) free(regionArray[i].uniCumProb);
+			if(regionArray[i].uniRelativeRate != NULL) free(regionArray[i].uniRelativeRate);
+			if(regionArray[i].minRxnTimeRV != NULL) free(regionArray[i].minRxnTimeRV);
+			if(regionArray[i].rBind != NULL) free(regionArray[i].rBind);
+			if(regionArray[i].rBindSq != NULL) free(regionArray[i].rBindSq);
+			if(regionArray[i].rUnbind != NULL) free(regionArray[i].rUnbind);
+			if(regionArray[i].biReactants != NULL) free(regionArray[i].biReactants);
+			if(regionArray[i].rxnProbType != NULL) free(regionArray[i].rxnProbType);
+			if(regionArray[i].rxnDiffCoef != NULL) free(regionArray[i].rxnDiffCoef);
+			if(regionArray[i].bSurfRxnIn != NULL) free(regionArray[i].bSurfRxnIn);
+			if(regionArray[i].rxnInID != NULL) free(regionArray[i].rxnInID);
+			if(regionArray[i].surfRxnInProb != NULL) free(regionArray[i].surfRxnInProb);
+			if(regionArray[i].bSurfRxnOut != NULL) free(regionArray[i].bSurfRxnOut);
+			if(regionArray[i].rxnOutID != NULL) free(regionArray[i].rxnOutID);
+			if(regionArray[i].surfRxnOutProb != NULL) free(regionArray[i].surfRxnOutProb);
+			if(regionArray[i].bUseRxnOutProb != NULL) free(regionArray[i].bUseRxnOutProb);
+		}
 		
 		// A Priori surface reactions
-		if(regionArray[i].numApmcRxn != NULL) free(regionArray[i].numApmcRxn);
-		if(regionArray[i].apmcRxnRegion != NULL) free(regionArray[i].apmcRxnRegion);
-		if(regionArray[i].apmcRxnID != NULL) free(regionArray[i].apmcRxnID);
-		if(regionArray[i].uniCumProbApmc != NULL) free(regionArray[i].uniCumProbApmc);
+		if(regionArray[i].spec.surfaceType == NO_SURFACE)
+		{
+			if(regionArray[i].numApmcRxn != NULL) free(regionArray[i].numApmcRxn);
+			if(regionArray[i].apmcRxnRegion != NULL) free(regionArray[i].apmcRxnRegion);
+			if(regionArray[i].apmcRxnID != NULL) free(regionArray[i].apmcRxnID);
+			if(regionArray[i].apmcGlobalRxnID != NULL) free(regionArray[i].apmcGlobalRxnID);
+			if(regionArray[i].uniCumProbApmc != NULL) free(regionArray[i].uniCumProbApmc);
+		}
 	}
 }
 
@@ -1123,4 +1145,108 @@ double calculateMembraneProb(const short curRegion,
 	}
 	
 	return rxnProb;
+}
+
+// Test A Priori surface reaction(s) for given molecule
+bool testApmcRxn(const double oldPoint[3],
+	double newPoint[3],
+	const short curRegion,
+	short * newRegion,
+	unsigned short * newRegionRxn,
+	const unsigned short curMolType,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	const struct chem_rxn_struct * chem_rxn,
+	const double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	unsigned short * curGlobalRxn)
+{
+	unsigned short curApmcRxn = 0; // Current reaction indexed in apmcRxnID
+	//unsigned short curGlobalRxn = 0; // Current reaction indexed in global reaction list
+	double curProb;
+	unsigned short curSurfRegion;
+	double dist; // Distance from point to current surface
+	double curRand;
+	
+	// Calculate probabilities associated with each prospective reaction
+	regionArray[curRegion].uniCumProbApmc[curMolType][0] = 0;
+	for(curApmcRxn = 0; curApmcRxn < regionArray[curRegion].numApmcRxn[curMolType];
+		curApmcRxn++)
+	{
+		if (curApmcRxn > 0)
+			regionArray[curRegion].uniCumProbApmc[curMolType][curApmcRxn] =
+				regionArray[curRegion].uniCumProbApmc[curMolType][curApmcRxn-1];
+		
+		// Surface region with current A Priori surface reaction
+		curSurfRegion = regionArray[curRegion].apmcRxnRegion[curMolType][curApmcRxn];
+		*curGlobalRxn = regionArray[curRegion].apmcGlobalRxnID[curMolType][curApmcRxn];
+		
+		// Calculate distance to surface
+		dist = distanceToBoundary(oldPoint, regionArray[curSurfRegion].spec.shape,
+			regionArray[curSurfRegion].boundary);
+		
+		if(chem_rxn[*curGlobalRxn].rxnThresholdType == RXN_THRESHOLD_DISTANCE
+			&& dist > chem_rxn[*curGlobalRxn].rxnThreshold)
+			continue; // This reaction is beyond threshold distance
+		
+		// Calculate (ideal and independent) absorption probability
+		switch(chem_rxn[*curGlobalRxn].rxnProbType)
+		{
+			case RXN_PROB_A_PRIORI_SPHERE:
+				// TODO: Add version with flow
+				// TODO: Add reference to equation source
+				curProb = regionArray[curSurfRegion].boundary[3] /
+					(dist + regionArray[curSurfRegion].boundary[3]) *
+					erfc(dist/sqrt(4*DIFF_COEF[curRegion][curMolType]*dt));
+				break;
+			case RXN_PROB_A_PRIORI_INFINITE_PLANE:
+				// TODO: Find flow along projection from point to boundary
+				// TODO: Add reference to equation source
+				curProb = erfc(dist/sqrt(4*DIFF_COEF[curRegion][curMolType]*dt));
+				break;
+			default:
+				fprintf(stderr, "ERROR: Chemical reaction %u has invalid A Priori reaction probability type %u.\n",
+					*curGlobalRxn, chem_rxn[*curGlobalRxn].rxnProbType);
+				exit(EXIT_FAILURE);			
+		}
+		
+		if(chem_rxn[*curGlobalRxn].rxnThresholdType == RXN_THRESHOLD_PROB
+			&& curProb < chem_rxn[*curGlobalRxn].rxnThreshold)
+			continue; // This reaction is less likely than threshold probability
+			
+		regionArray[curRegion].uniCumProbApmc[curMolType][curApmcRxn] += curProb;
+	}
+	
+	// Correct cumulative probabilities if the total sum is greater than 1
+	if (regionArray[curRegion].uniCumProbApmc[curMolType][curApmcRxn-1] > 1.)
+	{
+		for(curApmcRxn = 0; curApmcRxn < regionArray[curRegion].numApmcRxn[curMolType];
+			curApmcRxn++)
+		{
+			regionArray[curRegion].uniCumProbApmc[curMolType][curApmcRxn] /=
+				regionArray[curRegion].uniCumProbApmc[curMolType][regionArray[curRegion].numApmcRxn[curMolType]-1];
+		}
+	}
+	
+	// Test whether a reaction occurred
+	curRand = generateUniform();
+	for(curApmcRxn = 0; curApmcRxn < regionArray[curRegion].numApmcRxn[curMolType];
+		curApmcRxn++)
+	{
+		if(curRand < regionArray[curRegion].uniCumProbApmc[curMolType][curApmcRxn])
+		{ // Current reaction took place
+			*curGlobalRxn = regionArray[curRegion].apmcGlobalRxnID[curMolType][curApmcRxn];
+			*newRegionRxn = regionArray[curRegion].apmcRxnID[curMolType][curApmcRxn];
+			*newRegion = regionArray[curRegion].apmcRxnRegion[curMolType][curApmcRxn];
+			
+			// Place reacting molecule at point on reacting surface that is closest
+			// to current molecule location
+			closestPoint(oldPoint, newPoint, regionArray[*newRegion].spec.shape,
+				regionArray[*newRegion].boundary);			
+			return true;
+		}
+	}
+	
+	return false;
 }

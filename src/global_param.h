@@ -10,9 +10,16 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added parameters to implement a priori surface reactions, including chemical
+ * reaction type RXN_A_PRIORI_ABSORBING, surface reaction probability types
+ * RXN_PROB_A_PRIORI_SPHERE and RXN_PROB_A_PRIORI_INFINITE_PLANE, and types of
+ * a priori surface reaction thresholds (RXN_THRESHOLD_DISTANCE and
+ * RXN_THRESHOLD_PROB)
  *
  * Revision v1.1 (2016-12-24)
  * - added flow types FLOW_NONE and FLOW_UNIFORM
@@ -114,12 +121,20 @@
 #define RXN_RECEPTOR 3
 #define RXN_MEMBRANE_IN 4
 #define RXN_MEMBRANE_OUT 5
+#define RXN_A_PRIORI_ABSORBING 6
 
 // Types of reaction probability calculations
 // NOTE: Changes to list of names must be reflected in file_io.c
 #define RXN_PROB_NORMAL 0
 #define RXN_PROB_MIXED 1
 #define RXN_PROB_STEADY_STATE 2
+#define RXN_PROB_A_PRIORI_SPHERE 3
+#define RXN_PROB_A_PRIORI_INFINITE_PLANE 4
+
+// Types of thresholding for A Priori surface reactions
+#define RXN_THRESHOLD_DISTANCE 0
+#define RXN_THRESHOLD_PROB 1
+#define RXN_THRESHOLD_REGION 2
 
 // Types of molecule placement strategies when leaving surface
 // NOTE: Changes to list of names must be reflected in file_io.c

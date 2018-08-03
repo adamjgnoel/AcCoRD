@@ -10,9 +10,12 @@
  * base.h - general utility functions that can apply to different simulation data
  * 			structures
  *
- * Last revised for AcCoRD v1.1 (2016-12-24)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added function to find closest point on a boundary from some other point
  *
  * Revision v1.1 (2016-12-24)
  * - renamed some switch cases to use direction macros instead of explicit integers
@@ -194,6 +197,13 @@ void pushPoint(double p1[3],
 	
 // Determine distance from point to a boundary
 double distanceToBoundary(const double point[3],
+	const int boundary1Type,
+	const double boundary1[]);
+
+// Determine closest point on boundary to current point
+// Unlike closestFace, uses actual straightline distance
+void closestPoint(const double point[3],
+	double newPoint[3],
 	const int boundary1Type,
 	const double boundary1[]);
 

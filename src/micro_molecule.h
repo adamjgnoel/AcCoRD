@@ -10,9 +10,14 @@
  * micro_molecule.h - 	linked list of individual molecules in same
  * 						microscopic region
  *
- * Last revised for AcCoRD v1.2 (2018-05-30)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.2 (2018-05-30)
  * - fixed implementation of replication reactions, where a first order reactant produces
@@ -278,13 +283,14 @@ bool validateMolecule(double newPoint[3],
 	short * transRegion,
 	bool * bPointChange,
 	const struct region regionArray[],
-	short molType,
+	unsigned short molType,
 	bool * bReaction,
+	bool * bApmcRevert,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],
 	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
-	short * curRxn);
+	unsigned short * curRxn);
 
 // Recursively follow a molecule's path through region boundaries from its diffusion
 // start and end points
@@ -300,9 +306,10 @@ bool followMolecule(const double startPoint[3],
 	const short NUM_REGIONS,
 	const unsigned short NUM_MOL_TYPES,
 	const struct region regionArray[],
-	short molType,
+	unsigned short molType,
 	bool * bReaction,
-	short * curRxn,
+	unsigned short * curRxn,
+	bool * bApmcRevert,
 	bool bRecent,
 	double dt,
 	const struct chem_rxn_struct chem_rxn[],

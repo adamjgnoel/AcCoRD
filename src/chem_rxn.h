@@ -9,9 +9,14 @@
  *
  * chem_rxn.h - structure for storing chemical reaction properties
  *
- * Last revised for v1.0 (2016-10-31)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - added a priori monte carlo (APMC) absorption algorithm as a new surface
+ * reaction type. Includes settings for how to define the a priori absorption
+ * probability calculation and whether/how to apply a threshold to turn it off
  *
  * Revision v1.0 (2016-10-31)
  * - enabled local diffusion coefficients. Chemical reactions involving surface
@@ -162,6 +167,15 @@ struct chem_rxn_struct { // Used to define a single chemical reaction
 	// Type of surface reaction probability calculation
 	// Default is RXN_PROB_NORMAL, which is inaccurate for surface transition reactions
 	short rxnProbType;
+	
+	// Is a surface reaction constrained by a threshold parameter?
+	bool bRxnThreshold;
+	
+	// Type of reaction threshold
+	short rxnThresholdType;
+	
+	// Value of reaction threshold
+	double rxnThreshold;
 };
 
 //
@@ -210,5 +224,20 @@ double calculateMembraneProb(const short curRegion,
 	const short NUM_REGIONS,
 	const struct region regionArray[],
 	const unsigned short NUM_MOL_TYPES);
+
+// Test A Priori surface reaction(s) for given molecule
+bool testApmcRxn(const double oldPoint[3],
+	double newPoint[3],
+	const short curRegion,
+	short * newRegion,
+	unsigned short * newRegionRxn,
+	const unsigned short curMolType,
+	const double dt,
+	const short NUM_REGIONS,
+	const struct region regionArray[],
+	const unsigned short NUM_MOL_TYPES,
+	const struct chem_rxn_struct chem_rxn[],
+	double DIFF_COEF[NUM_REGIONS][NUM_MOL_TYPES],
+	unsigned short * curGlobalRxn);
 
 #endif // CHEM_RXN_H

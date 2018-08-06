@@ -10,11 +10,11 @@
  * global_param.h - global parameters that are independent of a specific
  * 					simulation
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.4 (2018-08-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.4 (2018-08-06)
  * - added parameters to implement a priori surface reactions, including chemical
  * reaction type RXN_A_PRIORI_ABSORBING, surface reaction probability types
  * RXN_PROB_A_PRIORI_SPHERE and RXN_PROB_A_PRIORI_INFINITE_PLANE, and types of

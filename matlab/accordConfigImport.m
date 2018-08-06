@@ -25,11 +25,11 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.4 (2018-08-06)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.4 (2018-08-06)
 % - added A Priori Absorption as a surface reaction type. Also added
 % corresponding unqiue parameters (surface reaction threshold type and
 % threshold value)

@@ -27,11 +27,11 @@ function [hFig, hAxes] = accordQuickPlot(inputFile)
 % hFig - handle to plotted figure. Use for making changes.
 % hAxes - handle to axes in plotted figure. Use for making changes.
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.4 (2018-08-06)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.4 (2018-08-06)
 % - Created file
 %
 % Created 2018-08-03

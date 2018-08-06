@@ -1,0 +1,116 @@
+{
+	"Notes": "Notes fields replace commenting, which is not standard in JSON.",
+	"Description": "Sample function that uses the A Priori Monte Carlo (APMC) algorithm
+		for simulating surface absorption. System has a point transmitter that releases
+		molecules instantaneously and an absorbing sphere. The APMC algorithm performs
+		a die roll for every molecule in every time step, using the probability of the
+		molecule being absorbed in the current time step. This approach, which is only
+		suitable when this probability can be accurately calculated, enables much
+		larger time steps (orders of magnitude) without a loss of accuracy.",
+	"Output Filename": "accord_sample_a_priori_absorption",
+	"Warning Override": false,
+	"Simulation Control": {
+		"Number of Repeats": 1,
+		"Final Simulation Time": 50,
+		"Global Microscopic Time Step": 0.5,
+		"Random Number Seed": 1,
+		"Max Number of Progress Updates": 100
+	},
+	"Chemical Properties": {
+		"Number of Molecule Types": 2,
+		"Diffusion Coefficients": [1e-9, 0],
+		"Global Flow Type": "None",
+		"Chemical Reaction Specification": [
+			{							
+				"Notes": "Conversion. Can only occur at the receiver.",
+				"Label": "Conversion",
+				"Is Reaction Reversible?": false,
+				"Surface Reaction?": true,
+				"Surface Reaction Type": "A Priori Absorbing",
+				"Surface Transition Probability": "A Priori Sphere",
+				"Surface Reaction Threshold Type": "None",
+				"Surface Reaction Threshold Value": 0,
+				"Default Everywhere?": false,
+				"Exception Regions": ["Receiver"],
+				"Reactants": [1, 0],
+				"Products": [0, 1],
+				"Products Released?": [false, false],
+				"Reaction Rate": 1e9999
+			}
+		]
+	},
+	"Environment":	{
+		"Subvolume Base Size": 1e-12,
+		"Region Specification": [
+			{
+				"Notes": "Single spherical region with infinite radius. If any other region were
+					added here then it should be defined as a child of this region.",
+				"Label": "A",
+				"Parent Label": "",
+				"Shape": "Sphere",
+				"Type": "Normal",
+				"Anchor Coordinate": [0, 0, 0],
+				"Radius": 1e9999
+			},
+			{
+				"Notes": "Region at receiver defined so that it can have a local chemical reaction.
+				Its location must match that of receiver.",
+				"Label": "Receiver",
+				"Parent Label": "A",
+				"Shape": "Sphere",
+				"Type": "3D Surface",
+				"Surface Type": "Outer",
+				"Anchor Coordinate": [0, 50e-6, 0],
+				"Radius": 5e-6
+			}
+		],
+		"Actor Specification": [
+		{
+				"Notes": "Point Transmitter at origin.",
+				"Is Location Defined by Regions?": false,
+				"Shape": "Point",
+				"Outer Boundary": [0, 0, 0],
+				"Is Actor Active?": true,
+				"Start Time": 0,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 1e9999,
+				"Is Actor Activity Recorded?": true,
+				"Random Number of Molecules?": false,
+				"Release Interval": 0,
+				"Slot Interval": 0,
+				"Modulation Scheme": "Burst",
+				"Modulation Strength": 1e4,
+				"Is Molecule Type Released?": [true, false]
+		},
+		{
+				"Notes": "Spherical observer at receiver",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["Receiver"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 0.5,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [false, true],
+				"Is Molecule Position Observed?": [false, false]
+		},
+		{
+				"Notes": "Observer of propagation environment",
+				"Is Location Defined by Regions?": true,
+				"List of Regions Defining Location": ["A"],
+				"Is Actor Active?": false,
+				"Start Time": 1e-10,
+				"Is There Max Number of Actions?": false,
+				"Is Actor Independent?": true,
+				"Action Interval": 0.5,
+				"Is Actor Activity Recorded?": true,
+				"Is Time Recorded with Activity?": false,
+				"Is Molecule Type Observed?": [true, false],
+				"Is Molecule Position Observed?": [false, false]
+		}
+		]		
+	}
+}

@@ -18,6 +18,9 @@
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface
  * reaction type. Includes settings for how to define the a priori absorption
  * probability calculation and whether/how to apply a threshold to turn it off
+ * - corrected missing assignment for first order reactions that don't have any
+ * product molecules to place. Led to memory error when first molecule in a list
+ * has to be removed
  *
  * Revision v1.2 (2018-05-30)
  * - fixed implementation of replication reactions, where a first order reactant produces
@@ -1073,7 +1076,8 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 					rxnFirstOrderProductPlacement(curNodeOld, curNode,
 						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
 						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true, &bProductIsReactant);
-				}
+				} else
+					bProductIsReactant = false;
 				
 				// Remove current molecule from list
 				numMolReCheck--; // One less molecule to check for regular reactions
@@ -1153,7 +1157,8 @@ void rxnFirstOrderRecent(const unsigned short NUM_REGIONS,
 					rxnFirstOrderProductPlacement(curNodeOld, curNode,
 						curRxn, NUM_REGIONS, NUM_MOL_TYPES, curRegion,
 						p_list, pRecentList, regionArray, curMolType, DIFF_COEF, true, &bProductIsReactant);
-				}
+				} else
+					bProductIsReactant = false;
 				
 				// Remove current molecule from list
 				removeItemRecent(prevNode, curNode);

@@ -8,6 +8,7 @@ This document is the CHANGELOG for AcCoRD v1.4 (2018-08-06)
 - [NEW] added a "Quick Plot" function, accordQuickPlot, which takes a single argument and plots all time-varying average observations by all passive actors. It is implemented as a simpler alternative to accordPlotMakerWrapper. It can also be used to import AcCoRD output, but in such a case it will only load data from the first corresponding seed file.
 - [FIX] corrected check on molecule transitions between parent and child regions when a molecule is initialized directly at the parent/child boundary
 - [FIX] fixed the loading of surface reaction parameters when there are products that are not released away from the surface.
+- [FIX] corrected missing assignment for first order reactions that don't have any product molecules to place. Led to memory error when first molecule in a list has to be removed 
 
 Changes introduced in AcCoRD v1.3 (2018-07-31)
 - [NEW] added PDF User's Manual to replace the helper text files and many pages on the AcCoRD homepage, to make it easier to expand and update as needed.

@@ -18,6 +18,9 @@
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface
  * reaction type. Includes settings for how to define the a priori absorption
  * probability calculation and whether/how to apply a threshold to turn it off
+ * - corrected missing assignment for first order reactions that don't have any
+ * product molecules to place. Led to memory error when first molecule in a list
+ * has to be removed
  *
  * Revision v1.2 (2018-05-30)
  * - fixed implementation of replication reactions, where a first order reactant produces

@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v1.3 (2018-07-31)
+This document is the README for AcCoRD v1.4 (2018-08-06)
 
 # Introduction
 

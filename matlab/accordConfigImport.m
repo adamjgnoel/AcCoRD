@@ -25,12 +25,14 @@ function config =  accordConfigImport(configJSON)
 %   the contents of configJSON (e.g., counts of number of regions and
 %   actors)
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.4 (2018-08-06)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
-% - added A Priori Absorption as a surface reaction type
+% Revision v1.4 (2018-08-06)
+% - added A Priori Absorption as a surface reaction type. Also added
+% corresponding unqiue parameters (surface reaction threshold type and
+% threshold value)
 % - fixed loading of surface reaction parameters when there are products
 % that are not released away from the surface
 %
@@ -183,6 +185,13 @@ for i = 1:config.numChemRxn
         sum(config.chemRxn{i}.bProdReleased(:)) > 0
         config.chemRxn{i}.releaseType =...
             curRxn.Release_0x20_Placement_0x20_Type;
+    end
+    
+    if strcmp(config.chemRxn{i}.surfRxnType, 'A Priori Absorbing')
+        config.chemRxn{i}.surfRxnThresholdType = ...
+            curRxn.Surface_0x20_Reaction_0x20_Threshold_0x20_Type;
+        config.chemRxn{i}.surfRxnThresholdValue = ...
+            curRxn.Surface_0x20_Reaction_0x20_Threshold_0x20_Value;
     end
 end
 

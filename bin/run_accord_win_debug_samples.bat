@@ -1,5 +1,6 @@
 @echo off
 accord_win_debug.exe
+accord_win_debug.exe accord_config_sample_a_priori_absorption.txt
 accord_win_debug.exe accord_config_sample_all_shapes_hybrid.txt
 accord_win_debug.exe accord_config_sample_all_shapes_meso.txt
 accord_win_debug.exe accord_config_sample_all_shapes_micro.txt

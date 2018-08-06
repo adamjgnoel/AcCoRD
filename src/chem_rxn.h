@@ -9,11 +9,11 @@
  *
  * chem_rxn.h - structure for storing chemical reaction properties
  *
- * Last revised for AcCoRD LATEST_VERSION
+ * Last revised for AcCoRD v1.4 (2018-08-06)
  *
  * Revision history:
  *
- * Revision LATEST_VERSION
+ * Revision v1.4 (2018-08-06)
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface
  * reaction type. Includes settings for how to define the a priori absorption
  * probability calculation and whether/how to apply a threshold to turn it off

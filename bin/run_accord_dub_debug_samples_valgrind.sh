@@ -1,4 +1,5 @@
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out;
+valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_a_priori_absorption.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_all_shapes_hybrid.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_all_shapes_meso.txt;
 valgrind --leak-check=full --show-reachable=no ./accord_dub_debug.out accord_config_sample_all_shapes_micro.txt;

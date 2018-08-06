@@ -1,4 +1,5 @@
 ./accord_dub_debug.out;
+./accord_dub_debug.out accord_config_sample_a_priori_absorption.txt;
 ./accord_dub_debug.out accord_config_sample_all_shapes_hybrid.txt;
 ./accord_dub_debug.out accord_config_sample_all_shapes_meso.txt;
 ./accord_dub_debug.out accord_config_sample_all_shapes_micro.txt;

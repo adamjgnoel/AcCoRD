@@ -89,4 +89,4 @@ Developed and maintained by Adam Noel (https://warwick.ac.uk/fac/sci/eng/staff/a
 
 Testing: M. Halimeh (v0.2 to v0.4) and T. Schwering (v0.3 to v0.5)
 
-Supervision and Support: Profs. K. C. Cheung (to v1.0), A. Hafid (v0.4 to v1.0), D. Makrakis (v0.4 to v1.1), and R. Schober  (to v1.0).
+Supervision and Support: K. C. Cheung (to v1.0), A. Hafid (v0.4 to v1.0), D. Makrakis (v0.4 to v1.1), and R. Schober  (to v1.0).

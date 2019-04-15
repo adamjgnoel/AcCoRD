@@ -2,7 +2,11 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v1.4 (2018-08-06)
+This document is the CHANGELOG for AcCoRD v1.4.1 (2019-04-16)
+- [NEW] added a "Quick Plot" function for empty environments, accordEmptyEnvironmentQuick, which takes a single argument (path to configuration file) and plots all of the regions and actors with default plot settings. Corresponding note added to the user manual
+- [FIX] Updated recommended MATLAB version to R2016b, because newer version of function to check strings is used when importing a configuration file (this call had changed some number of versions ago but compatibility with R2015a wasn't checked)
+
+Changes introduced in AcCoRD v1.4 (2018-08-06)
 - [NEW] added the A Priori Monte Carlo (APMC) Absorption algorithm, which enables accurate simulation with much larger time steps. Included as a new option for surface reactions. This initial implementation requires that the corresponding reaction rate must be infinite, otherwise the reaction will never occur. A threshold can constrain its use for additional runtime efficiency.
 - [NEW] added a sample configuration file that uses the APMC absorption algorithm. Simulated environment has a point transmitter and a single absorbing sphere.
 - [NEW] added a "Quick Plot" function, accordQuickPlot, which takes a single argument and plots all time-varying average observations by all passive actors. It is implemented as a simpler alternative to accordPlotMakerWrapper. It can also be used to import AcCoRD output, but in such a case it will only load data from the first corresponding seed file.

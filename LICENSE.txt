@@ -11,7 +11,7 @@ The use of third-party code does not imply endorsement of AcCoRD by the respecti
 
 License for AcCoRD:
 -------------------
-Copyright (c) 2016-2018 Adam Noel. All Rights Reserved.
+Copyright (c) 2016-2019 Adam Noel. All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 

@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v1.4 (2018-08-06)
+This document is the README for AcCoRD v1.4.1 (2019-04-16)
 
 # Introduction
 
@@ -81,7 +81,7 @@ Usage instructions can be found in the User's Manual that is included with the s
 
 # Licensing
 
-Main AcCoRD files are copyright 2016-2018 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
+Main AcCoRD files are copyright 2016-2019 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
 
 # Credits
 

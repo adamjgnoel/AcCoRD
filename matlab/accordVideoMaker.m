@@ -95,9 +95,13 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 % hFig - handle(s) to plotted figure(s). Use for making changes.
 % hAxes - handle(s) to axes in plotted figure(s). Use for making changes.
 %
-% Last revised for AcCoRD v1.2 (2018-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - added initialisation of nested function variables that can be read
+% globally. Needed for code to execute as of R2019b.
 %
 % Revision v1.2 (2018-05-30)
 % - updated call to build function for plotting molecules to accommodate
@@ -126,6 +130,13 @@ function [hFig, hAxes] = accordVideoMaker(fileToLoad,...
 
 %% Load Simulation Output
 load(fileToLoad, 'config', 'data');
+
+%% Code for R2019b - need to define nested function variables that have external scope
+hTimer = [];
+tArray = [];
+hObsCount = [];
+counterArray = [];
+counterText = [];
 
 %% Confirm Size of Molecule Arrays
 numFrames = length(observationToPlot);

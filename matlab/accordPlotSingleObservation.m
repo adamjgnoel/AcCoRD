@@ -29,9 +29,13 @@ function hPoints = accordPlotSingleObservation(hAxes, data, actorInd, molStruct,
 % OUTPUTS
 % hPoints - cell array of handles to plots made at this observation point
 %
-% Last revised for AcCoRD v1.2 (2018-05-30)
+% Last revised for AcCoRD LATEST_VERSION
 %
 % Revision history:
+%
+% Revision LATEST_VERSION
+% - corrected indexing of plots where markers are used to draw the
+% molecules
 %
 % Revision v1.2 (2018-05-30)
 % - added plotting molecules as shapes instead of only as markers. Added
@@ -59,12 +63,12 @@ for i = 1:molStruct.numToDisp
                     scatter3(hAxes, scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,1),...
                     scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,2),...
                     scale*data.passiveRecordPos{actorInd}{curMol}{realization,obsInd}(:,3));
-                set(hPoints(i),'DisplayName', molStruct.dispStr{1}{i});
-                set(hPoints(i),'SizeData', molStruct.size(i));
-                set(hPoints(i),'LineWidth', molStruct.lineWidth(i));
-                set(hPoints(i),'MarkerEdgeColor', molStruct.edgeColor{1}{i});
-                set(hPoints(i),'MarkerFaceColor', molStruct.faceColor{1}{i});
-                set(hPoints(i),'Marker', molStruct.marker{1}{i});
+                set(hPoints{i},'DisplayName', molStruct.dispStr{1}{i});
+                set(hPoints{i},'SizeData', molStruct.size(i));
+                set(hPoints{i},'LineWidth', molStruct.lineWidth(i));
+                set(hPoints{i},'MarkerEdgeColor', molStruct.edgeColor{1}{i});
+                set(hPoints{i},'MarkerFaceColor', molStruct.faceColor{1}{i});
+                set(hPoints{i},'Marker', molStruct.marker{1}{i});
             case 'sphere'
                 % Plot each molecule as an individual 3D sphere
                 numMol = data.passiveRecordCount{actorInd}(realization,curMol,obsInd);

@@ -9,9 +9,12 @@
  *
  * file_io.h - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.4 (2018-08-06)
+ * Last revised for AcCoRD LATEST_VERSION
  *
  * Revision history:
+ *
+ * Revision LATEST_VERSION
+ * - updated file output file directory creation to accommodate Apple OS
  *
  * Revision v1.4 (2018-08-06)
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface

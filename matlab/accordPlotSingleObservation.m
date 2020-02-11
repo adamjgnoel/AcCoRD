@@ -29,11 +29,11 @@ function hPoints = accordPlotSingleObservation(hAxes, data, actorInd, molStruct,
 % OUTPUTS
 % hPoints - cell array of handles to plots made at this observation point
 %
-% Last revised for AcCoRD LATEST_VERSION
+% Last revised for AcCoRD v1.4.2 (2020-02-12)
 %
 % Revision history:
 %
-% Revision LATEST_VERSION
+% Revision v1.4.2 (2020-02-12)
 % - corrected indexing of plots where markers are used to draw the
 % molecules
 %

@@ -4,6 +4,7 @@
 
 This document is the CHANGELOG for AcCoRD v1.4.2 (2020-02-12)
 - [NEW] Updated source code so that it can be compiled in MacOS systems. Executables are not provided but Mac OS users should be able to compile it themselves using the same syntax as that for Linux users
+- [CHANGE] Removed build scripts and executables specific to RHEL/CentOS Linux. The same files can be used as with Debian/Ubuntu Linux, as long as the executables are compiled on a RHEL/CentOS Linux operating system. This change was made to streamline future updates.
 - [FIX] Updated video generator code for compatibility from MATLAB R2019b. Should still be backwards compatible to R2016b.
 - [FIX] Corrected indexing of plots where markers are chosen to draw the individual molecules in the simulated environment
 

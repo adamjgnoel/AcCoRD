@@ -2,7 +2,12 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the CHANGELOG for AcCoRD v1.4.1 (2019-04-16)
+This document is the CHANGELOG for AcCoRD v1.4.2 (2020-02-12)
+- [NEW] Updated source code so that it can be compiled in MacOS systems. Executables are not provided but Mac OS users should be able to compile it themselves using the same syntax as that for Linux users
+- [FIX] Updated video generator code for compatibility from MATLAB R2019b. Should still be backwards compatible to R2016b.
+- [FIX] Corrected indexing of plots where markers are chosen to draw the individual molecules in the simulated environment
+
+Changes introduced in AcCoRD v1.4.1 (2019-04-16)
 - [NEW] added a "Quick Plot" function for empty environments, accordEmptyEnvironmentQuick, which takes a single argument (path to configuration file) and plots all of the regions and actors with default plot settings. Corresponding note added to the user manual
 - [FIX] Updated recommended MATLAB version to R2016b, because newer version of function to check strings is used when importing a configuration file (this call had changed some number of versions ago but compatibility with R2015a wasn't checked)
 

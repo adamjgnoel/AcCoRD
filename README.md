@@ -2,7 +2,7 @@
             The AcCoRD Simulator
             (Actor-based Communication via Reaction-Diffusion)
 
-This document is the README for AcCoRD v1.4.1 (2019-04-16)
+This document is the README for AcCoRD v1.4.2 (2020-02-12)
 
 # Introduction
 
@@ -55,7 +55,7 @@ This list is current as of v1.3. See https://github.com/adamjgnoel/AcCoRD/issues
 
 # Future Features
 
-Development of AcCoRD is active and on-going. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details. Here is a list of some planned end-user features (in no particular order):
+Development of AcCoRD is on-going. See https://github.com/adamjgnoel/AcCoRD/issues for the latest details. Here is a list of some planned end-user features (in no particular order):
 * Expand flow model. Currently, flow must be steady and uniform (within a given region).
 * Allow dependent actors, whose behavior depends on the observations of passive actors. This would allow implementation of more complex communication networks (e.g., relays)
 * Add actors that track changes to molecule composition in their volumes
@@ -81,7 +81,7 @@ Usage instructions can be found in the User's Manual that is included with the s
 
 # Licensing
 
-Main AcCoRD files are copyright 2016-2019 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
+Main AcCoRD files are copyright 2016-2020 by Adam Noel under the "New BSD" license. For full details of licensing, including use of third-party code, please see LICENSE.txt
 
 # Credits
 

@@ -9,9 +9,12 @@
  *
  * file_io.c - interface with JSON configuration files
  *
- * Last revised for AcCoRD v1.4 (2018-08-06)
+ * Last revised for AcCoRD v1.4.2 (2020-02-12)
  *
  * Revision history:
+ *
+ * Revision v1.4.2 (2020-02-12)
+ * - updated file output file directory creation to accommodate Mac OS
  *
  * Revision v1.4 (2018-08-06)
  * - added a priori monte carlo (APMC) absorption algorithm as a new surface
@@ -2698,7 +2701,7 @@ void initializeOutput(FILE ** out,
     } else
 	{ // Create directory "results/" and use for output
 		printf("NOTE: \"results\" directory could not be found. Trying to create.\n");
-		#ifdef __linux__
+		#if defined(__linux__) || defined(__APPLE__)
 			mkdirOutput = mkdir(outDir1, S_IRWXU);
 		#else
 			mkdirOutput = _mkdir(outDir1);

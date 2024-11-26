@@ -3,13 +3,14 @@
             (Actor-based Communication via Reaction-Diffusion)
 
 This document is the README for AcCoRD v1.4.2 (2020-02-12)
+Last updated 2024-11-26
 
 # Introduction
 
 Welcome to the AcCoRD Simulator (Actor-based Communication via Reaction-Diffusion). AcCoRD is a simulation tool for molecular communication. It is a hybrid microscopic/mesoscopic simulator that functions as a generic solver of stochastic advection-reaction-diffusion but which has been developed from the perspective of communications analysis. The focus is to efficiently generate the statistics of molecule observations at some location (i.e., at a receiver).
 
 Quicklinks:
-* User-friendly external webpage (includes links to feature list, download page, and instructions for use): https://warwick.ac.uk/fac/sci/eng/people/adam_noel/software/accord/
+* User-friendly external webpage (includes links to feature list, download page, and instructions for use): https://www.engr.mun.ca/~adamnoel/accord.html
 * Old AcCoRD releases: https://github.com/adamjgnoel/AcCoRD/releases
 * Main AcCoRD development page on Github: https://github.com/adamjgnoel/accord
 * Maintenance of existing issues and planned features: https://github.com/adamjgnoel/AcCoRD/issues
@@ -36,7 +37,7 @@ Most identified content on the Issues page are planned features.
 
 # Publications
 
-Publications that either describe or use AcCoRD can be found at this page: https://warwick.ac.uk/fac/sci/eng/people/adam_noel/software/accord/publications/
+Publications that either describe or use AcCoRD can be found at this page: https://www.engr.mun.ca/~adamnoel/accord.html
 
 # Known Issues and Limitations
 
@@ -71,7 +72,7 @@ Development of AcCoRD is on-going. See https://github.com/adamjgnoel/AcCoRD/issu
 
 # Installation
 
-Download and installation instructions can be found on this page: https://warwick.ac.uk/fac/sci/eng/people/adam_noel/software/accord/downloads/
+Download and installation instructions can be found on this page: https://www.engr.mun.ca/~adamnoel/accord.html
 
 
 # Basic Usage
@@ -85,7 +86,7 @@ Main AcCoRD files are copyright 2016-2020 by Adam Noel under the "New BSD" licen
 
 # Credits
 
-Developed and maintained by Adam Noel (https://warwick.ac.uk/adamnoel)
+Developed and maintained by Adam Noel (https://www.engr.mun.ca/~adamnoel)
 
 Testing: M. Halimeh (v0.2 to v0.4) and T. Schwering (v0.3 to v0.5)
 
